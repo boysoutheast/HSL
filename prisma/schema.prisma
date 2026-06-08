@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model HermesAgent {
+  id          String   @id @default(cuid())
+  name        String
+  apiKeyHash  String   @unique @map("api_key_hash")
+  status      String   @default("active")
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  assignments     Assignment[]
+  contentLogs     GeneratedContentLog[]
+  postingMonitors PostingMonitor[]
+
+  @@map("hermes_agents")
+}
+
+model InstagramAccount {
+  id              String    @id @default(cuid())
+  username        String    @unique
+  accountName     String?   @map("account_name")
+  status          String    @default("active")
+  purpose         String?
+  notes           String?
+  lastPostAt      DateTime? @map("last_post_at")
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  createdByUser       AdminUser?            @relation(fields: [createdByUserId], references: [id])
+  characters          Character[]
+  contentLogs         GeneratedContentLog[]
+  postingMonitor      PostingMonitor?
+  performanceTrackers PerformanceTracker[]
+
+  @@map("instagram_accounts")
+}
+
+model Character {
+  id                 String   @id @default(cuid())
+  instagramAccountId String   @map("instagram_account_id")
+  name               String
+  description        String
+  behavior           String?
+  speakingStyle      String?  @map("speaking_style")
+  expressionStyle    String?  @map("expression_style")
+  movementStyle      String?  @map("movement_style")
+  forbiddenRules     String?  @map("forbidden_rules")
+  status             String   @default("active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  instagramAccount InstagramAccount      @relation(fields: [instagramAccountId], references: [id])
+  photoReferences  PhotoReference[]
+  topics           Topic[]
+  contentLogs      GeneratedContentLog[]
+
+  @@map("characters")
+}
+
+model PhotoReference {
+  id                 String   @id @default(cuid())
+  uploadedBy         String?  @map("uploaded_by")
+  fileUrl            String   @map("file_url")
+  thumbnailUrl       String?  @map("thumbnail_url")
+  label              String
+  category           String?
+  instagramAccountId String?  @map("instagram_account_id")
+  characterId        String?  @map("character_id")
+  topicId            String?  @map("topic_id")
+  productId          String?  @map("product_id")
+  status             String   @default("active")
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  character   Character?            @relation(fields: [characterId], references: [id])
+  topic       Topic?                @relation(fields: [topicId], references: [id])
+  product     Product?              @relation(fields: [productId], references: [id])
+  contentLogs GeneratedContentLog[]
+
+  @@map("photo_references")
+}
+
+model Topic {
+  id                 String   @id @default(cuid())
+  name               String
+  description        String
+  instagramAccountId String?  @map("instagram_account_id")
+  characterId        String?  @map("character_id")
+  productId          String?  @map("product_id")
+  status             String   @default("active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  character       Character?            @relation(fields: [characterId], references: [id])
+  product         Product?              @relation(fields: [productId], references: [id])
+  ceps            Cep[]
+  photoReferences PhotoReference[]
+  contentLogs     GeneratedContentLog[]
+
+  @@map("topics")
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  mainBenefit      String?  @map("main_benefit")
+  productUrl       String?  @map("product_url")
+  ingredients      String?
+  usageInstruction String?  @map("usage_instruction")
+  price            Decimal? @db.Decimal(10, 2)
+  shopeeUrl        String?  @map("shopee_url")
+  notes            String?
+  status           String   @default("active")
+  createdByUserId  String?  @map("created_by_user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  createdByUser   AdminUser?            @relation(fields: [createdByUserId], references: [id])
+  topics          Topic[]
+  photoReferences PhotoReference[]
+  ceps            Cep[]
+  contentLogs     GeneratedContentLog[]
+
+  @@map("products")
+}
+
+model Cep {
+  id                String   @id @default(cuid())
+  topicId           String?  @map("topic_id")
+  productId         String?  @map("product_id")
+  cepText           String   @map("cep_text")
+  painPoint         String?  @map("pain_point")
+  angle             String?
+  source            String   @default("human")
+  createdByHermesId String?  @map("created_by_hermes_id")
+  status            String   @default("active")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  topic       Topic?                @relation(fields: [topicId], references: [id])
+  product     Product?              @relation(fields: [productId], references: [id])
+  contentLogs GeneratedContentLog[]
+
+  @@map("ceps")
+}
+
+// Polymorphic assignment — assignableId is intentionally untyped at DB level.
+// The hermesAgentId FK is enforced by Prisma; assignableId joins are resolved
+// in application code based on assignableType.
+model Assignment {
+  id             String   @id @default(cuid())
+  hermesAgentId  String   @map("hermes_agent_id")
+  assignableType String   @map("assignable_type")
+  assignableId   String   @map("assignable_id")
+  status         String   @default("active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  hermesAgent HermesAgent @relation(fields: [hermesAgentId], references: [id])
+
+  @@unique([hermesAgentId, assignableType, assignableId])
+  @@map("assignments")
+}
+
+model GeneratedContentLog {
+  id                 String    @id @default(cuid())
+  hermesAgentId      String    @map("hermes_agent_id")
+  instagramAccountId String    @map("instagram_account_id")
+  characterId        String?   @map("character_id")
+  topicId            String?   @map("topic_id")
+  cepId              String?   @map("cep_id")
+  productId          String?   @map("product_id")
+  referenceImageId   String?   @map("reference_image_id")
+  prompt             String
+  script             String?
+  caption            String?
+  postUrl            String?   @map("post_url")
+  videoUrl           String?   @map("video_url")
+  status             String    @default("generated")
+  errorMessage       String?   @map("error_message")
+  postedAt           DateTime? @map("posted_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  hermesAgent        HermesAgent      @relation(fields: [hermesAgentId], references: [id])
+  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id])
+  character          Character?       @relation(fields: [characterId], references: [id])
+  topic              Topic?           @relation(fields: [topicId], references: [id])
+  cep                Cep?             @relation(fields: [cepId], references: [id])
+  product            Product?         @relation(fields: [productId], references: [id])
+  referenceImage     PhotoReference?  @relation(fields: [referenceImageId], references: [id])
+  performanceTracker PerformanceTracker?
+
+  @@map("generated_content_logs")
+}
+
+model PerformanceTracker {
+  id                    String    @id @default(cuid())
+  generatedContentLogId String    @unique @map("generated_content_log_id")
+  instagramAccountId    String    @map("instagram_account_id")
+  postUrl               String    @map("post_url")
+  views                 Int       @default(0)
+  likes                 Int       @default(0)
+  comments              Int       @default(0)
+  shares                Int       @default(0)
+  saves                 Int       @default(0)
+  reach                 Int       @default(0)
+  lastCheckedAt         DateTime? @map("last_checked_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  contentLog       GeneratedContentLog @relation(fields: [generatedContentLogId], references: [id])
+  instagramAccount InstagramAccount    @relation(fields: [instagramAccountId], references: [id])
+  snapshots        PerformanceSnapshot[]
+
+  @@map("performance_trackers")
+}
+
+model PerformanceSnapshot {
+  id                    String   @id @default(cuid())
+  performanceTrackerId  String   @map("performance_tracker_id")
+  generatedContentLogId String   @map("generated_content_log_id")
+  instagramAccountId    String   @map("instagram_account_id")
+  views                 Int      @default(0)
+  likes                 Int      @default(0)
+  comments              Int      @default(0)
+  shares                Int      @default(0)
+  saves                 Int      @default(0)
+  reach                 Int      @default(0)
+  checkedAt             DateTime @default(now()) @map("checked_at")
+
+  performanceTracker PerformanceTracker @relation(fields: [performanceTrackerId], references: [id])
+
+  @@map("performance_snapshots")
+}
+
+model PostingMonitor {
+  id                    String    @id @default(cuid())
+  instagramAccountId    String    @unique @map("instagram_account_id")
+  latestContentLogId    String?   @map("latest_content_log_id")
+  latestPostUrl         String?   @map("latest_post_url")
+  lastPostAt            DateTime? @map("last_post_at")
+  currentViews          Int       @default(0) @map("current_views")
+  previousViews         Int       @default(0) @map("previous_views")
+  growthPerHour         Float     @default(0) @map("growth_per_hour")
+  consecutiveStuckCount Int       @default(0) @map("consecutive_stuck_count")
+  status                String    @default("WAITING")
+  reason                String?
+  lockedUntil           DateTime? @map("locked_until")
+  assignedHermesId      String?   @map("assigned_hermes_id")
+  lastMetricsCheckAt    DateTime? @map("last_metrics_check_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  instagramAccount InstagramAccount @relation(fields: [instagramAccountId], references: [id])
+  hermesAgent      HermesAgent?     @relation(fields: [assignedHermesId], references: [id])
+
+  @@map("posting_monitors")
+}
+
+model PostingMonitorSetting {
+  id                             String   @id @default(cuid())
+  checkIntervalMinutes           Int      @default(60) @map("check_interval_minutes")
+  minimumDecisionAgeMinutes      Int      @default(180) @map("minimum_decision_age_minutes")
+  deadEarlyAgeMinutes            Int      @default(120) @map("dead_early_age_minutes")
+  stuckThresholdPercentPerHour   Float    @default(3) @map("stuck_threshold_percent_per_hour")
+  growingThresholdPercentPerHour Float    @default(10) @map("growing_threshold_percent_per_hour")
+  hotThresholdPercentPerHour     Float    @default(20) @map("hot_threshold_percent_per_hour")
+  stuckConfirmationCount         Int      @default(2) @map("stuck_confirmation_count")
+  hotLockDurationMinutes         Int      @default(360) @map("hot_lock_duration_minutes")
+  maxPostPerDay                  Int      @default(2) @map("max_post_per_day")
+  minimumGapUploadMinutes        Int      @default(360) @map("minimum_gap_upload_minutes")
+  createdAt                      DateTime @default(now()) @map("created_at")
+  updatedAt                      DateTime @updatedAt @map("updated_at")
+
+  @@map("posting_monitor_settings")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String?
+  role         String   @default("user")
+  status       String   @default("active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions          Session[]
+  instagramAccounts InstagramAccount[]
+  products          Product[]
+
+  @@map("admin_users")
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([token])
+  @@index([userId])
+  @@map("sessions")
+}

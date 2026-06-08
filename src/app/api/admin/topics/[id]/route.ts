@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
+  const topic = await prisma.topic.findUnique({
+    where: { id: params.id },
+    include: {
+      character: true,
+      product: true,
+      ceps: { where: { status: 'active' } },
+      photoReferences: { where: { status: 'active' } },
+    },
+  })
+
+  if (!topic) {
+    return NextResponse.json({ error: 'Topic not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({ topic })
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
+  let body: {
+    name?: string
+    description?: string
+    instagramAccountId?: string
+    characterId?: string
+    productId?: string
+    status?: string
+  }
+
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const topic = await prisma.topic.update({
+    where: { id: params.id },
+    data: body,
+  })
+
+  return NextResponse.json({ topic })
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
+  // Get all CEPs in this topic
+  const ceps = await prisma.cep.findMany({
+    where: { topicId: params.id },
+    select: { id: true },
+  })
+  const cepIds = ceps.map((c) => c.id)
+
+  // Null out cepId in content logs
+  if (cepIds.length > 0) {
+    await prisma.generatedContentLog.updateMany({
+      where: { cepId: { in: cepIds } },
+      data: { cepId: null },
+    })
+  }
+
+  // Null out topicId in content logs
+  await prisma.generatedContentLog.updateMany({
+    where: { topicId: params.id },
+    data: { topicId: null },
+  })
+
+  // Hard delete CEPs
+  await prisma.cep.deleteMany({ where: { topicId: params.id } })
+
+  // Null out topicId in photo references (photos remain, just unlinked)
+  await prisma.photoReference.updateMany({
+    where: { topicId: params.id },
+    data: { topicId: null },
+  })
+
+  // Hard delete topic
+  await prisma.topic.delete({ where: { id: params.id } })
+
+  return NextResponse.json({ success: true })
+}

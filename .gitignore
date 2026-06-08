@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+
+# Production build
+/build
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Prisma — generated client (tidak perlu di-commit)
+prisma/*.db
+prisma/*.db-journal
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local overrides
+*.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel / Railway
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+/coverage
+/.nyc_output
+
+# Misc
+*.pem
+.env.railway
+
+# Local data / uploads (Railway Volume, tidak perlu di-commit)
+/data/
+/uploads/
+public/uploads/
+
+# Scripts output
+scripts/*.js
