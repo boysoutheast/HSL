@@ -34,14 +34,14 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(password, 12)
 
   await prisma.adminUser.create({
-    data: {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      passwordHash,
-      role: 'user',
-      status: 'active',
-    },
+  data: {
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    passwordHash,
+    role: 'user',
+    status: 'pending',
+  },
   })
 
-  return NextResponse.json({ ok: true, message: 'Akun berhasil dibuat. Silakan login.' })
+  return NextResponse.json({ ok: true, message: 'Akun berhasil dibuat. Tunggu approval admin sebelum bisa login.' })
 }
