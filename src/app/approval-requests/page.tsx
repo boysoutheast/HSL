@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { Suspense, useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -61,8 +61,8 @@ const ACTION_TYPE_LABELS: Record<string, string> = {
   pause_ad: 'Jeda Iklan',
 }
 
-const STATUS_TABS = ['all', 'pending', 'approved', 'rejected'] as const
-type StatusTab = typeof STATUS_TABS[number]
+const STATUS = ['all', 'pending', 'approved', 'rejected'] as const
+type StatusTab = typeof STATUS[number]
 
 function formatDate(d: string | null) {
   if (!d) return '—'
@@ -72,7 +72,12 @@ function formatDate(d: string | null) {
   })
 }
 
-export default function ApprovalRequestsPage() {
+const ACTION_TO_STATUS: Record<string, string> = {
+  approve: 'approved',
+  reject: 'rejected',
+}
+
+function ApprovalRequestsInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = (searchParams.get('tab') ?? 'all') as StatusTab
@@ -141,7 +146,7 @@ export default function ApprovalRequestsPage() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          status: reviewModal.action,
+          status: ACTION_TO_STATUS[reviewModal.action!],
           reviewNote: reviewNote.trim() || undefined,
         }),
       })
@@ -378,5 +383,13 @@ export default function ApprovalRequestsPage() {
         )}
       </Modal>
     </div>
+  )
+}
+
+export default function ApprovalRequestsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-48 text-gray-400 text-sm">Memuat...</div>}>
+      <ApprovalRequestsInner />
+    </Suspense>
   )
 }
