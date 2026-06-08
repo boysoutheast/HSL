@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { safeMetaError } from '@/lib/crypto'
+import { decode, safeMetaError } from '@/lib/crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +30,15 @@ export async function POST(
     return NextResponse.json({ error: 'No token stored. Connect Meta account first.' }, { status: 400 })
   }
 
-  const token = (metaAccount.longLivedTokenEncrypted ?? metaAccount.shortLivedTokenEncrypted)!
+  let token: string
+  try {
+    token = decode((metaAccount.longLivedTokenEncrypted ?? metaAccount.shortLivedTokenEncrypted)!)
+  } catch {
+    return NextResponse.json({ error: 'Stored token could not be decrypted. Reconnect Meta account.' }, { status: 400 })
+  }
+  if (!token) {
+    return NextResponse.json({ error: 'Stored token is empty. Reconnect Meta account.' }, { status: 400 })
+  }
 
   const now = new Date()
   const results: {
@@ -99,6 +107,27 @@ export async function POST(
     }
   } catch (e) {
     results.errors.push(`businesses exception: ${String(e)}`)
+  }
+
+  // ── Fetch direct Ad Accounts (/me/adaccounts) for system-user tokens without BM visibility ──
+  try {
+    const meAdRes = await metaGet('me/adaccounts', token, { fields: 'id,name,account_status,currency,timezone_name', limit: '100' })
+    const meAdData = await meAdRes.json()
+    if (meAdRes.ok && meAdData?.data) {
+      for (const acct of meAdData.data) {
+        const aaId = String(acct.id).replace(/^act_/, '')
+        await prisma.metaAdAccount.upsert({
+          where: { metaAccountId_adAccountId: { metaAccountId: metaAccount.id, adAccountId: aaId } },
+          update: { adAccountName: acct.name, accountStatus: acct.account_status ?? 1, currency: acct.currency ?? null, timezoneName: acct.timezone_name ?? null, lastSyncedAt: now },
+          create: { metaAccountId: metaAccount.id, adAccountId: aaId, adAccountName: acct.name, accountStatus: acct.account_status ?? 1, currency: acct.currency ?? null, timezoneName: acct.timezone_name ?? null, isDefault: false, lastSyncedAt: now },
+        })
+        results.adAccounts.push({ id: aaId, name: acct.name, type: 'direct' })
+      }
+    } else {
+      results.errors.push(`me/adaccounts: ${safeMetaError(meAdData)}`)
+    }
+  } catch (e) {
+    results.errors.push(`me/adaccounts exception: ${String(e)}`)
   }
 
   // ── Fetch Pages (/me/accounts) ──
