@@ -104,7 +104,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       launchId: testLaunch.id,
       userId: testLaunch.userId,
       metaAccountId: testLaunch.metaAccountId,
-      adAccountId: testLaunch.metaAccount?.defaultAdAccountId ? `act_${testLaunch.metaAccount.defaultAdAccountId}` : '',
+      adAccountId: testLaunch.metaAdAccountId
+        ? (() => {
+            const id = testLaunch.metaAdAccountId!
+            return id.startsWith('act_') ? id : `act_${id}`
+          })()
+        : testLaunch.metaAccount?.defaultAdAccountId
+          ? `act_${testLaunch.metaAccount.defaultAdAccountId}`
+          : '',
       pageId: testLaunch.pageId || '',
       igAccountId: testLaunch.igAccountId || '',
       objective: testLaunch.objective || 'OUTCOME_LEADS',
