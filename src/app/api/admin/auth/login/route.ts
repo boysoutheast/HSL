@@ -2,10 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createSession, setSessionCookie } from '@/lib/session'
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 attempts per 15 minutes per IP
+  const rlKey = getRateLimitKey(req, 'login')
+  const rl = checkRateLimit(rlKey, 5, 15 * 60 * 1000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many attempts. Coba lagi nanti.', resetAt: rl.resetAt },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    )
+  }
+
   let body: { email: string; password: string }
 
   try {
