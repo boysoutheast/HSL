@@ -11,3 +11,14 @@ export const prisma =
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+// Clean shutdown — critical for Railway zero-downtime deploys
+if (process.env.NODE_ENV === 'production') {
+  const shutdown = async () => {
+    console.log('[prisma] Shutting down...')
+    await globalForPrisma.prisma?.$disconnect()
+    process.exit(0)
+  }
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
+}

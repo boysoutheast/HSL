@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 3 registrations per hour per IP
+  const rlKey = getRateLimitKey(req, 'register')
+  const rl = checkRateLimit(rlKey, 3, 60 * 60 * 1000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many registrations. Coba lagi nanti.', resetAt: rl.resetAt },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+    )
+  }
+
   if (process.env.ALLOW_REGISTRATION !== 'true') {
     return NextResponse.json({ error: 'Registrasi tidak dibuka' }, { status: 403 })
   }
