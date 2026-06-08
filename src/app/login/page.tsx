@@ -8,7 +8,7 @@ import { Suspense } from 'react'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const registered = searchParams.get('registered') === '1'
+  const pending = searchParams.get('pending') === '1'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -59,9 +59,9 @@ function LoginForm() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          {registered && (
-            <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 mb-4">
-              ✅ Akun berhasil dibuat. Silakan login.
+          {pending && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 mb-4">
+              ⏳ Akun berhasil dibuat. Menunggu approval admin sebelum bisa login.
             </div>
           )}
 

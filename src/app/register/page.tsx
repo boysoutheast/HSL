@@ -30,7 +30,7 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      router.push('/login?registered=1')
+      router.push('/login?pending=1')
     } catch (err) {
       setError(String(err).replace('Error: ', ''))
     } finally {
