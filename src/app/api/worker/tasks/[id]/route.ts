@@ -22,6 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   let body: {
     status?: 'completed' | 'failed' | 'processing'
     lastError?: string
+    resultJson?: string
   }
 
   try {
@@ -32,6 +33,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (!body.status || !['completed', 'failed', 'processing'].includes(body.status)) {
     return NextResponse.json({ error: 'status must be "completed", "failed", or "processing"' }, { status: 400 })
+  }
+
+  // Validate resultJson is valid JSON if provided
+  if (body.resultJson !== undefined) {
+    try {
+      JSON.parse(body.resultJson)
+    } catch {
+      return NextResponse.json({ error: 'resultJson must be valid JSON' }, { status: 400 })
+    }
   }
 
   const task = await prisma.workerTask.findUnique({
@@ -46,15 +56,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const newAttempts = task.attempts + 1
   const shouldFail = body.status === 'failed' || newAttempts >= task.maxAttempts
 
+  const updateData: Record<string, any> = {
+    status: shouldFail ? 'failed' : body.status,
+    lastError: body.lastError ?? task.lastError,
+    attempts: newAttempts,
+    completedAt: body.status === 'completed' ? now : task.completedAt,
+    startedAt: body.status === 'processing' ? now : task.startedAt,
+  }
+
+  if (body.resultJson !== undefined) {
+    updateData.resultJson = body.resultJson
+  }
+
   const updated = await prisma.workerTask.update({
     where: { id: params.id },
-    data: {
-      status: shouldFail ? 'failed' : body.status,
-      lastError: body.lastError ?? task.lastError,
-      attempts: newAttempts,
-      completedAt: body.status === 'completed' ? now : task.completedAt,
-      startedAt: body.status === 'processing' ? now : task.startedAt,
-    },
+    data: updateData,
   })
 
   return NextResponse.json({ task: updated })

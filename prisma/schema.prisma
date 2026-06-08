@@ -518,8 +518,9 @@ model ApprovalRequest {
 
 model WorkerTask {
   id            String    @id @default(cuid())
-  type          String    // create_campaign | pause_ad | scale_adset | kill_ad | clone_adset
+  type          String    // create_campaign | create_full_launch | pause_ad | scale_adset | kill_ad | clone_adset
   payloadJson   String    @map("payload_json")   // JSON string with full task params
+  resultJson    String?   @map("result_json")    // JSON string with result data (optional, set when task completes)
   status        String    @default("pending")    // pending | processing | completed | failed | cancelled
   priority      Int       @default(5)            // 1=highest 10=lowest
   attempts      Int       @default(0)

@@ -47,11 +47,21 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  // Parse payloadJson into payload field
-  const tasksWithPayload = tasks.map((task) => ({
-    ...task,
-    payload: task.payloadJson ? JSON.parse(task.payloadJson) : null,
-  }))
+  // Parse payloadJson + resultJson into payload/result fields
+  const tasksWithPayload = tasks.map((task) => {
+    const result: any = {
+      ...task,
+      payload: task.payloadJson ? JSON.parse(task.payloadJson) : null,
+    }
+    if (task.resultJson) {
+      try {
+        result.result = JSON.parse(task.resultJson)
+      } catch {
+        result.result = null
+      }
+    }
+    return result
+  })
 
   return NextResponse.json({ tasks: tasksWithPayload })
 }

@@ -99,24 +99,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // Build complete immutable payload snapshot
+    // Normalize ad account ID
+    const adAccountId = testLaunch.metaAdAccountId
+      ? (() => {
+          const id = testLaunch.metaAdAccountId!
+          return id.startsWith('act_') ? id : id
+        })()
+      : testLaunch.metaAccount?.defaultAdAccountId
+        ? testLaunch.metaAccount.defaultAdAccountId
+        : ''
+
+    // Build complete immutable payload snapshot for full launch
     const payload = {
-      launchId: testLaunch.id,
-      userId: testLaunch.userId,
-      metaAccountId: testLaunch.metaAccountId,
-      adAccountId: testLaunch.metaAdAccountId
-        ? (() => {
-            const id = testLaunch.metaAdAccountId!
-            return id.startsWith('act_') ? id : `act_${id}`
-          })()
-        : testLaunch.metaAccount?.defaultAdAccountId
-          ? `act_${testLaunch.metaAccount.defaultAdAccountId}`
-          : '',
+      metaConnectionId: testLaunch.metaAccountId,
+      adAccountId,
       pageId: testLaunch.pageId || '',
       igAccountId: testLaunch.igAccountId || '',
       objective: testLaunch.objective || 'OUTCOME_LEADS',
       dailyBudget: Number(testLaunch.dailyBudget),
-      currency: testLaunch.metaAccount?.currency || 'IDR',
       destinationUrl: testLaunch.destinationUrl || '',
       placementMode: testLaunch.placementMode || 'automatic',
       placements,
@@ -127,13 +127,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         headline: c.adHeadline || c.headline || '',
         callToAction: c.callToAction || 'LEARN_MORE',
       })),
-      launchMode: testLaunch.launchMode || 'new_test',
+      name: testLaunch.name || `HSL Launch ${now.toISOString()}`,
       snapshotAt: now.toISOString(),
     }
 
+    // Determine task type based on launch mode and creatives
+    const hasCreatives = testLaunch.creatives && testLaunch.creatives.length > 0
+    const taskType = hasCreatives ? 'create_full_launch' : 'create_campaign'
+
     await prisma.workerTask.create({
       data: {
-        type: 'create_campaign',
+        type: taskType,
         payloadJson: JSON.stringify(payload),
         status: 'pending',
         priority: 1,
