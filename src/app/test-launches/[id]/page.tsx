@@ -185,15 +185,19 @@ export default function TestLaunchDetailPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/test-launches/${id}`, { credentials: 'include' })
-      if (!res.ok) throw new Error()
+      if (res.status === 401) {
+        router.replace(`/login?redirect=/test-launches/${id}`)
+        return
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setTestLaunch(data.testLaunch ?? null)
-    } catch {
-      // silent
+    } catch (err) {
+      console.error('fetchTestLaunch error:', err)
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }, [id, router])
 
   useEffect(() => { fetchTestLaunch() }, [fetchTestLaunch])
 
