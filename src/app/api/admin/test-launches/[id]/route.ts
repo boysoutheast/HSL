@@ -17,7 +17,7 @@ export async function GET(
       creatives: true,
       approvalRequest: true,
       metaAccount: {
-        select: { accountName: true, adAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true },
       },
       workerTasks: true,
     },
@@ -81,7 +81,7 @@ export async function PATCH(
     include: {
       creatives: true,
       metaAccount: {
-        select: { accountName: true, adAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true },
       },
     },
   })

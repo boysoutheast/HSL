@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       creatives: true,
       approvalRequest: true,
       metaAccount: {
-        select: { accountName: true, adAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true },
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     include: {
       creatives: true,
       metaAccount: {
-        select: { accountName: true, adAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true },
       },
     },
   })

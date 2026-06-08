@@ -4,11 +4,16 @@ import { requireAuth, ownerFilter } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
+// Fields to NEVER return to frontend (encrypted token/secret fields)
 const SAFE_META_ACCOUNT_SELECT = {
   id: true,
   userId: true,
   name: true,
   appId: true,
+  // appSecretEncrypted intentionally omitted
+  // shortLivedTokenEncrypted intentionally omitted
+  // longLivedTokenEncrypted intentionally omitted
+  tokenExpiry: true,
   metaUserId: true,
   metaUserName: true,
   scopesJson: true,
@@ -24,10 +29,56 @@ const SAFE_META_ACCOUNT_SELECT = {
   notes: true,
   createdAt: true,
   updatedAt: true,
-  businesses: true,
-  adAccounts: true,
-  pages: true,
-} as const
+  // relations
+  businesses: {
+    select: {
+      id: true,
+      businessId: true,
+      businessName: true,
+      verificationStatus: true,
+      isSelected: true,
+      lastSyncedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+  adAccounts: {
+    select: {
+      id: true,
+      adAccountId: true,
+      adAccountName: true,
+      accountStatus: true,
+      currency: true,
+      timezoneName: true,
+      isDefault: true,
+      lastSyncedAt: true,
+      createdAt: true,
+      updatedAt: true,
+      // include business relation
+      business: {
+        select: {
+          id: true,
+          businessId: true,
+          businessName: true,
+        },
+      },
+    },
+  },
+  pages: {
+    select: {
+      id: true,
+      pageId: true,
+      pageName: true,
+      igBusinessAccountId: true,
+      igUsername: true,
+      igName: true,
+      isActive: true,
+      lastSyncedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+}
 
 export async function GET(req: NextRequest) {
   const auth = await requireAuth(req)
@@ -50,17 +101,17 @@ export async function POST(req: NextRequest) {
     name?: string
     appId?: string
     appSecretEncrypted?: string
-    longLivedTokenEncrypted?: string
     shortLivedTokenEncrypted?: string
-    tokenExpiry?: string
+    longLivedTokenEncrypted?: string
+    tokenExpiry?: string | null
     metaUserId?: string
     metaUserName?: string
     scopesJson?: string
     defaultAdAccountId?: string
     accountName?: string
-    pixelId?: string
     currency?: string
     timezone?: string
+    pixelId?: string
     notes?: string
   }
 
@@ -70,28 +121,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
+  // At minimum userId comes from auth; appId is strongly recommended
   if (!body.appId) {
     return NextResponse.json({ error: 'appId is required' }, { status: 400 })
   }
 
   const metaAccount = await prisma.metaAccount.create({
     data: {
+      userId: auth.id,
       name: body.name,
       appId: body.appId,
       appSecretEncrypted: body.appSecretEncrypted,
-      longLivedTokenEncrypted: body.longLivedTokenEncrypted,
       shortLivedTokenEncrypted: body.shortLivedTokenEncrypted,
-      tokenExpiry: body.tokenExpiry ? new Date(body.tokenExpiry) : undefined,
+      longLivedTokenEncrypted: body.longLivedTokenEncrypted,
+      tokenExpiry: body.tokenExpiry ? new Date(body.tokenExpiry) : null,
       metaUserId: body.metaUserId,
       metaUserName: body.metaUserName,
       scopesJson: body.scopesJson,
       defaultAdAccountId: body.defaultAdAccountId,
       accountName: body.accountName,
-      pixelId: body.pixelId,
       currency: body.currency ?? 'IDR',
       timezone: body.timezone ?? 'Asia/Jakarta',
+      pixelId: body.pixelId,
       notes: body.notes,
-      userId: auth.id,
     },
     select: SAFE_META_ACCOUNT_SELECT,
   })

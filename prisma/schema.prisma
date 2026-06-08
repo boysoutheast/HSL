@@ -325,40 +325,137 @@ model Session {
 // ── META ADS LAUNCHER MODELS ─────────────────────────────────────────────────
 
 model MetaAccount {
-  id            String    @id @default(cuid())
-  userId        String    @map("user_id")
-  adAccountId   String    @map("ad_account_id")  // e.g. "act_1234567890"
-  accountName   String?   @map("account_name")
-  accessToken   String    @map("access_token")   // encrypted or short-lived token
-  pageId        String?   @map("page_id")
-  igAccountId   String?   @map("ig_account_id")
-  pixelId       String?   @map("pixel_id")
-  currency      String    @default("IDR")
-  timezone      String    @default("Asia/Jakarta")
-  status        String    @default("connected")  // connected | expired | revoked
-  lastSyncAt    DateTime? @map("last_sync_at")
-  notes         String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id                     String    @id @default(cuid())
+  userId                 String    @map("user_id")
+  name                   String?   // user-friendly connection name
+  // ── Meta App Credentials ──
+  appId                  String?   @map("app_id")
+  appSecretEncrypted     String?   @map("app_secret_encrypted")
+  // ── Tokens ──
+  shortLivedTokenEncrypted String? @map("short_lived_token_encrypted")
+  longLivedTokenEncrypted   String? @map("long_lived_token_encrypted")
+  tokenExpiry            DateTime? @map("token_expiry")
+  // ── User Meta Identity ──
+  metaUserId             String?   @map("meta_user_id")    // Meta user ID
+  metaUserName           String?   @map("meta_user_name")  // Meta user name
+  scopesJson             String?   @map("scopes_json")     // granted OAuth scopes
+  // ── Default Selection ──
+  defaultAdAccountId     String?   @map("default_ad_account_id")
+  accountName            String?   @map("account_name")
+  currency               String    @default("IDR")
+  timezone               String    @default("Asia/Jakarta")
+  pixelId                String?   @map("pixel_id")
+  // ── Status ──
+  status                 String    @default("connected")  // connected | expired | needs_reconnect | revoked
+  lastMetaCallAt         DateTime? @map("last_meta_call_at")  // last successful Meta API call
+  lastTokenCheckAt       DateTime? @map("last_token_check_at") // last token debug/health check
+  lastSyncAt             DateTime? @map("last_sync_at")
+  notes                  String?
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   user         AdminUser    @relation(fields: [userId], references: [id])
+  businesses   MetaBusiness[]
+  adAccounts   MetaAdAccount[]
+  pages        MetaPage[]
   testLaunches TestLaunch[]
 
   @@index([userId])
   @@map("meta_accounts")
 }
 
+model MetaBusiness {
+  id                 String   @id @default(cuid())
+  metaAccountId      String   @map("meta_account_id")
+  businessId         String   @map("business_id")       // Meta BM ID
+  businessName       String?  @map("business_name")
+  verificationStatus String?  @map("verification_status")
+  isSelected         Boolean  @default(false) @map("is_selected")
+  lastSyncedAt       DateTime? @map("last_synced_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  adAccounts  MetaAdAccount[]
+
+  @@unique([metaAccountId, businessId])
+  @@index([metaAccountId])
+  @@index([businessId])
+  @@map("meta_businesses")
+}
+
+model MetaAdAccount {
+  id             String   @id @default(cuid())
+  metaAccountId  String   @map("meta_account_id")
+  metaBusinessId String?  @map("meta_business_id")     // FK to meta_businesses.id
+  businessId     String?  @map("business_id")          // Meta BM ID
+  adAccountId    String   @map("ad_account_id")        // act_XXXXXXXXX
+  adAccountName  String?  @map("ad_account_name")
+  accountStatus  Int      @default(1) @map("account_status")  // 1=active, 2=disabled
+  currency       String?  // IDR, USD, etc
+  timezoneName   String?  @map("timezone_name")
+  isDefault      Boolean  @default(false) @map("is_default")
+  lastSyncedAt   DateTime? @map("last_synced_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  metaAccount  MetaAccount   @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  business     MetaBusiness? @relation(fields: [metaBusinessId], references: [id])
+
+  @@unique([metaAccountId, adAccountId])
+  @@index([metaAccountId])
+  @@index([adAccountId])
+  @@index([businessId])
+  @@map("meta_ad_accounts")
+}
+
+model MetaPage {
+  id                   String   @id @default(cuid())
+  metaAccountId        String   @map("meta_account_id")
+  pageId               String   @map("page_id")          // Facebook Page ID
+  pageName             String?  @map("page_name")
+  pageAccessTokenEncrypted String? @map("page_access_token_encrypted")
+  igBusinessAccountId  String?  @map("ig_business_account_id")  // Instagram Business Account ID
+  igUsername           String?  @map("ig_username")
+  igName               String?  @map("ig_name")
+  isActive             Boolean  @default(true) @map("is_active")
+  lastSyncedAt         DateTime? @map("last_synced_at")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  metaAccount MetaAccount  @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([metaAccountId, pageId])
+  @@index([metaAccountId])
+  @@index([pageId])
+  @@map("meta_pages")
+}
+
 model TestLaunch {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
   metaAccountId   String   @map("meta_account_id")
+  metaBusinessId  String?  @map("meta_business_id")   // which BM to use
+  metaAdAccountId String?  @map("meta_ad_account_id") // which ad account
   productId       String?  @map("product_id")
   name            String
   objective       String   @default("OUTCOME_LEADS")  // OUTCOME_LEADS | OUTCOME_SALES | OUTCOME_TRAFFIC
   dailyBudget     Decimal  @map("daily_budget") @db.Decimal(12, 2)
-  targetingJson   String?  @map("targeting_json")    // JSON string
-  launchMode      String   @map("launch_mode")       // new_test | duplicate_winner
-  sourceAdsetId   String?  @map("source_adset_id")  // nullable, used in duplicate_winner mode
+  currency        String   @default("IDR")
+  // ── Page & Instagram Selection (per-launch) ──
+  pageId          String?  @map("page_id")             // chosen Facebook Page
+  igAccountId     String?  @map("ig_account_id")       // chosen Instagram Business Account
+  // ── Placement ──
+  placementMode   String   @default("automatic") @map("placement_mode") // automatic | manual
+  placementsJson  String?  @map("placements_json")     // ["facebook_feed","instagram_reels",...]
+  // ── Audience ──
+  audienceJson    String?  @map("audience_json")       // {ageMin, ageMax, gender, locations, interests}
+  targetingJson   String?  @map("targeting_json")      // raw Meta targeting (built from audienceJson)
+  // ── Destination ──
+  destinationUrl  String?  @map("destination_url")
+  // ── Launch Mode ──
+  launchMode      String   @map("launch_mode")         // new_test | duplicate_winner
+  sourceAdsetId   String?  @map("source_adset_id")    // for duplicate_winner
   notes           String?
   // status lifecycle: draft → pending_approval → approved/rejected → executing → completed/failed
   status          String   @default("draft")
@@ -384,7 +481,9 @@ model TestLaunchCreative {
   captionText    String?  @map("caption_text")
   hookText       String?  @map("hook_text")
   headline       String?
-  callToAction   String?  @map("call_to_action")  // LEARN_MORE | SHOP_NOW | SIGN_UP
+  primaryText    String?  @map("primary_text")    // ad primary text (main body)
+adHeadline     String?  @map("ad_headline")     // ad headline
+callToAction   String?  @map("call_to_action")  // LEARN_MORE | SHOP_NOW | SIGN_UP
   sortOrder      Int      @default(0) @map("sort_order")
   status         String   @default("pending")     // pending | testing | winner | killed
   notes          String?
