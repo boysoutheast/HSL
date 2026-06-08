@@ -1,0 +1,60 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { validateHermesApiKey } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
+
+async function getWorkerAgent(req: NextRequest) {
+  const apiKey = req.headers.get('x-api-key')
+  if (apiKey) {
+    return validateHermesApiKey(apiKey)
+  }
+  const { getSessionUser } = await import('@/lib/session')
+  return getSessionUser(req)
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const agent = await getWorkerAgent(req)
+  if (!agent) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  let body: {
+    status?: 'completed' | 'failed'
+    lastError?: string
+  }
+
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  if (!body.status || !['completed', 'failed'].includes(body.status)) {
+    return NextResponse.json({ error: 'status must be "completed" or "failed"' }, { status: 400 })
+  }
+
+  const task = await prisma.workerTask.findUnique({
+    where: { id: params.id },
+  })
+
+  if (!task) {
+    return NextResponse.json({ error: 'WorkerTask not found' }, { status: 404 })
+  }
+
+  const now = new Date()
+  const newAttempts = task.attempts + 1
+  const shouldFail = body.status === 'failed' || newAttempts >= task.maxAttempts
+
+  const updated = await prisma.workerTask.update({
+    where: { id: params.id },
+    data: {
+      status: shouldFail ? 'failed' : body.status,
+      lastError: body.lastError ?? task.lastError,
+      attempts: newAttempts,
+      completedAt: body.status === 'completed' ? now : task.completedAt,
+    },
+  })
+
+  return NextResponse.json({ task: updated })
+}
