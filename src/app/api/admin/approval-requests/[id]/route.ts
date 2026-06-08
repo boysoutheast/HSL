@@ -116,8 +116,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       audience,
       creatives: testLaunch.creatives.map((c) => ({
         imageUrl: c.creativeUrl || '',
-        primaryText: c.hookText || c.captionText || '',
-        headline: c.headline || '',
+        primaryText: c.primaryText || c.hookText || c.captionText || '',
+        headline: c.adHeadline || c.headline || '',
         callToAction: c.callToAction || 'LEARN_MORE',
       })),
       launchMode: testLaunch.launchMode || 'new_test',
