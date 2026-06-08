@@ -7,23 +7,39 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface Creative {
   id: string
   creativeUrl: string | null
   captionText: string | null
   hookText: string | null
   headline: string | null
+  primaryText: string | null
+  adHeadline: string | null
   callToAction: string | null
   sortOrder: number
   status: string
 }
 
-interface MetaAccount {
-  accountName: string
-  adAccountId: string
+interface MetaConnection {
+  id: string
+  name: string | null
+  appId: string | null
+  status: string
+  accountName: string | null
+  adAccounts: Array<{ id: string; adAccountId: string; adAccountName: string | null; currency: string | null }>
+  pages: Array<{ id: string; pageId: string; pageName: string | null; igBusinessAccountId: string | null; igUsername: string | null }>
 }
 
-interface ApprovalRequestSummary {
+interface AdAccount {
+  id: string
+  adAccountId: string
+  adAccountName: string | null
+  currency: string | null
+}
+
+interface ApprovalRequest {
   id: string
   actionType: string
   status: string
@@ -53,11 +69,20 @@ interface TestLaunchDetail {
   id: string
   userId: string
   metaAccountId: string
+  metaBusinessId: string | null
+  metaAdAccountId: string | null
   productId: string | null
   name: string
   objective: string
   dailyBudget: string
+  currency: string
+  pageId: string | null
+  igAccountId: string | null
+  placementMode: string
+  placementsJson: string | null
+  audienceJson: string | null
   targetingJson: string | null
+  destinationUrl: string | null
   launchMode: string
   sourceAdsetId: string | null
   notes: string | null
@@ -66,10 +91,13 @@ interface TestLaunchDetail {
   createdAt: string
   updatedAt: string
   creatives: Creative[]
-  approvalRequest: ApprovalRequestSummary | null
-  metaAccount: MetaAccount
+  approvalRequest: ApprovalRequest | null
+  metaAccount: MetaConnection
+  metaAdAccount: AdAccount | null
   workerTasks: WorkerTask[]
 }
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const OBJECTIVE_LABELS: Record<string, string> = {
   OUTCOME_LEADS: 'Leads',
@@ -82,6 +110,22 @@ const LAUNCH_MODE_LABELS: Record<string, string> = {
   duplicate_winner: 'Duplikat Winner',
 }
 
+const PLACEMENT_LABELS: Record<string, string> = {
+  facebook_feed: 'Facebook Feed',
+  facebook_stories: 'Facebook Stories',
+  instagram_feed: 'Instagram Feed',
+  instagram_stories: 'Instagram Stories',
+  instagram_reels: 'Instagram Reels',
+  instagram_explore: 'Instagram Explore',
+}
+
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  create_campaign: 'Buat Campaign',
+  duplicate_adset: 'Duplikat Adset',
+  increase_budget: 'Naikkan Budget',
+  pause_ad: 'Jeda Iklan',
+}
+
 const WORKER_TASK_TYPE_LABELS: Record<string, string> = {
   create_campaign: 'Buat Campaign',
   pause_ad: 'Jeda Iklan',
@@ -90,13 +134,42 @@ const WORKER_TASK_TYPE_LABELS: Record<string, string> = {
   clone_adset: 'Clone Adset',
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  draft: 'bg-cyan-100 text-cyan-800',
+  pending_approval: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+  executing: 'bg-blue-100 text-blue-800',
+  completed: 'bg-gray-100 text-gray-600',
+  failed: 'bg-red-100 text-red-800',
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  executing: 'Executing',
+  completed: 'Completed',
+  failed: 'Failed',
+}
+
 function formatDate(d: string | null) {
   if (!d) return '—'
-  return new Date(d).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+  return new Date(d).toLocaleString('id-ID', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
+
+function parseAudience(audienceJson: string | null): { ageMin: number; ageMax: number; gender: string; locations: Array<{ type: string; key: string }> } | null {
+  if (!audienceJson) return null
+  try { return JSON.parse(audienceJson) } catch { return null }
+}
+
+function parsePlacements(placementsJson: string | null): string[] {
+  if (!placementsJson) return []
+  try { return JSON.parse(placementsJson) } catch { return [] }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TestLaunchDetailPage() {
   const params = useParams()
@@ -154,16 +227,24 @@ export default function TestLaunchDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-gray-500">Test Launch tidak ditemukan.</p>
-        <Link href="/" className="text-sm text-indigo-600 hover:underline">← Kembali</Link>
+        <Link href="/test-launches" className="text-sm text-indigo-600 hover:underline">← Kembali ke Test Launches</Link>
       </div>
     )
   }
 
+  const audience = parseAudience(testLaunch.audienceJson)
+  const placements = parsePlacements(testLaunch.placementsJson)
+  const metaAccount = testLaunch.metaAccount
+  const selectedPage = metaAccount?.pages?.find((p) => p.pageId === testLaunch.pageId)
+  const statusCls = STATUS_COLORS[testLaunch.status] ?? 'bg-gray-100 text-gray-600'
+  const statusLabel = STATUS_LABELS[testLaunch.status] ?? testLaunch.status
+
   return (
     <div>
-      {/* Breadcrumb */}
+
+      {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">Dashboard</Link>
+        <Link href="/test-launches" className="text-sm text-gray-500 hover:text-gray-700">Test Launches</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium text-gray-900">{testLaunch.name}</span>
       </div>
@@ -177,7 +258,7 @@ export default function TestLaunchDetailPage() {
         ]}
       />
 
-      {/* Pending approval banner */}
+      {/* ── Pending Approval Banner ──────────────────────────────────────── */}
       {testLaunch.status === 'pending_approval' && testLaunch.approvalRequest && (
         <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-5">
           <div className="flex items-start gap-3">
@@ -185,8 +266,7 @@ export default function TestLaunchDetailPage() {
             <div>
               <h3 className="font-semibold text-yellow-900 mb-1">Menunggu Approval</h3>
               <p className="text-sm text-yellow-800 mb-3">
-                Test Launch ini telah diajukan untuk approval pada{' '}
-                {formatDate(testLaunch.approvalRequest.createdAt)}.
+                Test Launch ini telah diajukan untuk approval pada {formatDate(testLaunch.approvalRequest.createdAt)}.
                 <br />
                 Diajukan oleh: <strong>{testLaunch.approvalRequest.requestedBy.name ?? testLaunch.approvalRequest.requestedBy.email}</strong>
               </p>
@@ -201,7 +281,7 @@ export default function TestLaunchDetailPage() {
         </div>
       )}
 
-      {/* Error banner */}
+      {/* ── Error Banner ───────────────────────────────────────────────── */}
       {testLaunch.errorMessage && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
           <p className="text-sm text-red-700">
@@ -210,7 +290,7 @@ export default function TestLaunchDetailPage() {
         </div>
       )}
 
-      {/* Main Info Card */}
+      {/* ── Main Header Card ────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
         <div className="flex items-start justify-between mb-5">
           <div>
@@ -220,7 +300,9 @@ export default function TestLaunchDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <StatusBadge status={testLaunch.status} />
+            <span className={`text-xs px-3 py-1.5 rounded-full font-semibold ${statusCls}`}>
+              {statusLabel}
+            </span>
             {testLaunch.status === 'draft' && (
               <button
                 onClick={handleSubmitForApproval}
@@ -239,40 +321,95 @@ export default function TestLaunchDetailPage() {
           </div>
         )}
 
+        {/* Summary Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 text-sm">
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Budget Harian</p>
-            <p className="text-gray-900 font-semibold">Rp{Number(testLaunch.dailyBudget).toLocaleString()}</p>
+            <p className="text-gray-900 font-semibold">
+              Rp{Number(testLaunch.dailyBudget).toLocaleString('id-ID')}
+            </p>
+            <p className="text-xs text-gray-400">{testLaunch.currency}</p>
           </div>
+
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Objective</p>
             <p className="text-gray-900">{OBJECTIVE_LABELS[testLaunch.objective] ?? testLaunch.objective}</p>
           </div>
+
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Launch Mode</p>
             <p className="text-gray-900">{LAUNCH_MODE_LABELS[testLaunch.launchMode] ?? testLaunch.launchMode}</p>
           </div>
+
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta Account</p>
-            <p className="text-gray-900">{testLaunch.metaAccount.accountName ?? testLaunch.metaAccountId}</p>
-            <p className="text-xs text-gray-400">{testLaunch.metaAccount.adAccountId}</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta Connection</p>
+            <p className="text-gray-900">{metaAccount?.name ?? metaAccount?.appId ?? testLaunch.metaAccountId}</p>
+            <p className="text-xs text-gray-400">{metaAccount?.status}</p>
           </div>
+
+          {testLaunch.metaAdAccount && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Ad Account</p>
+              <p className="text-gray-900">{testLaunch.metaAdAccount.adAccountName ?? testLaunch.metaAdAccount.adAccountId}</p>
+              <p className="text-xs text-gray-400">{testLaunch.metaAdAccount.adAccountId}</p>
+            </div>
+          )}
+
+          {selectedPage && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Facebook Page</p>
+              <p className="text-gray-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
+            </div>
+          )}
+
+          {selectedPage?.igUsername && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Instagram</p>
+              <p className="text-pink-700">@{selectedPage.igUsername}</p>
+            </div>
+          )}
+
+          {testLaunch.destinationUrl && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Destination URL</p>
+              <a
+                href={testLaunch.destinationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 text-xs hover:underline truncate block max-w-[200px]"
+              >
+                {testLaunch.destinationUrl}
+              </a>
+            </div>
+          )}
+
           {testLaunch.sourceAdsetId && (
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Source Adset ID</p>
               <p className="text-gray-900 font-mono text-xs">{testLaunch.sourceAdsetId}</p>
             </div>
           )}
-          {testLaunch.targetingJson && (
+
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Placement</p>
+            <p className="text-gray-900">
+              {testLaunch.placementMode === 'automatic'
+                ? '⚡ Automatic'
+                : placements.length > 0
+                ? placements.map((p) => PLACEMENT_LABELS[p] ?? p).join(', ')
+                : '—'}
+            </p>
+          </div>
+
+          {audience && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Targeting</p>
-              <p className="text-gray-700 text-xs max-w-xs truncate">
-                {(() => {
-                  try { return JSON.parse(testLaunch.targetingJson!) } catch { return testLaunch.targetingJson }
-                })()}
+              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Audience</p>
+              <p className="text-gray-900">
+                {audience.ageMin}–{audience.ageMax} th · {audience.gender} · {audience.locations?.[0]?.key ?? '—'}
               </p>
             </div>
           )}
+
           <div>
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Updated</p>
             <p className="text-gray-700">{formatDate(testLaunch.updatedAt)}</p>
@@ -282,12 +419,12 @@ export default function TestLaunchDetailPage() {
         {testLaunch.notes && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-500 font-medium mb-1">Notes</p>
-            <p className="text-sm text-gray-700">{testLaunch.notes}</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{testLaunch.notes}</p>
           </div>
         )}
       </div>
 
-      {/* Creatives */}
+      {/* ── Creatives ──────────────────────────────────────────────────── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-gray-900">
@@ -318,25 +455,36 @@ export default function TestLaunchDetailPage() {
                         No Image
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <StatusBadge status={creative.status} />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[creative.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {creative.status}
+                        </span>
                         {creative.callToAction && (
                           <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
                             CTA: {creative.callToAction}
                           </span>
                         )}
+                        <span className="text-xs text-gray-400">#{creative.sortOrder + 1}</span>
                       </div>
+
                       {creative.headline && (
-                        <p className="text-sm font-medium text-gray-900 mb-0.5">{creative.headline}</p>
+                        <p className="text-sm font-medium text-gray-900">{creative.headline}</p>
+                      )}
+                      {creative.primaryText && (
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          <span className="text-gray-400 text-xs mr-1">Primary:</span>{creative.primaryText}
+                        </p>
                       )}
                       {creative.hookText && (
-                        <p className="text-sm text-gray-700 mb-0.5">
-                          <span className="text-gray-400 text-xs">Hook: </span>{creative.hookText}
+                        <p className="text-xs text-gray-500">
+                          <span className="text-gray-400">Hook:</span> {creative.hookText}
                         </p>
                       )}
                       {creative.captionText && (
-                        <p className="text-xs text-gray-500 line-clamp-2">{creative.captionText}</p>
+                        <p className="text-xs text-gray-400 line-clamp-2">
+                          Caption: {creative.captionText}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -346,7 +494,7 @@ export default function TestLaunchDetailPage() {
         )}
       </div>
 
-      {/* Approval Request */}
+      {/* ── Approval Request ────────────────────────────────────────────── */}
       {testLaunch.approvalRequest && (
         <div className="mb-6">
           <h2 className="text-base font-semibold text-gray-900 mb-3">Approval Request</h2>
@@ -354,11 +502,7 @@ export default function TestLaunchDetailPage() {
             <div className="flex items-center gap-3 mb-4">
               <StatusBadge status={testLaunch.approvalRequest.status} />
               <span className="text-sm text-gray-600">
-                {testLaunch.approvalRequest.actionType === 'create_campaign'
-                  ? 'Buat Campaign'
-                  : testLaunch.approvalRequest.actionType === 'duplicate_adset'
-                  ? 'Duplikat Adset'
-                  : testLaunch.approvalRequest.actionType}
+                {ACTION_TYPE_LABELS[testLaunch.approvalRequest.actionType] ?? testLaunch.approvalRequest.actionType}
               </span>
             </div>
 
@@ -385,21 +529,21 @@ export default function TestLaunchDetailPage() {
             {testLaunch.approvalRequest.requestNote && (
               <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                 <p className="text-xs text-gray-500 font-medium mb-0.5">Catatan Request:</p>
-                <p className="text-sm text-gray-700">{testLaunch.approvalRequest.requestNote}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{testLaunch.approvalRequest.requestNote}</p>
               </div>
             )}
 
             {testLaunch.approvalRequest.reviewNote && (
               <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                 <p className="text-xs text-blue-600 font-medium mb-0.5">Catatan Review:</p>
-                <p className="text-sm text-blue-900">{testLaunch.approvalRequest.reviewNote}</p>
+                <p className="text-sm text-blue-900 whitespace-pre-wrap">{testLaunch.approvalRequest.reviewNote}</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Worker Tasks */}
+      {/* ── Worker Tasks ────────────────────────────────────────────────── */}
       {testLaunch.workerTasks.length > 0 && (
         <div>
           <h2 className="text-base font-semibold text-gray-900 mb-3">
@@ -415,7 +559,9 @@ export default function TestLaunchDetailPage() {
                   {WORKER_TASK_TYPE_LABELS[task.type] ?? task.type}
                 </td>
                 <td className="px-4 py-3">
-                  <StatusBadge status={task.status} />
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {STATUS_LABELS[task.status] ?? task.status}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-gray-600 text-sm">{task.priority}</td>
                 <td className="px-4 py-3 text-gray-600 text-sm">
@@ -435,6 +581,13 @@ export default function TestLaunchDetailPage() {
           </Table>
         </div>
       )}
+
+      {/* ── Back Link ──────────────────────────────────────────────────── */}
+      <div className="mt-8 pt-4 border-t border-gray-200">
+        <Link href="/test-launches" className="text-sm text-gray-500 hover:text-gray-700">
+          ← Kembali ke Test Launches
+        </Link>
+      </div>
     </div>
   )
 }

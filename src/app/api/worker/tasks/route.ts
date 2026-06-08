@@ -21,13 +21,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const { searchParams } = new URL(req.url)
+  const type = searchParams.get('type')
+  const metaAccountId = searchParams.get('metaAccountId')
+
+  const where: Record<string, unknown> = {}
+  if (type) {
+    where.type = type
+  }
+  if (metaAccountId) {
+    where.payloadJson = { contains: `"metaAccountId":"${metaAccountId}"` }
+  }
+
   const tasks = await prisma.workerTask.findMany({
-    where: { status: 'pending' },
+    where,
     orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     take: 10,
+    include: {
+      testLaunch: {
+        select: {
+          name: true,
+          status: true,
+        },
+      },
+    },
   })
 
-  return NextResponse.json({ tasks })
+  // Parse payloadJson into payload field
+  const tasksWithPayload = tasks.map((task) => ({
+    ...task,
+    payload: task.payloadJson ? JSON.parse(task.payloadJson) : null,
+  }))
+
+  return NextResponse.json({ tasks: tasksWithPayload })
 }
 
 export async function POST(req: NextRequest) {

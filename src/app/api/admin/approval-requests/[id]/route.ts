@@ -46,31 +46,82 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const now = new Date()
 
   if (body.status === 'approved') {
+    // Load full TestLaunch with all fields + metaAccount (safe fields only, no encrypted tokens)
+    const testLaunch = await prisma.testLaunch.findUnique({
+      where: { id: approvalRequest.testLaunchId },
+      include: {
+        creatives: true,
+        metaAccount: {
+          select: {
+            id: true,
+            defaultAdAccountId: true,
+            accountName: true,
+            currency: true,
+            timezone: true,
+            userId: true,
+          },
+        },
+      },
+    })
+
+    if (!testLaunch) {
+      return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
+    }
+
     // Update testLaunch status
     await prisma.testLaunch.update({
       where: { id: approvalRequest.testLaunchId },
       data: { status: 'approved' },
     })
 
-    // Create WorkerTask with type='create_campaign'
+    // Parse audience from targetingJson
+    let audience = { ageMin: 25, ageMax: 45, gender: 'all', locations: [{ type: 'country', key: 'ID' }] }
+    if (testLaunch.targetingJson) {
+      try {
+        const targeting = typeof testLaunch.targetingJson === 'string'
+          ? JSON.parse(testLaunch.targetingJson)
+          : testLaunch.targetingJson
+        if (targeting.audience) {
+          audience = targeting.audience
+        }
+      } catch {
+        // Use default audience
+      }
+    }
+
+    // Parse placements from placementsJson
+    let placements: string[] = []
+    if (testLaunch.placementsJson) {
+      try {
+        placements = JSON.parse(testLaunch.placementsJson)
+      } catch {
+        // Use empty
+      }
+    }
+
+    // Build complete immutable payload snapshot
     const payload = {
-      testLaunchId: approvalRequest.testLaunch.id,
-      metaAccountId: approvalRequest.testLaunch.metaAccountId,
-      productId: approvalRequest.testLaunch.productId,
-      objective: approvalRequest.testLaunch.objective,
-      dailyBudget: approvalRequest.testLaunch.dailyBudget.toString(),
-      targetingJson: approvalRequest.testLaunch.targetingJson,
-      launchMode: approvalRequest.testLaunch.launchMode,
-      sourceAdsetId: approvalRequest.testLaunch.sourceAdsetId,
-      notes: approvalRequest.testLaunch.notes,
-      creatives: approvalRequest.testLaunch.creatives.map((c) => ({
-        id: c.id,
-        creativeUrl: c.creativeUrl,
-        captionText: c.captionText,
-        hookText: c.hookText,
-        headline: c.headline,
-        callToAction: c.callToAction,
+      launchId: testLaunch.id,
+      userId: testLaunch.userId,
+      metaAccountId: testLaunch.metaAccountId,
+      adAccountId: testLaunch.metaAccount?.defaultAdAccountId ? `act_${testLaunch.metaAccount.defaultAdAccountId}` : '',
+      pageId: testLaunch.pageId || '',
+      igAccountId: testLaunch.igAccountId || '',
+      objective: testLaunch.objective || 'OUTCOME_LEADS',
+      dailyBudget: Number(testLaunch.dailyBudget),
+      currency: testLaunch.metaAccount?.currency || 'IDR',
+      destinationUrl: testLaunch.destinationUrl || '',
+      placementMode: testLaunch.placementMode || 'automatic',
+      placements,
+      audience,
+      creatives: testLaunch.creatives.map((c) => ({
+        imageUrl: c.creativeUrl || '',
+        primaryText: c.hookText || c.captionText || '',
+        headline: c.headline || '',
+        callToAction: c.callToAction || 'LEARN_MORE',
       })),
+      launchMode: testLaunch.launchMode || 'new_test',
+      snapshotAt: now.toISOString(),
     }
 
     await prisma.workerTask.create({

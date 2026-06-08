@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   let body: {
-    status?: 'completed' | 'failed'
+    status?: 'completed' | 'failed' | 'processing'
     lastError?: string
   }
 
@@ -30,8 +30,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  if (!body.status || !['completed', 'failed'].includes(body.status)) {
-    return NextResponse.json({ error: 'status must be "completed" or "failed"' }, { status: 400 })
+  if (!body.status || !['completed', 'failed', 'processing'].includes(body.status)) {
+    return NextResponse.json({ error: 'status must be "completed", "failed", or "processing"' }, { status: 400 })
   }
 
   const task = await prisma.workerTask.findUnique({
@@ -53,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       lastError: body.lastError ?? task.lastError,
       attempts: newAttempts,
       completedAt: body.status === 'completed' ? now : task.completedAt,
+      startedAt: body.status === 'processing' ? now : task.startedAt,
     },
   })
 

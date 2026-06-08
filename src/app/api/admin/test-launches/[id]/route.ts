@@ -17,7 +17,13 @@ export async function GET(
       creatives: true,
       approvalRequest: true,
       metaAccount: {
-        select: { accountName: true, defaultAdAccountId: true },
+        select: {
+          accountName: true,
+          status: true,
+          appId: true,
+          metaUserName: true,
+          defaultAdAccountId: true,
+        },
       },
       workerTasks: true,
     },
@@ -25,6 +31,11 @@ export async function GET(
 
   if (!testLaunch) {
     return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
+  }
+
+  // Ownership check: non-admin can only see their own launches
+  if (testLaunch.userId !== auth.id && auth.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   return NextResponse.json({ testLaunch })
@@ -37,7 +48,6 @@ export async function PATCH(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  // Fetch existing to check ownership
   const existing = await prisma.testLaunch.findUnique({
     where: { id: params.id },
     select: { userId: true, status: true },
@@ -47,22 +57,29 @@ export async function PATCH(
     return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
   }
 
-  // Ownership check: userId must match OR auth.role must be admin
   if (existing.userId !== auth.id && auth.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Only allow updates if status is 'draft'
   if (existing.status !== 'draft') {
     return NextResponse.json({ error: 'Can only update drafts' }, { status: 400 })
   }
 
   let body: {
+    metaBusinessId?: string
+    metaAdAccountId?: string
     metaAccountId?: string
     productId?: string
     name?: string
     objective?: string
     dailyBudget?: number
+    currency?: string
+    pageId?: string
+    igAccountId?: string
+    placementMode?: string
+    placementsJson?: string
+    audienceJson?: string
+    destinationUrl?: string
     targetingJson?: string
     launchMode?: string
     sourceAdsetId?: string
@@ -75,16 +92,74 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
+  // Build targetingJson from audienceJson if audienceJson is provided
+  if (body.audienceJson && !body.targetingJson) {
+    try {
+      const audience = JSON.parse(body.audienceJson)
+      const targeting: Record<string, unknown> = {
+        age_min: audience.ageMin ?? 18,
+        age_max: audience.ageMax ?? 65,
+      }
+      if (audience.gender && audience.gender !== 'all') {
+        targeting.gender = audience.gender
+      }
+      if (audience.locations && audience.locations.length > 0) {
+        targeting.geo_locations = { locations: audience.locations }
+      }
+      if (audience.interests && audience.interests.length > 0) {
+        targeting.interests = audience.interests
+      }
+      body.targetingJson = JSON.stringify(targeting)
+    } catch {
+      return NextResponse.json({ error: 'Invalid audienceJson format' }, { status: 400 })
+    }
+  }
+
   const testLaunch = await prisma.testLaunch.update({
     where: { id: params.id },
     data: body,
     include: {
       creatives: true,
       metaAccount: {
-        select: { accountName: true, defaultAdAccountId: true },
+        select: {
+          accountName: true,
+          defaultAdAccountId: true,
+          status: true,
+        },
       },
     },
   })
 
   return NextResponse.json({ testLaunch })
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
+  const existing = await prisma.testLaunch.findUnique({
+    where: { id: params.id },
+    select: { userId: true, status: true },
+  })
+
+  if (!existing) {
+    return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
+  }
+
+  // Only owner or admin can delete
+  if (existing.userId !== auth.id && auth.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Only allow delete if status is 'draft'
+  if (existing.status !== 'draft') {
+    return NextResponse.json({ error: 'Can only delete drafts' }, { status: 400 })
+  }
+
+  await prisma.testLaunch.delete({ where: { id: params.id } })
+
+  return NextResponse.json({ success: true })
 }

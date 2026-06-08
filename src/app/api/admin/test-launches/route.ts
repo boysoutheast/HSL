@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       creatives: true,
       approvalRequest: true,
       metaAccount: {
-        select: { accountName: true, defaultAdAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true, status: true },
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -34,11 +34,20 @@ export async function POST(req: NextRequest) {
   if (auth instanceof NextResponse) return auth
 
   let body: {
+    metaBusinessId?: string
+    metaAdAccountId?: string
     metaAccountId: string
     productId?: string
     name: string
     objective: string
     dailyBudget: number
+    currency?: string
+    pageId?: string
+    igAccountId?: string
+    placementMode?: string
+    placementsJson?: string
+    audienceJson?: string
+    destinationUrl?: string
     targetingJson?: string
     launchMode: string
     sourceAdsetId?: string
@@ -48,6 +57,8 @@ export async function POST(req: NextRequest) {
       captionText?: string
       hookText?: string
       headline?: string
+      primaryText?: string
+      adHeadline?: string
       callToAction?: string
       sortOrder?: number
     }>
@@ -63,14 +74,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'metaAccountId, name, objective, dailyBudget, and launchMode are required' }, { status: 400 })
   }
 
+  if (body.dailyBudget <= 0) {
+    return NextResponse.json({ error: 'dailyBudget must be greater than 0' }, { status: 400 })
+  }
+
   const testLaunch = await prisma.testLaunch.create({
     data: {
       userId: auth.id,
       metaAccountId: body.metaAccountId,
+      metaBusinessId: body.metaBusinessId,
+      metaAdAccountId: body.metaAdAccountId,
       productId: body.productId,
       name: body.name,
       objective: body.objective,
       dailyBudget: body.dailyBudget,
+      currency: body.currency ?? 'IDR',
+      pageId: body.pageId,
+      igAccountId: body.igAccountId,
+      placementMode: body.placementMode ?? 'automatic',
+      placementsJson: body.placementsJson,
+      audienceJson: body.audienceJson,
+      destinationUrl: body.destinationUrl,
       targetingJson: body.targetingJson,
       launchMode: body.launchMode,
       sourceAdsetId: body.sourceAdsetId,
@@ -83,6 +107,8 @@ export async function POST(req: NextRequest) {
                 captionText: c.captionText,
                 hookText: c.hookText,
                 headline: c.headline,
+                primaryText: c.primaryText,
+                adHeadline: c.adHeadline,
                 callToAction: c.callToAction,
                 sortOrder: c.sortOrder ?? 0,
               })),
@@ -93,7 +119,7 @@ export async function POST(req: NextRequest) {
     include: {
       creatives: true,
       metaAccount: {
-        select: { accountName: true, defaultAdAccountId: true },
+        select: { accountName: true, defaultAdAccountId: true, status: true },
       },
     },
   })
