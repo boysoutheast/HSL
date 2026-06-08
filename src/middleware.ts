@@ -30,10 +30,12 @@ export function middleware(req: NextRequest) {
   }
 
   // Hermes API (Bearer token auth handled inside route handlers)
+  // Worker API (x-api-key auth handled inside route handlers)
   if (
     pathname.startsWith('/api/hermes/') ||
     pathname.startsWith('/api/photos/') ||
-    pathname.startsWith('/api/cron/')
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/worker/')
   ) {
     return NextResponse.next()
   }
