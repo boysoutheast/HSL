@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 async function run() {
   const now = new Date()
 
-  const result = await prisma.postingMonitor.updateMany({
+  const unlockedLocks = await prisma.postingMonitor.updateMany({
     where: {
       status: 'HOT_VIDEO',
       lockedUntil: { lt: now },
@@ -17,7 +17,17 @@ async function run() {
     },
   })
 
-  return { updated: result.count, ts: now.toISOString() }
+  const deletedExpiredSessions = await prisma.session.deleteMany({
+    where: {
+      expiresAt: { lt: now },
+    },
+  })
+
+  return {
+    updated: unlockedLocks.count,
+    deletedExpiredSessions: deletedExpiredSessions.count,
+    ts: now.toISOString(),
+  }
 }
 
 function checkAuth(req: NextRequest): boolean {
