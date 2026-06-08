@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { href: '/accounts', label: 'Accounts', icon: '📱' },
   { href: '/admin-users', label: 'Users', icon: '👥', adminOnly: true },
   { href: '/products', label: 'Products', icon: '🛍️' },
+  { href: '/meta-connections', label: 'Meta Akun', icon: '🔗' },
   { href: '/test-launches', label: 'Test Launcher', icon: '🚀' },
   { href: '/approval-requests', label: 'Approvals', icon: '✅', adminOnly: true },
   { href: '/agents', label: 'Agents', icon: '🤖', adminOnly: true },
