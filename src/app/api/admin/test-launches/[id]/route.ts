@@ -94,6 +94,7 @@ export async function PATCH(
     currency?: string
     pageId?: string
     igAccountId?: string
+    pixelId?: string
     placementMode?: string
     placementsJson?: string
     audienceJson?: string

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Sidebar from './Sidebar'
+import TopNav from './TopNav'
 
 interface CurrentUser {
   id: string
@@ -34,16 +34,12 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     router.refresh()
   }
 
-  if (noShell) {
-    return <>{children}</>
-  }
+  if (noShell) return <>{children}</>
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar onLogout={handleLogout} user={currentUser} />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-7xl mx-auto">{children}</div>
-      </main>
+    <div className="min-h-screen bg-gray-50">
+      <TopNav onLogout={handleLogout} user={currentUser} />
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
     </div>
   )
 }
