@@ -58,6 +58,8 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Users', href: '/admin-users', adminOnly: true },
       { label: 'Agents', href: '/agents', adminOnly: true },
+      { label: 'Dead Letters', href: '/admin/dead-letters', adminOnly: true },
+      { label: 'Observability', href: '/observability', adminOnly: true },
       { label: 'API Docs', href: '/docs' },
       { label: 'Settings', href: '/settings', adminOnly: true },
     ],

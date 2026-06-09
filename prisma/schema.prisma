@@ -540,7 +540,8 @@ model WorkerTask {
   capability   String?   // capability filter: automation_action | rules | monitor | fast-executor | null (any)
   payloadJson  String    @map("payload_json") // JSON string with full task params
   resultJson   String?   @map("result_json") // JSON string with result data (optional, set when task completes)
-  status       String    @default("pending") // pending | processing | completed | failed | cancelled
+  // Status: pending | processing | completed | failed | cancelled | dead_letter
+  status       String    @default("pending")
   priority     Int       @default(5) // 1=highest 10=lowest
   attempts     Int       @default(0)
   maxAttempts  Int       @default(3) @map("max_attempts")
@@ -557,6 +558,28 @@ model WorkerTask {
   @@index([testLaunchId])
   @@index([capability])
   @@map("worker_tasks")
+}
+
+model DeadLetterEntry {
+  id              String    @id @default(cuid())
+  workerTaskId    String    @map("worker_task_id")
+  actionId        String?   @map("action_id")
+  taskType        String    @map("task_type")
+  payloadJson     String    @map("payload_json")
+  errorCode       String    @map("error_code")
+  errorMessage    String    @map("error_message")
+  attemptCount    Int       @default(0) @map("attempt_count")
+  // Status: PENDING | REVIEWED | RETRIED | ARCHIVED
+  status          String    @default("PENDING")
+  assignedTo      String?   @map("assigned_to")  // admin user who claimed this
+  resolution      String?   // manual action taken
+  resolvedAt      DateTime? @map("resolved_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([taskType])
+  @@map("dead_letter_entries")
 }
 
 // ── PLATFORM MODELS ───────────────────────────────────────────────────────────
@@ -946,4 +969,20 @@ model WorkerHeartbeatEvent {
   worker WorkerRegistry @relation(fields: [workerId], references: [id], onDelete: Cascade)
 
   @@map("worker_heartbeat_events")
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  enabled     Boolean  @default(false)
+  scope       String   @default("global")
+  targetId    String?
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([enabled, scope])
+  @@index([scope, targetId])
 }
