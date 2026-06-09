@@ -15,7 +15,12 @@ export async function GET(
     where: { id: params.id },
     include: {
       creatives: true,
-      approvalRequest: true,
+      approvalRequest: {
+        include: {
+          requestedBy: { select: { id: true, name: true, email: true } },
+          reviewedBy: { select: { id: true, name: true, email: true } },
+        },
+      },
       metaAccount: {
         select: {
           accountName: true,
