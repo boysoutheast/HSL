@@ -99,15 +99,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // Normalize ad account ID
-    const adAccountId = testLaunch.metaAdAccountId
-      ? (() => {
-          const id = testLaunch.metaAdAccountId!
-          return id.startsWith('act_') ? id : id
-        })()
-      : testLaunch.metaAccount?.defaultAdAccountId
-        ? testLaunch.metaAccount.defaultAdAccountId
-        : ''
+    // Resolve actual Meta ad account ID (not HSL DB id). TestLaunch.metaAdAccountId stores MetaAdAccount.id.
+    const selectedAdAccount = testLaunch.metaAdAccountId
+      ? await prisma.metaAdAccount.findUnique({
+          where: { id: testLaunch.metaAdAccountId },
+          select: { adAccountId: true, adAccountName: true },
+        })
+      : null
+
+    const adAccountId = selectedAdAccount?.adAccountId
+      || testLaunch.metaAccount?.defaultAdAccountId
+      || ''
 
     // Build complete immutable payload snapshot for full launch
     const payload = {
