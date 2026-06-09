@@ -275,7 +275,7 @@ export default function NewTestLaunchPage() {
       locations: [{ type: 'country', key: 'ID' }],
     })
 
-    const placementsJson = form.placementMode === 'manual' ? form.placements : []
+    const placementsJson = form.placementMode === 'manual' ? JSON.stringify(form.placements) : undefined
 
     // Determine metaAdAccountId internal id vs adAccountId string
     const selectedAdAccount = adAccounts.find((a) => a.id === form.metaAdAccountId)
@@ -299,7 +299,7 @@ export default function NewTestLaunchPage() {
           pageId: selectedPage?.pageId || undefined,
           igAccountId: selectedPage?.igBusinessAccountId || undefined,
           placementMode: form.placementMode,
-          placementsJson: placementsJson.length > 0 ? placementsJson : undefined,
+          placementsJson: placementsJson !== undefined ? placementsJson : undefined,
           audienceJson,
           creatives: form.creatives
             .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
@@ -314,7 +314,9 @@ export default function NewTestLaunchPage() {
         }),
       })
 
-      const data = await res.json()
+      const text = await res.text()
+      let data: any = null
+      try { if (text) data = JSON.parse(text) } catch { /* ignore */ }
       if (!res.ok) throw new Error(data?.error ?? `Error ${res.status}`)
 
       const newId = data.testLaunch?.id ?? data.id
