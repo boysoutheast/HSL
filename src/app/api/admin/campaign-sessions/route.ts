@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { AutomationAction, WorkerTask } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -76,6 +77,37 @@ export async function POST(req: NextRequest) {
       phase: body.phase ?? 'TESTING',
       automationEnabled: body.automationEnabled ?? true,
       status: 'DRAFT',
+    },
+  })
+
+  // Create AutomationAction for campaign creation (P1_INTERACTIVE = priority 1)
+  const createCampaignAction = await prisma.automationAction.create({
+    data: {
+      userId: auth.id,
+      campaignSessionId: session.id,
+      source: 'USER',
+      actionType: 'CREATE_CAMPAIGN',
+      payloadJson: JSON.stringify({ campaignSessionId: session.id, name: session.name }),
+      status: 'PENDING',
+      idempotencyKey: `${auth.id}-CREATE_CAMPAIGN-${session.id}-${Date.now()}`,
+      priority: 1, // P1_INTERACTIVE
+      requestedAt: new Date(),
+    },
+  })
+
+  // Create paired WorkerTask for the automation action
+  await prisma.workerTask.create({
+    data: {
+      type: 'automation_action',
+      payloadJson: JSON.stringify({
+        actionId: createCampaignAction.id,
+        actionType: 'CREATE_CAMPAIGN',
+        campaignSessionId: session.id,
+        payload: { campaignSessionId: session.id, name: session.name },
+      }),
+      status: 'PENDING',
+      priority: 1,
+      testLaunchId: session.testLaunchId,
     },
   })
 

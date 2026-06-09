@@ -168,7 +168,21 @@ export default function CampaignDetailPage() {
       const res = await fetch(`/api/admin/campaign-sessions/${id}`, { credentials: 'include' })
       if (!res.ok) throw new Error()
       const data = await res.json()
-      setSession(data.session)
+      const loaded = data.session as Session
+      setSession(loaded)
+      // If latestSnapshot is not loaded, fetch from metrics endpoint
+      if (!loaded.latestSnapshot) {
+        try {
+          const metricsRes = await fetch(`/api/admin/campaign-sessions/${id}/metrics`, { credentials: 'include' })
+          if (metricsRes.ok) {
+            const metricsData = await metricsRes.json()
+            const metrics = metricsData.metrics as MetricSnapshot[] | undefined
+            if (metrics && metrics.length > 0) {
+              setSession((prev) => prev ? { ...prev, latestSnapshot: metrics[0] } : prev)
+            }
+          }
+        } catch { /* silent */ }
+      }
     } catch {
       /* silent */
     } finally {

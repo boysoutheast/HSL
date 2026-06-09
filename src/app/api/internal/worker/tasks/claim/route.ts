@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       FROM worker_tasks
       WHERE status = 'pending'
         AND (attempts < max_attempts OR max_attempts IS NULL)
+        AND (capability = ANY(${capabilities}) OR capability IS NULL)
       ORDER BY priority ASC, created_at ASC
       LIMIT ${maxTasks}
       FOR UPDATE SKIP LOCKED

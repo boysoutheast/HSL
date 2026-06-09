@@ -536,7 +536,8 @@ model ApprovalRequest {
 
 model WorkerTask {
   id           String    @id @default(cuid())
-  type         String // create_campaign | create_full_launch | pause_ad | scale_adset | kill_ad | clone_adset
+  type         String // create_campaign | create_full_launch | pause_ad | scale_adset | kill_ad | clone_adset | automation_action
+  capability   String?   // capability filter: automation_action | rules | monitor | fast-executor | null (any)
   payloadJson  String    @map("payload_json") // JSON string with full task params
   resultJson   String?   @map("result_json") // JSON string with result data (optional, set when task completes)
   status       String    @default("pending") // pending | processing | completed | failed | cancelled
@@ -554,6 +555,7 @@ model WorkerTask {
 
   @@index([status, priority])
   @@index([testLaunchId])
+  @@index([capability])
   @@map("worker_tasks")
 }
 
@@ -756,6 +758,7 @@ model MetricSnapshot {
   campaignSession CampaignSession @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
   metaEntity      MetaEntity      @relation(fields: [metaEntityId], references: [id], onDelete: Cascade)
 
+  @@unique([campaignSessionId, metaEntityId, windowEnd])
   @@index([metaEntityId, windowEnd])
   @@index([campaignSessionId, windowEnd])
   @@map("metric_snapshots")
