@@ -358,6 +358,7 @@ model MetaAccount {
   businesses   MetaBusiness[]
   adAccounts   MetaAdAccount[]
   pages        MetaPage[]
+  comments     MetaComment[]
   testLaunches TestLaunch[]
 
   @@index([userId])
@@ -424,11 +425,42 @@ model MetaPage {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   metaAccount MetaAccount  @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  comments    MetaComment[]
 
   @@unique([metaAccountId, pageId])
   @@index([metaAccountId])
   @@index([pageId])
   @@map("meta_pages")
+}
+
+model MetaComment {
+  id              String    @id @default(cuid())
+  metaAccountId   String    @map("meta_account_id")
+  metaPageId      String?   @map("meta_page_id")
+  metaCommentId   String    @map("meta_comment_id")
+  metaPostId      String?   @map("meta_post_id")
+  platform        String    @default("facebook")
+  authorName      String?   @map("author_name")
+  authorMetaId    String?   @map("author_meta_id")
+  message         String
+  sentiment       String    @default("neutral")
+  moderationState String    @default("pending") @map("moderation_state")
+  repliedAt       DateTime? @map("replied_at")
+  deletedAt       DateTime? @map("deleted_at")
+  commentedAt     DateTime? @map("commented_at")
+  fetchedAt       DateTime? @map("fetched_at")
+  rawJson         String?   @map("raw_json")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  metaPage    MetaPage?   @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
+
+  @@unique([metaAccountId, metaCommentId])
+  @@index([metaAccountId, moderationState])
+  @@index([metaPageId])
+  @@index([commentedAt])
+  @@map("meta_comments")
 }
 
 model TestLaunch {
