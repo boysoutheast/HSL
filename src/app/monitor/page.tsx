@@ -105,14 +105,14 @@ export default function MonitorPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ready Upload Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Ready Upload Dashboard</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             Auto-refresh every 60s · Last updated: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
         <button
           onClick={fetchData}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg hover:bg-stone-50 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -149,13 +149,13 @@ export default function MonitorPage() {
               className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
                 isActive
                   ? FILTER_ACTIVE_COLORS[value] ?? 'bg-violet-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                  : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
               }`}
             >
               {label}
               <span
                 className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
+                  isActive ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
                 }`}
               >
                 {count}
@@ -172,16 +172,16 @@ export default function MonitorPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
           Loading monitor data...
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-stone-50">
               <tr>
                 {['Account IG', 'Status', 'Last Post', 'Views', 'Growth/hr', 'Reason', 'Assigned Hermes', 'Last Check', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -190,13 +190,13 @@ export default function MonitorPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-stone-400">
                     No entries for this filter.
                   </td>
                 </tr>
               ) : (
                 filtered.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={entry.id} className="hover:bg-stone-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-violet-700">
                       <a
                         href={`https://instagram.com/${entry.instagramAccount.username}`}
@@ -210,7 +210,7 @@ export default function MonitorPage() {
                     <td className="px-4 py-3">
                       <StatusBadge status={entry.status} />
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                       {formatDate(entry.lastPostAt)}
                     </td>
                     <td className="px-4 py-3 font-medium">
@@ -225,19 +225,19 @@ export default function MonitorPage() {
                             ? 'text-cyan-600'
                             : entry.growthPerHour > 3
                             ? 'text-green-600'
-                            : 'text-gray-500'
+                            : 'text-stone-500'
                         }`}
                       >
                         {entry.growthPerHour.toFixed(1)}%/hr
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[200px] truncate">
+                    <td className="px-4 py-3 text-stone-500 max-w-[200px] truncate">
                       {entry.reason ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-stone-600">
                       {entry.hermesAgent?.name ?? <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                       {formatDate(entry.lastMetricsCheckAt)}
                     </td>
                     <td className="px-4 py-3">

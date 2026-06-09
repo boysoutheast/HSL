@@ -27,7 +27,7 @@ const EMPTY_EDIT = {
   name: '', description: '', price: '', shopeeUrl: '', status: 'active',
 }
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
+const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -176,8 +176,8 @@ export default function ProductsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Products</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${products.length} produk`}
           </p>
         </div>
@@ -200,26 +200,26 @@ export default function ProductsPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>
       ) : (
         <Table
           headers={['Name', 'Price', 'Status', 'Photos', 'CEPs', 'Shopee', 'Actions']}
           empty="No products found."
         >
           {products.map((product) => (
-            <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={product.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
-                <p className="font-medium text-gray-900">{product.name}</p>
+                <p className="font-medium text-stone-900">{product.name}</p>
                 {product.description && (
-                  <p className="text-xs text-gray-400 mt-0.5 max-w-[200px] truncate">{product.description}</p>
+                  <p className="text-xs text-stone-400 mt-0.5 max-w-[200px] truncate">{product.description}</p>
                 )}
               </td>
-              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
                 {product.price ? `Rp ${Number(product.price).toLocaleString('id-ID')}` : '—'}
               </td>
               <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
-              <td className="px-4 py-3 text-gray-600">{product._count?.photoReferences ?? 0}</td>
-              <td className="px-4 py-3 text-gray-600">{product._count?.ceps ?? 0}</td>
+              <td className="px-4 py-3 text-stone-600">{product._count?.photoReferences ?? 0}</td>
+              <td className="px-4 py-3 text-stone-600">{product._count?.ceps ?? 0}</td>
               <td className="px-4 py-3">
                 {product.shopeeUrl ? (
                   <a href={product.shopeeUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm">Shopee ↗</a>
@@ -247,7 +247,7 @@ export default function ProductsPage() {
       <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add Product">
         <form onSubmit={handleAdd} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={addForm.name}
@@ -258,7 +258,7 @@ export default function ProductsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
             <textarea
               value={addForm.description}
               onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
@@ -270,11 +270,11 @@ export default function ProductsPage() {
 
           {/* Photo upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Foto Produk</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Foto Produk</label>
             <div
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors text-center ${
-                photoPreview ? 'border-violet-300 bg-violet-50' : 'border-gray-300 hover:border-violet-400 hover:bg-gray-50'
+                photoPreview ? 'border-violet-300 bg-violet-50' : 'border-stone-300 hover:border-violet-400 hover:bg-stone-50'
               }`}
             >
               {photoPreview ? (
@@ -282,15 +282,15 @@ export default function ProductsPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photoPreview} alt="preview" className="h-24 w-auto rounded-lg object-cover mx-auto" />
                   <p className="text-xs text-violet-600 font-medium">{photoFile?.name}</p>
-                  <p className="text-xs text-gray-400">Klik untuk ganti</p>
+                  <p className="text-xs text-stone-400">Klik untuk ganti</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-1 py-2">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-sm text-gray-500">Klik untuk upload foto</p>
-                  <p className="text-xs text-gray-400">JPG, PNG, WebP — maks 10MB</p>
+                  <p className="text-sm text-stone-500">Klik untuk upload foto</p>
+                  <p className="text-xs text-stone-400">JPG, PNG, WebP — maks 10MB</p>
                 </div>
               )}
             </div>
@@ -299,7 +299,7 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Shopee URL</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Shopee URL</label>
               <input
                 type="url"
                 value={addForm.shopeeUrl}
@@ -309,7 +309,7 @@ export default function ProductsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rp)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Price (Rp)</label>
               <input
                 type="number"
                 value={addForm.price}
@@ -336,20 +336,20 @@ export default function ProductsPage() {
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title={`Edit: ${editProduct?.name}`}>
         <form onSubmit={handleEdit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Name <span className="text-red-500">*</span></label>
             <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
             <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} className={`${inputCls} resize-none`} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rp)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Price (Rp)</label>
               <input type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })} className={inputCls} placeholder="150000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Status</label>
               <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className={inputCls}>
                 <option value="active">active</option>
                 <option value="inactive">inactive</option>
@@ -357,7 +357,7 @@ export default function ProductsPage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Shopee URL</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Shopee URL</label>
             <input type="url" value={editForm.shopeeUrl} onChange={(e) => setEditForm({ ...editForm, shopeeUrl: e.target.value })} className={inputCls} placeholder="https://s.shopee.co.id/..." />
           </div>
           {saveError && (

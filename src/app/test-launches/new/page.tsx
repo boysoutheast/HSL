@@ -348,7 +348,7 @@ export default function NewTestLaunchPage() {
   const hasValidCreative = form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())
 
   if (loadingDeps) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Memuat...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
   }
 
   return (
@@ -356,10 +356,10 @@ export default function NewTestLaunchPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
-          <Link href="/test-launches" className="text-sm text-gray-400 hover:text-gray-600">← Test Launches</Link>
+          <Link href="/test-launches" className="text-sm text-stone-400 hover:text-stone-600">← Test Launches</Link>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">New Test Launch</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Buat Meta Ads test launch baru dengan langkah demi langkah</p>
+        <h1 className="text-2xl font-bold text-stone-900">New Test Launch</h1>
+        <p className="text-sm text-stone-500 mt-0.5">Buat Meta Ads test launch baru dengan langkah demi langkah</p>
       </div>
 
       {/* Step Indicator */}
@@ -408,7 +408,7 @@ export default function NewTestLaunchPage() {
             />
 
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Informasi Dasar</h2>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Informasi Dasar</h2>
 
               {/* Name */}
               <div>
@@ -441,7 +441,7 @@ export default function NewTestLaunchPage() {
                   ))}
                 </select>
                 {metaConnections.length === 0 && (
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-stone-400 mt-1">
                     Belum ada Meta Connection.{' '}
                     <Link href="/meta-connections/new" className="text-violet-600 hover:underline">Buat baru →</Link>
                   </p>
@@ -469,10 +469,10 @@ export default function NewTestLaunchPage() {
                       ))}
                     </select>
                   ) : (
-                    <p className="text-sm text-gray-400 py-2">Memuat ad accounts...</p>
+                    <p className="text-sm text-stone-400 py-2">Memuat ad accounts...</p>
                   )
                 ) : (
-                  <select disabled className={`${inputCls} bg-gray-50 text-gray-400`}>
+                  <select disabled className={`${inputCls} bg-stone-50 text-stone-400`}>
                     <option value="">Pilih Meta Connection terlebih dahulu</option>
                   </select>
                 )}
@@ -531,7 +531,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.launchMode === opt.value
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                       }`}
                     >
                       <input
@@ -612,15 +612,15 @@ export default function NewTestLaunchPage() {
             />
 
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
                 Pilih Facebook Page
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-stone-500">
                 Pilih 1 page. Jika page memiliki Instagram Business Account, Anda bisa menjalankan iklan Instagram.
               </p>
 
               {pages.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">
+                <div className="text-center py-8 text-stone-400 text-sm">
                   Memuat pages...
                 </div>
               ) : (
@@ -633,7 +633,7 @@ export default function NewTestLaunchPage() {
                       className={`text-left p-4 rounded-xl border-2 transition-all ${
                         selectedPage?.id === page.id
                           ? 'border-violet-500 bg-violet-50'
-                          : 'border-stone-200 hover:border-violet-300 hover:bg-gray-50'
+                          : 'border-stone-200 hover:border-violet-300 hover:bg-stone-50'
                       }`}
                     >
                       {/* Page icon + name */}
@@ -644,10 +644,10 @@ export default function NewTestLaunchPage() {
                           </svg>
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 text-sm truncate">
+                          <p className="font-medium text-stone-900 text-sm truncate">
                             {page.pageName ?? page.pageId}
                           </p>
-                          <p className="text-xs text-gray-400 font-mono truncate">{page.pageId}</p>
+                          <p className="text-xs text-stone-400 font-mono truncate">{page.pageId}</p>
                         </div>
                       </div>
 
@@ -663,11 +663,11 @@ export default function NewTestLaunchPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 mt-1">
-                          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                        <div className="flex items-center gap-2 bg-stone-100 rounded-lg px-3 py-2 mt-1">
+                          <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.445.649-1.445 1.445 0 .796.649 1.445 1.445 1.445s1.445-.649 1.445-1.445c0-.796-.649-1.445-1.445-1.445z"/>
                           </svg>
-                          <p className="text-xs text-gray-500">Tidak ada Instagram</p>
+                          <p className="text-xs text-stone-500">Tidak ada Instagram</p>
                         </div>
                       )}
                     </button>
@@ -686,7 +686,7 @@ export default function NewTestLaunchPage() {
               {selectedPage && (
                 <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
                   <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Page Terpilih</p>
-                  <p className="font-medium text-gray-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
+                  <p className="font-medium text-stone-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
                   {selectedPage.igUsername && (
                     <p className="text-sm text-pink-600 mt-1">
                       Instagram: @{selectedPage.igUsername}
@@ -727,7 +727,7 @@ export default function NewTestLaunchPage() {
             />
 
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Placement</h2>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Placement</h2>
 
               {/* Mode Toggle */}
               <div>
@@ -739,7 +739,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.placementMode === mode
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                       }`}
                     >
                       <input
@@ -769,7 +769,7 @@ export default function NewTestLaunchPage() {
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors text-sm ${
                             checked
                               ? 'border-violet-500 bg-violet-50 text-violet-700'
-                              : 'border-stone-200 text-gray-600 hover:bg-gray-50'
+                              : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                           }`}
                         >
                           <input
@@ -779,7 +779,7 @@ export default function NewTestLaunchPage() {
                             className="sr-only"
                           />
                           <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            checked ? 'bg-violet-600 border-violet-600' : 'border-gray-300'
+                            checked ? 'bg-violet-600 border-violet-600' : 'border-stone-300'
                           }`}>
                             {checked && (
                               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -799,7 +799,7 @@ export default function NewTestLaunchPage() {
               )}
 
               {form.placementMode === 'automatic' && (
-                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+                <div className="bg-stone-50 rounded-lg p-4 text-sm text-stone-600">
                   <p>Meta akan secara otomatis memilih placement terbaik untuk mencapai objective <strong>{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</strong>.</p>
                 </div>
               )}
@@ -838,14 +838,14 @@ export default function NewTestLaunchPage() {
             />
 
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Audience</h2>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Audience</h2>
 
               {/* Age Range */}
               <div>
                 <label className={labelCls}>Age Range</label>
                 <div className="flex items-center gap-3 mt-1">
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-500 mb-1">Min</label>
+                    <label className="block text-xs text-stone-500 mb-1">Min</label>
                     <input
                       type="number"
                       value={form.ageMin}
@@ -855,9 +855,9 @@ export default function NewTestLaunchPage() {
                       className={inputCls}
                     />
                   </div>
-                  <span className="text-gray-400 mt-5">—</span>
+                  <span className="text-stone-400 mt-5">—</span>
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-500 mb-1">Max</label>
+                    <label className="block text-xs text-stone-500 mb-1">Max</label>
                     <input
                       type="number"
                       value={form.ageMax}
@@ -883,7 +883,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.gender === opt.value
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                       }`}
                     >
                       <input
@@ -903,21 +903,21 @@ export default function NewTestLaunchPage() {
               {/* Location */}
               <div>
                 <label className={labelCls}>Location</label>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg border border-stone-200 text-sm">
-                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 rounded-lg border border-stone-200 text-sm">
+                  <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                   </svg>
-                  <span className="text-gray-700">Indonesia</span>
-                  <span className="text-xs text-gray-400 ml-auto">Country · ID</span>
+                  <span className="text-stone-700">Indonesia</span>
+                  <span className="text-xs text-stone-400 ml-auto">Country · ID</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Location tingkat negara saja untuk saat ini.</p>
+                <p className="text-xs text-stone-400 mt-1">Location tingkat negara saja untuk saat ini.</p>
               </div>
 
               {/* Summary */}
               <div className="bg-violet-50 rounded-lg p-4 text-sm">
                 <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Audience Summary</p>
-                <p className="text-gray-800">
+                <p className="text-stone-800">
                   Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
                   Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
                   Lokasi <strong>Indonesia</strong>
@@ -955,8 +955,8 @@ export default function NewTestLaunchPage() {
             />
 
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pilih Meta Pixel</h2>
-              <p className="text-xs text-gray-500 mb-3">
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Pilih Meta Pixel</h2>
+              <p className="text-xs text-stone-500 mb-3">
                 Pixel melacak conversions di website Anda. Pilih salah satu dari pixel yang tersedia di ad account.
               </p>
               <div className="space-y-2">
@@ -971,7 +971,7 @@ export default function NewTestLaunchPage() {
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                       selectedPixel?.id === px.id
                         ? 'border-violet-500 bg-violet-50'
-                        : 'border-stone-200 hover:border-violet-300 hover:bg-gray-50'
+                        : 'border-stone-200 hover:border-violet-300 hover:bg-stone-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -981,8 +981,8 @@ export default function NewTestLaunchPage() {
                         </svg>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{px.name}</p>
-                        <p className="text-xs text-gray-400 font-mono">{px.id}</p>
+                        <p className="font-medium text-stone-900 text-sm">{px.name}</p>
+                        <p className="text-xs text-stone-400 font-mono">{px.id}</p>
                       </div>
                       {selectedPixel?.id === px.id && (
                         <span className="ml-auto text-violet-500 text-sm font-medium">✓ Dipilih</span>
@@ -1031,7 +1031,7 @@ export default function NewTestLaunchPage() {
 
             <div className={sectionCls}>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Creatives</h2>
+                <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Creatives</h2>
                 <button
                   type="button"
                   onClick={addCreative}
@@ -1042,14 +1042,14 @@ export default function NewTestLaunchPage() {
               </div>
 
               {form.creatives.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">Belum ada creative. Klik Tambah Creative.</p>
+                <p className="text-sm text-stone-400 text-center py-4">Belum ada creative. Klik Tambah Creative.</p>
               )}
 
               <div className="space-y-4">
                 {form.creatives.map((creative, idx) => (
-                  <div key={creative.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                  <div key={creative.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-stone-50">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Creative #{idx + 1}</p>
+                      <p className="text-xs font-semibold text-stone-500 uppercase">Creative #{idx + 1}</p>
                       {form.creatives.length > 1 && (
                         <button
                           type="button"
@@ -1063,7 +1063,7 @@ export default function NewTestLaunchPage() {
 
                     {/* Image URL */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Image URL</label>
                       <input
                         type="url"
                         value={creative.imageUrl}
@@ -1075,7 +1075,7 @@ export default function NewTestLaunchPage() {
 
                     {/* Primary Text */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Primary Text (Ad Body)</label>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Primary Text (Ad Body)</label>
                       <textarea
                         value={creative.primaryText}
                         onChange={(e) => updateCreative(creative.id, 'primaryText', e.target.value)}
@@ -1088,7 +1088,7 @@ export default function NewTestLaunchPage() {
                     {/* Headline & CTA */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Headline</label>
+                        <label className="block text-xs font-medium text-stone-600 mb-1">Headline</label>
                         <input
                           type="text"
                           value={creative.headline}
@@ -1098,7 +1098,7 @@ export default function NewTestLaunchPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Call to Action</label>
+                        <label className="block text-xs font-medium text-stone-600 mb-1">Call to Action</label>
                         <select
                           value={creative.callToAction}
                           onChange={(e) => updateCreative(creative.id, 'callToAction', e.target.value)}
@@ -1113,7 +1113,7 @@ export default function NewTestLaunchPage() {
 
                     {/* Caption */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Caption</label>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Caption</label>
                       <input
                         type="text"
                         value={creative.caption}
@@ -1140,23 +1140,23 @@ export default function NewTestLaunchPage() {
             )}
 
             {/* Summary before submit */}
-            <div className="bg-gray-50 rounded-xl border border-stone-200 p-5 space-y-2 text-sm">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ringkasan Launch</p>
+            <div className="bg-stone-50 rounded-xl border border-stone-200 p-5 space-y-2 text-sm">
+              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Ringkasan Launch</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <p className="text-gray-500">Nama</p>
-                <p className="font-medium text-gray-900">{form.name || '—'}</p>
-                <p className="text-gray-500">Objective</p>
-                <p className="text-gray-900">{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
-                <p className="text-gray-500">Daily Budget</p>
-                <p className="text-gray-900">Rp{Number(form.dailyBudget).toLocaleString('id-ID') || '—'}</p>
-                <p className="text-gray-500">Launch Mode</p>
-                <p className="text-gray-900">{LAUNCH_MODE_OPTIONS.find((l) => l.value === form.launchMode)?.label}</p>
-                <p className="text-gray-500">Placement</p>
-                <p className="text-gray-900">{form.placementMode === 'automatic' ? 'Automatic' : `${form.placements.length} placements`}</p>
-                <p className="text-gray-500">Audience</p>
-                <p className="text-gray-900">{form.ageMin}–{form.ageMax} · {GENDER_OPTIONS.find((g) => g.value === form.gender)?.label} · ID</p>
-                <p className="text-gray-500">Creatives</p>
-                <p className="text-gray-900">{form.creatives.length}</p>
+                <p className="text-stone-500">Nama</p>
+                <p className="font-medium text-stone-900">{form.name || '—'}</p>
+                <p className="text-stone-500">Objective</p>
+                <p className="text-stone-900">{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
+                <p className="text-stone-500">Daily Budget</p>
+                <p className="text-stone-900">Rp{Number(form.dailyBudget).toLocaleString('id-ID') || '—'}</p>
+                <p className="text-stone-500">Launch Mode</p>
+                <p className="text-stone-900">{LAUNCH_MODE_OPTIONS.find((l) => l.value === form.launchMode)?.label}</p>
+                <p className="text-stone-500">Placement</p>
+                <p className="text-stone-900">{form.placementMode === 'automatic' ? 'Automatic' : `${form.placements.length} placements`}</p>
+                <p className="text-stone-500">Audience</p>
+                <p className="text-stone-900">{form.ageMin}–{form.ageMax} · {GENDER_OPTIONS.find((g) => g.value === form.gender)?.label} · ID</p>
+                <p className="text-stone-500">Creatives</p>
+                <p className="text-stone-900">{form.creatives.length}</p>
               </div>
             </div>
 

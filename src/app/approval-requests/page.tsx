@@ -175,8 +175,8 @@ function ApprovalRequestsInner() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Approval Requests</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-stone-900">Approval Requests</h1>
+        <p className="text-sm text-stone-500 mt-0.5">
           {loading ? '...' : `${pagination.total} request${pagination.total !== 1 ? 's' : ''} total`}
         </p>
       </div>
@@ -190,7 +190,7 @@ function ApprovalRequestsInner() {
       />
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
+      <div className="flex items-center gap-1 mb-5 bg-stone-100 rounded-lg p-1 w-fit">
         {[
           { key: 'all', label: 'Semua', count: pagination.total },
           { key: 'pending', label: 'Pending', count: pendingCount },
@@ -202,13 +202,13 @@ function ApprovalRequestsInner() {
             onClick={() => handleTabChange(key as StatusTab)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
               activeTab === key
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
             }`}
           >
             {label}
             {count > 0 && (
-              <span className={`ml-1.5 text-xs ${activeTab === key ? 'text-violet-600' : 'text-gray-400'}`}>
+              <span className={`ml-1.5 text-xs ${activeTab === key ? 'text-violet-600' : 'text-stone-400'}`}>
                 {count}
               </span>
             )}
@@ -218,18 +218,18 @@ function ApprovalRequestsInner() {
 
       {/* Table */}
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Memuat...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Memuat...</div>
       ) : (
         <Table
           headers={['Requester', 'Test Launch', 'Action', 'Tgl Request', 'Status', 'Actions']}
           empty={`Tidak ada request dengan status "${activeTab}".`}
         >
           {filteredRequests.map((req) => (
-            <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={req.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
                 <div className="text-sm">
-                  <p className="font-medium text-gray-900">{req.requestedBy.name ?? req.requestedBy.email}</p>
-                  <p className="text-gray-400 text-xs">{req.requestedBy.email}</p>
+                  <p className="font-medium text-stone-900">{req.requestedBy.name ?? req.requestedBy.email}</p>
+                  <p className="text-stone-400 text-xs">{req.requestedBy.email}</p>
                 </div>
               </td>
               <td className="px-4 py-3">
@@ -237,10 +237,10 @@ function ApprovalRequestsInner() {
                   {req.testLaunch.name}
                 </Link>
               </td>
-              <td className="px-4 py-3 text-gray-700 text-sm">
+              <td className="px-4 py-3 text-stone-700 text-sm">
                 {ACTION_TYPE_LABELS[req.actionType] ?? req.actionType}
               </td>
-              <td className="px-4 py-3 text-gray-500 text-sm whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-500 text-sm whitespace-nowrap">
                 {formatDate(req.createdAt)}
               </td>
               <td className="px-4 py-3">
@@ -263,7 +263,7 @@ function ApprovalRequestsInner() {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-stone-400">
                     {req.reviewedBy ? (
                       <span>
                         {req.reviewedBy.name ?? req.reviewedBy.email}{' '}
@@ -284,7 +284,7 @@ function ApprovalRequestsInner() {
       {/* Pagination */}
       {!loading && pagination.pages > 0 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-stone-500">
             Halaman {pagination.page} dari {pagination.pages}
           </p>
           <div className="flex items-center gap-2">
@@ -314,35 +314,35 @@ function ApprovalRequestsInner() {
       >
         {reviewModal.request && (
           <form onSubmit={handleSubmitReview} className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+            <div className="bg-stone-50 rounded-lg p-3 text-sm space-y-1">
               <p>
-                <span className="text-gray-500">Test Launch:</span>{' '}
+                <span className="text-stone-500">Test Launch:</span>{' '}
                 <Link href={`/test-launches/${reviewModal.request.testLaunch.id}`} className="font-medium text-violet-700 hover:underline">
                   {reviewModal.request.testLaunch.name}
                 </Link>
               </p>
               <p>
-                <span className="text-gray-500">Action:</span>{' '}
+                <span className="text-stone-500">Action:</span>{' '}
                 <span className="font-medium">
                   {ACTION_TYPE_LABELS[reviewModal.request.actionType] ?? reviewModal.request.actionType}
                 </span>
               </p>
               <p>
-                <span className="text-gray-500">Requested by:</span>{' '}
+                <span className="text-stone-500">Requested by:</span>{' '}
                 <span>{reviewModal.request.requestedBy.name ?? reviewModal.request.requestedBy.email}</span>
               </p>
               {reviewModal.request.requestNote && (
                 <p>
-                  <span className="text-gray-500">Catatan:</span>{' '}
-                  <span className="text-gray-700">{reviewModal.request.requestNote}</span>
+                  <span className="text-stone-500">Catatan:</span>{' '}
+                  <span className="text-stone-700">{reviewModal.request.requestNote}</span>
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 Catatan Review{' '}
-                <span className="text-gray-400 font-normal">(opsional)</span>
+                <span className="text-stone-400 font-normal">(opsional)</span>
               </label>
               <textarea
                 value={reviewNote}
@@ -353,7 +353,7 @@ function ApprovalRequestsInner() {
                     : 'Alasan penolakan...'
                 }
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
               />
             </div>
 
@@ -388,7 +388,7 @@ function ApprovalRequestsInner() {
 
 export default function ApprovalRequestsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-48 text-gray-400 text-sm">Memuat...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-48 text-stone-400 text-sm">Memuat...</div>}>
       <ApprovalRequestsInner />
     </Suspense>
   )

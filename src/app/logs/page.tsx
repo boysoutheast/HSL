@@ -7,7 +7,7 @@ import PageInfo from '@/components/ui/PageInfo'
 
 export default function LogsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>}>
       <LogsPageInner />
     </Suspense>
   )
@@ -120,8 +120,8 @@ function LogsPageInner() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Logs</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Logs</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {activeTab === 'logs'
               ? (loadingLogs ? '...' : `${logs.length} log entries`)
               : (loadingPerf ? '...' : `${perfRows.length} posts tracked`)}
@@ -133,7 +133,7 @@ function LogsPageInner() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-stone-200 mb-6">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
@@ -141,7 +141,7 @@ function LogsPageInner() {
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === key
                 ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
             {label}
@@ -163,13 +163,13 @@ function LogsPageInner() {
           />
 
           {/* Filter bar */}
-          <div className="flex flex-wrap gap-3 mb-5 bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex flex-wrap gap-3 mb-5 bg-white border border-stone-200 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-600 uppercase tracking-wide whitespace-nowrap">Status</label>
+              <label className="text-xs font-medium text-stone-600 uppercase tracking-wide whitespace-nowrap">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="text-sm border border-stone-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
                 <option value="">All</option>
                 <option value="generated">Generated</option>
@@ -182,29 +182,29 @@ function LogsPageInner() {
           </div>
 
           {loadingLogs ? (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading logs...</div>
+            <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading logs...</div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50">
                   <tr>
                     {['Date', 'Hermes', 'Account', 'Character', 'Topic', 'CEP', 'Status', 'Post URL', 'Prompt'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {logs.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No content logs found.</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-stone-400">No content logs found.</td></tr>
                   ) : (
                     logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(log.postedAt ?? log.createdAt)}</td>
-                        <td className="px-4 py-3 text-gray-700 font-medium">{log.hermesAgent.name}</td>
+                      <tr key={log.id} className="hover:bg-stone-50 transition-colors">
+                        <td className="px-4 py-3 text-stone-500 whitespace-nowrap text-xs">{formatDate(log.postedAt ?? log.createdAt)}</td>
+                        <td className="px-4 py-3 text-stone-700 font-medium">{log.hermesAgent.name}</td>
                         <td className="px-4 py-3 text-violet-700">@{log.instagramAccount.username}</td>
-                        <td className="px-4 py-3 text-gray-600">{log.character?.name ?? <span className="text-gray-300">—</span>}</td>
-                        <td className="px-4 py-3 text-gray-600 max-w-[120px]"><p className="truncate">{log.topic?.name ?? '—'}</p></td>
-                        <td className="px-4 py-3 text-gray-500 max-w-[160px]">
+                        <td className="px-4 py-3 text-stone-600">{log.character?.name ?? <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-stone-600 max-w-[120px]"><p className="truncate">{log.topic?.name ?? '—'}</p></td>
+                        <td className="px-4 py-3 text-stone-500 max-w-[160px]">
                           <p className="truncate text-xs">{log.cep ? log.cep.cepText.substring(0, 60) + '…' : '—'}</p>
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={log.status} /></td>
@@ -222,14 +222,14 @@ function LogsPageInner() {
                               <div className="bg-gray-900 text-gray-100 text-xs p-3 rounded-lg max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">{log.prompt}</div>
                               {log.script && (
                                 <div className="mt-2">
-                                  <p className="text-xs font-medium text-gray-600 mb-1">Script:</p>
-                                  <div className="bg-gray-50 text-gray-700 text-xs p-3 rounded-lg max-h-36 overflow-y-auto whitespace-pre-wrap border border-gray-200">{log.script}</div>
+                                  <p className="text-xs font-medium text-stone-600 mb-1">Script:</p>
+                                  <div className="bg-stone-50 text-stone-700 text-xs p-3 rounded-lg max-h-36 overflow-y-auto whitespace-pre-wrap border border-stone-200">{log.script}</div>
                                 </div>
                               )}
                               {log.caption && (
                                 <div className="mt-2">
-                                  <p className="text-xs font-medium text-gray-600 mb-1">Caption:</p>
-                                  <div className="bg-gray-50 text-gray-700 text-xs p-3 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap border border-gray-200">{log.caption}</div>
+                                  <p className="text-xs font-medium text-stone-600 mb-1">Caption:</p>
+                                  <div className="bg-stone-50 text-stone-700 text-xs p-3 rounded-lg max-h-24 overflow-y-auto whitespace-pre-wrap border border-stone-200">{log.caption}</div>
                                 </div>
                               )}
                             </div>
@@ -265,43 +265,43 @@ function LogsPageInner() {
                 { label: 'Total Likes', value: totalLikes },
                 { label: 'Avg Views/Post', value: perfRows.length ? Math.round(totalViews / perfRows.length) : 0 },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white border border-gray-200 rounded-xl p-4">
-                  <p className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                <div key={label} className="bg-white border border-stone-200 rounded-xl p-4">
+                  <p className="text-2xl font-bold text-stone-900">{value.toLocaleString()}</p>
+                  <p className="text-xs text-stone-500 mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
           )}
 
           {loadingPerf ? (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading performance data...</div>
+            <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading performance data...</div>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50">
                   <tr>
                     {['Account', 'Post URL', 'Views', 'Likes', 'Comments', 'Shares', 'Saves', 'Growth/hr', 'Last Checked'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {perfRows.length === 0 ? (
-                    <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">No performance data yet.</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-stone-400">No performance data yet.</td></tr>
                   ) : (
                     perfRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={row.id} className="hover:bg-stone-50 transition-colors">
                         <td className="px-4 py-3 font-medium text-violet-700">@{row.instagramAccount.username}</td>
                         <td className="px-4 py-3 max-w-[180px]">
                           <a href={row.postUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 hover:underline truncate block">{row.postUrl}</a>
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{row.views.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-gray-700">{row.likes.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-gray-700">{row.comments.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-gray-700">{row.shares.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-gray-700">{row.saves.toLocaleString()}</td>
-                        <td className="px-4 py-3"><span className="text-gray-400 text-xs">—</span></td>
-                        <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{formatDate(row.lastCheckedAt)}</td>
+                        <td className="px-4 py-3 font-medium text-stone-900">{row.views.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-stone-700">{row.likes.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-stone-700">{row.comments.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-stone-700">{row.shares.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-stone-700">{row.saves.toLocaleString()}</td>
+                        <td className="px-4 py-3"><span className="text-stone-400 text-xs">—</span></td>
+                        <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">{formatDate(row.lastCheckedAt)}</td>
                       </tr>
                     ))
                   )}

@@ -96,8 +96,8 @@ export default function MetaConnectionsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Meta Akun</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Meta Akun</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${accounts.length} koneksi${accounts.length !== 1 ? 's' : ''}`}
           </p>
         </div>
@@ -117,23 +117,23 @@ export default function MetaConnectionsPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Memuat...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Memuat...</div>
       ) : (
         <Table
           headers={['Nama', 'App ID', 'Meta User', 'Status', 'Last Call', 'Actions']}
           empty="Belum ada koneksi Meta. Klik &quot;Hubungkan Baru&quot; untuk mulai."
         >
           {accounts.map((acc) => (
-            <tr key={acc.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={acc.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
-                <span className="font-medium text-gray-900">{acc.name}</span>
+                <span className="font-medium text-stone-900">{acc.name}</span>
               </td>
-              <td className="px-4 py-3 text-gray-600 font-mono text-xs">{acc.appId}</td>
-              <td className="px-4 py-3 text-gray-700">{acc.metaUserName ?? '—'}</td>
+              <td className="px-4 py-3 text-stone-600 font-mono text-xs">{acc.appId}</td>
+              <td className="px-4 py-3 text-stone-700">{acc.metaUserName ?? '—'}</td>
               <td className="px-4 py-3">
                 <MetaStatusBadge status={acc.status} />
               </td>
-              <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">
                 {formatDate(acc.lastMetaCallAt)}
               </td>
               <td className="px-4 py-3">
@@ -162,7 +162,7 @@ export default function MetaConnectionsPage() {
         maxWidth="max-w-md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-600">
             Hapus koneksi <strong>{deleteTarget?.name}</strong>? Tindakan ini tidak bisa dibatalkan.
           </p>
           {deleteError && (

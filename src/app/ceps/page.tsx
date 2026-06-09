@@ -28,7 +28,7 @@ const TABS = [
 
 export default function CepsPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>}>
       <CepsPageInner />
     </Suspense>
   )
@@ -103,13 +103,13 @@ function CepsPageInner() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">CEP Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{ceps.length} total CEPs</p>
+          <h1 className="text-2xl font-bold text-stone-900">CEP Management</h1>
+          <p className="text-sm text-stone-500 mt-0.5">{ceps.length} total CEPs</p>
         </div>
         <button
           title="CEP baru dibuat oleh Hermes Agent — tidak dibuat manual via UI"
           disabled
-          className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400"
+          className="cursor-not-allowed rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-medium text-stone-400"
         >
           + Add CEP
         </button>
@@ -131,7 +131,7 @@ function CepsPageInner() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200 mb-4">
+      <div className="flex gap-1 border-b border-stone-200 mb-4">
         {TABS.map(({ label, value }) => (
           <button
             key={value}
@@ -139,7 +139,7 @@ function CepsPageInner() {
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === value
                 ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
             {label}
@@ -147,7 +147,7 @@ function CepsPageInner() {
               className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
                 activeTab === value
                   ? 'bg-violet-100 text-violet-700'
-                  : 'bg-gray-100 text-gray-500'
+                  : 'bg-stone-100 text-stone-500'
               }`}
             >
               {tabCount(value)}
@@ -157,16 +157,16 @@ function CepsPageInner() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
           Loading CEPs...
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-stone-50">
               <tr>
                 {['CEP Text', 'Topic', 'Product', 'Source', 'Status', 'Created', ...(activeTab === 'pending_review' ? ['Actions'] : [])].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -175,23 +175,23 @@ function CepsPageInner() {
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-stone-400">
                     No CEPs in this status.
                   </td>
                 </tr>
               ) : (
                 filtered.map((cep) => (
-                  <tr key={cep.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={cep.id} className="hover:bg-stone-50 transition-colors">
                     <td className="px-4 py-3 max-w-[300px]">
-                      <p className="line-clamp-3 text-gray-800">{cep.cepText}</p>
+                      <p className="line-clamp-3 text-stone-800">{cep.cepText}</p>
                       {cep.painPoint && (
-                        <p className="text-xs text-gray-400 mt-1 truncate">Pain: {cep.painPoint}</p>
+                        <p className="text-xs text-stone-400 mt-1 truncate">Pain: {cep.painPoint}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-stone-600">
                       {cep.topic?.name ?? <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-stone-600">
                       {cep.product?.name ?? <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3">
@@ -199,7 +199,7 @@ function CepsPageInner() {
                         className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           cep.source === 'ai'
                             ? 'bg-violet-100 text-violet-800'
-                            : 'bg-gray-100 text-gray-700'
+                            : 'bg-stone-100 text-stone-700'
                         }`}
                       >
                         {cep.source === 'ai' ? 'AI' : 'Human'}
@@ -208,7 +208,7 @@ function CepsPageInner() {
                     <td className="px-4 py-3">
                       <StatusBadge status={cep.status} />
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
                       {new Date(cep.createdAt).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',

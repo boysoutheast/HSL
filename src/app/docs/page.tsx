@@ -15,29 +15,29 @@ export default function DocsPage() {
   ] as const
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-stone-200 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-bold">H</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Hermes API — Panduan Singkat</h1>
-            <p className="text-xs text-gray-500">{BASE}/api/hermes/</p>
+            <h1 className="text-lg font-bold text-stone-900">Hermes API — Panduan Singkat</h1>
+            <p className="text-xs text-stone-500">{BASE}/api/hermes/</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Tab navigation */}
-        <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-6">
+        <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1 mb-6">
           {tabs.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-                tab === key ? 'bg-violet-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+                tab === key ? 'bg-violet-600 text-white' : 'text-stone-600 hover:bg-stone-50'
               }`}
             >
               {label}
@@ -60,7 +60,7 @@ function AuthTab() {
   return (
     <div className="space-y-4">
       <Card title="API Key">
-        <p className="text-sm text-gray-700 mb-3">
+        <p className="text-sm text-stone-700 mb-3">
           Semua endpoint Hermes memerlukan API Key. Dapatkan dari halaman{' '}
           <strong>Admin → Agents → buat agent → copy API key</strong>.
         </p>
@@ -68,9 +68,9 @@ function AuthTab() {
       </Card>
       <Card title="Base URL">
         <Pre>{`${BASE}`}</Pre>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-stone-500 mt-2">
           Semua endpoint dimulai dengan:{' '}
-          <code className="bg-gray-100 px-1 rounded">/api/hermes/</code>
+          <code className="bg-stone-100 px-1 rounded">/api/hermes/</code>
         </p>
       </Card>
       <Card title="Response jika tidak ada / salah API key">
@@ -97,7 +97,7 @@ function ProdukTab() {
       <Card title="GET /api/hermes/library — Ambil semua produk">
         <Pre>{`GET ${BASE}/api/hermes/library
 Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-gray-600 mt-3 mb-2">Response — bagian products:</p>
+        <p className="text-sm text-stone-600 mt-3 mb-2">Response — bagian products:</p>
         <Pre>{`{
   "library": {
     "products": [
@@ -146,9 +146,9 @@ function FotoTab() {
       </div>
 
       <Card title="Opsi A — Foto sudah ada di /library">
-        <p className="text-sm text-gray-600 mb-2">
+        <p className="text-sm text-stone-600 mb-2">
           Setiap produk dan karakter di response /library sudah include array{' '}
-          <code className="bg-gray-100 px-1 rounded">photoReferences</code>. Gunakan langsung.
+          <code className="bg-stone-100 px-1 rounded">photoReferences</code>. Gunakan langsung.
         </p>
         <Pre>{`// Dari response /library:
 product.photoReferences[0].fileUrl
@@ -160,7 +160,7 @@ const buffer = await res.arrayBuffer()`}</Pre>
       </Card>
 
       <Card title="Opsi B — GET /api/hermes/photos (fetch per entitas)">
-        <p className="text-sm text-gray-600 mb-2">
+        <p className="text-sm text-stone-600 mb-2">
           Kalau butuh foto spesifik untuk satu produk atau karakter:
         </p>
         <Pre>{`// Foto produk:
@@ -170,7 +170,7 @@ Authorization: Bearer YOUR_API_KEY
 // Foto karakter:
 GET ${BASE}/api/hermes/photos?characterId=clchar456
 Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-gray-600 mt-3 mb-2">Response:</p>
+        <p className="text-sm text-stone-600 mt-3 mb-2">Response:</p>
         <Pre>{`{
   "photos": [
     {
@@ -203,7 +203,7 @@ function CepTab() {
       </div>
 
       <Card title="READ — GET /api/hermes/ceps">
-        <p className="text-sm text-gray-600 mb-2">Ambil semua CEP aktif untuk topik atau produk tertentu:</p>
+        <p className="text-sm text-stone-600 mb-2">Ambil semua CEP aktif untuk topik atau produk tertentu:</p>
         <Pre>{`// Semua CEP dari produk/topik yang di-assign ke kamu:
 GET ${BASE}/api/hermes/ceps
 Authorization: Bearer YOUR_API_KEY
@@ -219,13 +219,13 @@ Authorization: Bearer YOUR_API_KEY
 // Dengan pagination:
 GET ${BASE}/api/hermes/ceps?limit=50&offset=0
 Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-gray-600 mt-3 mb-2">Query parameters (opsional):</p>
+        <p className="text-sm text-stone-600 mt-3 mb-2">Query parameters (opsional):</p>
         <table className="w-full text-xs border-collapse mb-3">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="text-left p-2 border border-gray-200">Parameter</th>
-              <th className="text-left p-2 border border-gray-200">Type</th>
-              <th className="text-left p-2 border border-gray-200">Keterangan</th>
+            <tr className="bg-stone-50">
+              <th className="text-left p-2 border border-stone-200">Parameter</th>
+              <th className="text-left p-2 border border-stone-200">Type</th>
+              <th className="text-left p-2 border border-stone-200">Keterangan</th>
             </tr>
           </thead>
           <tbody>
@@ -236,14 +236,14 @@ Authorization: Bearer YOUR_API_KEY`}</Pre>
               ['offset',    'number', 'Skip N hasil — untuk pagination'],
             ] as [string, string, string][]).map(([p, t, d]) => (
               <tr key={p}>
-                <td className="p-2 border border-gray-200 font-mono">{p}</td>
-                <td className="p-2 border border-gray-200 text-gray-500">{t}</td>
-                <td className="p-2 border border-gray-200">{d}</td>
+                <td className="p-2 border border-stone-200 font-mono">{p}</td>
+                <td className="p-2 border border-stone-200 text-stone-500">{t}</td>
+                <td className="p-2 border border-stone-200">{d}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="text-sm text-gray-600 mb-2">Response:</p>
+        <p className="text-sm text-stone-600 mb-2">Response:</p>
         <Pre>{`{
   "ceps": [
     {
@@ -273,7 +273,7 @@ Authorization: Bearer YOUR_API_KEY`}</Pre>
       </Card>
 
       <Card title="WRITE — POST /api/hermes/ceps">
-        <p className="text-sm text-gray-600 mb-2">
+        <p className="text-sm text-stone-600 mb-2">
           Ketika kamu menemukan hook yang bagus, simpan ke sistem — langsung aktif, tidak perlu review:
         </p>
         <Pre>{`POST ${BASE}/api/hermes/ceps
@@ -285,13 +285,13 @@ Content-Type: application/json
   "cepText": "Udah 3 bulan nyoba semua produk tapi kulit tetap kusam? Ini yang mungkin kamu skip.",
   "angle": "curiosity"
 }`}</Pre>
-        <p className="text-sm text-gray-600 mt-3 mb-2">Field yang tersedia:</p>
+        <p className="text-sm text-stone-600 mt-3 mb-2">Field yang tersedia:</p>
         <table className="w-full text-xs border-collapse mb-3">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="text-left p-2 border border-gray-200">Field</th>
-              <th className="text-left p-2 border border-gray-200">Wajib</th>
-              <th className="text-left p-2 border border-gray-200">Keterangan</th>
+            <tr className="bg-stone-50">
+              <th className="text-left p-2 border border-stone-200">Field</th>
+              <th className="text-left p-2 border border-stone-200">Wajib</th>
+              <th className="text-left p-2 border border-stone-200">Keterangan</th>
             </tr>
           </thead>
           <tbody>
@@ -303,9 +303,9 @@ Content-Type: application/json
               ['notes', '❌', 'Catatan tambahan'],
             ] as [string, string, string][]).map(([f, r, d]) => (
               <tr key={f}>
-                <td className="p-2 border border-gray-200 font-mono">{f}</td>
-                <td className="p-2 border border-gray-200">{r}</td>
-                <td className="p-2 border border-gray-200">{d}</td>
+                <td className="p-2 border border-stone-200 font-mono">{f}</td>
+                <td className="p-2 border border-stone-200">{r}</td>
+                <td className="p-2 border border-stone-200">{d}</td>
               </tr>
             ))}
           </tbody>
@@ -331,14 +331,14 @@ Content-Type: application/json
       </Card>
 
       <Card title="DELETE /api/hermes/ceps/:id — Nonaktifkan CEP">
-        <p className="text-sm text-gray-600 mb-3">
+        <p className="text-sm text-stone-600 mb-3">
           Soft-delete sebuah CEP — status diubah ke{' '}
-          <code className="bg-gray-100 px-1 rounded text-xs">inactive</code>. Data tidak dihapus
+          <code className="bg-stone-100 px-1 rounded text-xs">inactive</code>. Data tidak dihapus
           permanen, tetap tercatat di log.
         </p>
         <Pre>{`curl -X DELETE ${BASE}/api/hermes/ceps/CEP_ID \\
   -H "Authorization: Bearer YOUR_API_KEY"`}</Pre>
-        <p className="text-sm text-gray-600 mt-3 mb-2">Response 200:</p>
+        <p className="text-sm text-stone-600 mt-3 mb-2">Response 200:</p>
         <Pre>{`{
   "cep": {
     "id": "cep_abc123",
@@ -361,8 +361,8 @@ Content-Type: application/json
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-gray-800 mb-3">{title}</h3>
+    <div className="bg-white border border-stone-200 rounded-xl p-5">
+      <h3 className="text-sm font-semibold text-stone-800 mb-3">{title}</h3>
       {children}
     </div>
   )

@@ -33,15 +33,15 @@ export default async function TopicsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Topics</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Topics</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {topics.length} total · {activeCount} active
           </p>
         </div>
         <button
           title="Topik dibuat saat setup character atau product — belum tersedia di halaman ini"
           disabled
-          className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400"
+          className="cursor-not-allowed rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-medium text-stone-400"
         >
           + Add Topic
         </button>
@@ -68,26 +68,26 @@ export default async function TopicsPage() {
         empty="No topics found."
       >
         {topics.map((topic) => (
-          <tr key={topic.id} className="hover:bg-gray-50 transition-colors">
+          <tr key={topic.id} className="hover:bg-stone-50 transition-colors">
             <td className="px-4 py-3">
-              <p className="font-medium text-gray-900">{topic.name}</p>
+              <p className="font-medium text-stone-900">{topic.name}</p>
             </td>
-            <td className="px-4 py-3 text-gray-600">
+            <td className="px-4 py-3 text-stone-600">
               {topic.character?.name ?? <span className="text-gray-300">—</span>}
             </td>
-            <td className="px-4 py-3 text-gray-600">
+            <td className="px-4 py-3 text-stone-600">
               {topic.product?.name ?? <span className="text-gray-300">—</span>}
             </td>
             <td className="px-4 py-3">
               <StatusBadge status={topic.status} />
             </td>
-            <td className="px-4 py-3 text-gray-500 max-w-[260px]">
+            <td className="px-4 py-3 text-stone-500 max-w-[260px]">
               <p className="truncate">{topic.description}</p>
             </td>
-            <td className="px-4 py-3 text-gray-600 font-medium">
+            <td className="px-4 py-3 text-stone-600 font-medium">
               {topic._count?.ceps ?? 0}
             </td>
-            <td className="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">
+            <td className="px-4 py-3 text-stone-400 whitespace-nowrap text-xs">
               {new Date(topic.createdAt).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',

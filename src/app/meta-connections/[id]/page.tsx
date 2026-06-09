@@ -146,13 +146,13 @@ export default function MetaConnectionDetailPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Memuat...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
   }
 
   if (!conn) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-gray-500">Koneksi tidak ditemukan.</p>
+        <p className="text-stone-500">Koneksi tidak ditemukan.</p>
         <Link href="/meta-connections" className="text-sm text-violet-600 hover:underline">
           Kembali ke Meta Akun
         </Link>
@@ -164,20 +164,20 @@ export default function MetaConnectionDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/meta-connections" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/meta-connections" className="text-sm text-stone-500 hover:text-stone-700">
           Meta Akun
         </Link>
         <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium text-gray-900">{conn.name}</span>
+        <span className="text-sm font-medium text-stone-900">{conn.name}</span>
       </div>
 
       {/* Header Card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{conn.name}</h1>
+            <h1 className="text-2xl font-bold text-stone-900">{conn.name}</h1>
             {conn.metaUserName && (
-              <p className="text-gray-600 mt-0.5">{conn.metaUserName}</p>
+              <p className="text-stone-600 mt-0.5">{conn.metaUserName}</p>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -190,30 +190,30 @@ export default function MetaConnectionDetailPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">App ID</p>
-            <p className="font-mono text-gray-800 text-xs">{conn.appId}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">App ID</p>
+            <p className="font-mono text-stone-800 text-xs">{conn.appId}</p>
           </div>
           {conn.metaUserId && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta User ID</p>
-              <p className="font-mono text-gray-800 text-xs">{conn.metaUserId}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Meta User ID</p>
+              <p className="font-mono text-stone-800 text-xs">{conn.metaUserId}</p>
             </div>
           )}
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Last Call</p>
-            <p className="text-gray-800">{formatDate(conn.lastMetaCallAt)}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Last Call</p>
+            <p className="text-stone-800">{formatDate(conn.lastMetaCallAt)}</p>
           </div>
           {conn.tokenExpiry && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Token Expiry</p>
-              <p className="text-gray-800">{formatDate(conn.tokenExpiry)}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Token Expiry</p>
+              <p className="text-stone-800">{formatDate(conn.tokenExpiry)}</p>
             </div>
           )}
         </div>
 
         {conn.scopes && conn.scopes.length > 0 && (
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Scopes</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-2">Scopes</p>
             <div className="flex flex-wrap gap-1.5">
               {conn.scopes.map((scope) => (
                 <span key={scope} className="bg-violet-100 text-violet-700 text-xs px-2 py-0.5 rounded-full font-medium">
@@ -236,7 +236,7 @@ export default function MetaConnectionDetailPage() {
           {syncError && (
             <span className="text-sm text-red-600">⚠️ {syncError}</span>
           )}
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-stone-400">
             Sinkronkan Businesses, Ad Accounts, dan Pages dari Meta API
           </span>
         </div>
@@ -244,7 +244,7 @@ export default function MetaConnectionDetailPage() {
 
       {/* Businesses */}
       <div className="mb-8">
-        <h2 className="text-base font-semibold text-gray-900 mb-3">
+        <h2 className="text-base font-semibold text-stone-900 mb-3">
           Businesses ({conn.businesses?.length ?? 0})
         </h2>
         <Table
@@ -252,14 +252,14 @@ export default function MetaConnectionDetailPage() {
           empty="Belum ada business yang terhubung."
         >
           {conn.businesses?.map((biz) => (
-            <tr key={biz.businessId} className="hover:bg-gray-50">
-              <td className="px-4 py-3 font-mono text-xs text-gray-700">{biz.businessId}</td>
-              <td className="px-4 py-3 text-gray-800">{biz.businessName}</td>
+            <tr key={biz.businessId} className="hover:bg-stone-50">
+              <td className="px-4 py-3 font-mono text-xs text-stone-700">{biz.businessId}</td>
+              <td className="px-4 py-3 text-stone-800">{biz.businessName}</td>
               <td className="px-4 py-3">
                 {biz.verificationStatus ? (
                   <StatusBadge status={biz.verificationStatus} />
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-stone-400">—</span>
                 )}
               </td>
             </tr>
@@ -269,7 +269,7 @@ export default function MetaConnectionDetailPage() {
 
       {/* Ad Accounts */}
       <div className="mb-8">
-        <h2 className="text-base font-semibold text-gray-900 mb-3">
+        <h2 className="text-base font-semibold text-stone-900 mb-3">
           Ad Accounts ({conn.adAccounts?.length ?? 0})
         </h2>
         <Table
@@ -281,13 +281,13 @@ export default function MetaConnectionDetailPage() {
             const name = acc.adAccountName || acc.name || adAccountId
             const status = acc.accountStatus || acc.status || 'unknown'
             return (
-              <tr key={adAccountId} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-xs text-gray-700">{adAccountId}</td>
-                <td className="px-4 py-3 text-gray-800">{name}</td>
+              <tr key={adAccountId} className="hover:bg-stone-50">
+                <td className="px-4 py-3 font-mono text-xs text-stone-700">{adAccountId}</td>
+                <td className="px-4 py-3 text-stone-800">{name}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={status} />
                 </td>
-                <td className="px-4 py-3 text-gray-600">{acc.currency ?? '—'}</td>
+                <td className="px-4 py-3 text-stone-600">{acc.currency ?? '—'}</td>
               </tr>
             )
           })}
@@ -296,7 +296,7 @@ export default function MetaConnectionDetailPage() {
 
       {/* Pages */}
       <div className="mb-8">
-        <h2 className="text-base font-semibold text-gray-900 mb-3">
+        <h2 className="text-base font-semibold text-stone-900 mb-3">
           Pages ({conn.pages?.length ?? 0})
         </h2>
         <Table
@@ -304,17 +304,17 @@ export default function MetaConnectionDetailPage() {
           empty="Belum ada page yang terhubung."
         >
           {conn.pages?.map((pg) => (
-            <tr key={pg.pageId || pg.pageName} className="hover:bg-gray-50">
-              <td className="px-4 py-3 text-gray-800">{pg.pageName}</td>
-              <td className="px-4 py-3 text-gray-600">{pg.igUsername ?? '—'}</td>
-              <td className="px-4 py-3 text-gray-600">{pg.igName ?? '—'}</td>
+            <tr key={pg.pageId || pg.pageName} className="hover:bg-stone-50">
+              <td className="px-4 py-3 text-stone-800">{pg.pageName}</td>
+              <td className="px-4 py-3 text-stone-600">{pg.igUsername ?? '—'}</td>
+              <td className="px-4 py-3 text-stone-600">{pg.igName ?? '—'}</td>
               <td className="px-4 py-3">
                 {pg.isActive !== undefined ? (
-                  <span className={pg.isActive ? 'text-green-600' : 'text-gray-400'}>
+                  <span className={pg.isActive ? 'text-green-600' : 'text-stone-400'}>
                     {pg.isActive ? '✓' : '—'}
                   </span>
                 ) : (
-                  <span className="text-gray-400">—</span>
+                  <span className="text-stone-400">—</span>
                 )}
               </td>
             </tr>
@@ -325,7 +325,7 @@ export default function MetaConnectionDetailPage() {
       {/* Danger Zone */}
       <div className="bg-white rounded-xl border border-red-200 p-6">
         <h2 className="text-base font-semibold text-red-700 mb-1">Danger Zone</h2>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-stone-500 mb-4">
           Menghapus koneksi tidak akan menghapus data assets yang sudah disinkronkan.
         </p>
         <button
@@ -344,7 +344,7 @@ export default function MetaConnectionDetailPage() {
         maxWidth="max-w-md"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-600">
             Hapus koneksi <strong>{conn.name}</strong>? Tindakan ini tidak bisa dibatalkan.
           </p>
           {deleteError && (

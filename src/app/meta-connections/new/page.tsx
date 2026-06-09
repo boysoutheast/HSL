@@ -109,11 +109,11 @@ export default function NewMetaConnectionPage() {
     <div className="max-w-2xl">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/meta-connections" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/meta-connections" className="text-sm text-stone-500 hover:text-stone-700">
           Meta Akun
         </Link>
         <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium text-gray-900">Hubungkan Baru</span>
+        <span className="text-sm font-medium text-stone-900">Hubungkan Baru</span>
       </div>
 
       <PageInfo
@@ -139,14 +139,14 @@ export default function NewMetaConnectionPage() {
                   ? 'bg-violet-600 text-white'
                   : s === step
                   ? 'bg-violet-100 text-violet-700 ring-2 ring-violet-400'
-                  : 'bg-gray-100 text-gray-400'
+                  : 'bg-stone-100 text-stone-400'
               }`}
             >
               {s < step ? '✓' : s}
             </div>
             <span
               className={`text-sm font-medium ${
-                s === step ? 'text-violet-700' : s < step ? 'text-gray-500' : 'text-gray-400'
+                s === step ? 'text-violet-700' : s < step ? 'text-stone-500' : 'text-stone-400'
               }`}
             >
               {s === 1 ? 'Input Credentials' : s === 2 ? 'Review' : 'Connect'}
@@ -158,11 +158,11 @@ export default function NewMetaConnectionPage() {
 
       {/* Step 1: Input Credentials */}
       {step === 1 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Credential Meta</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-6">
+          <h2 className="text-lg font-semibold text-stone-900 mb-4">Credential Meta</h2>
           <form onSubmit={handleTest} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 App ID <span className="text-red-500">*</span>
               </label>
               <input
@@ -175,7 +175,7 @@ export default function NewMetaConnectionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 App Secret <span className="text-red-500">*</span>
               </label>
               <input
@@ -188,7 +188,7 @@ export default function NewMetaConnectionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 User Access Token <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -199,7 +199,7 @@ export default function NewMetaConnectionPage() {
                 required
                 className={`${inputCls} resize-none`}
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-stone-400 mt-1">
                 Peroleh dari: Graph API Explorer → Permissions: ads_management, business_management, pages_read_engagement, instagram_basic
               </p>
             </div>
@@ -223,30 +223,30 @@ export default function NewMetaConnectionPage() {
 
       {/* Step 2: Review */}
       {step === 2 && testResult && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl">✓</div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Koneksi Valid</h2>
-              <p className="text-sm text-gray-500">Credential berhasil diverifikasi dengan Meta API</p>
+              <h2 className="text-lg font-semibold text-stone-900">Koneksi Valid</h2>
+              <p className="text-sm text-stone-500">Credential berhasil diverifikasi dengan Meta API</p>
             </div>
           </div>
 
           {/* Result Info */}
-          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+          <div className="bg-stone-50 rounded-lg p-4 space-y-3">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta User ID</p>
-                <p className="font-mono text-gray-800">{testResult.metaUserId}</p>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Meta User ID</p>
+                <p className="font-mono text-stone-800">{testResult.metaUserId}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta User Name</p>
-                <p className="font-medium text-gray-800">{testResult.metaUserName || '—'}</p>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Meta User Name</p>
+                <p className="font-medium text-stone-800">{testResult.metaUserName || '—'}</p>
               </div>
               {testResult.tokenExpiry && (
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Token Expiry</p>
-                  <p className="text-gray-800">
+                  <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Token Expiry</p>
+                  <p className="text-stone-800">
                     {new Date(testResult.tokenExpiry).toLocaleString('id-ID', {
                       day: 'numeric',
                       month: 'short',
@@ -259,7 +259,7 @@ export default function NewMetaConnectionPage() {
 
             {testResult.scopes && testResult.scopes.length > 0 && (
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Scopes</p>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-2">Scopes</p>
                 <div className="flex flex-wrap gap-1.5">
                   {testResult.scopes.map((scope) => (
                     <span
@@ -276,9 +276,9 @@ export default function NewMetaConnectionPage() {
 
           {/* Custom Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               Nama Koneksi
-              <span className="text-xs text-gray-400 font-normal ml-1">(opsional, default dari Meta User Name)</span>
+              <span className="text-xs text-stone-400 font-normal ml-1">(opsional, default dari Meta User Name)</span>
             </label>
             <input
               type="text"
@@ -302,25 +302,25 @@ export default function NewMetaConnectionPage() {
 
       {/* Step 3: Confirm */}
       {step === 3 && testResult && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-          <h2 className="text-lg font-semibold text-gray-900">Konfirmasi</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-6 space-y-6">
+          <h2 className="text-lg font-semibold text-stone-900">Konfirmasi</h2>
 
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+          <div className="bg-stone-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Nama</span>
-              <span className="font-medium text-gray-900">{connectionName || testResult.metaUserName || appId}</span>
+              <span className="text-stone-500">Nama</span>
+              <span className="font-medium text-stone-900">{connectionName || testResult.metaUserName || appId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">App ID</span>
-              <span className="font-mono text-gray-800">{appId}</span>
+              <span className="text-stone-500">App ID</span>
+              <span className="font-mono text-stone-800">{appId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Meta User</span>
-              <span className="text-gray-800">{testResult.metaUserName || testResult.metaUserId}</span>
+              <span className="text-stone-500">Meta User</span>
+              <span className="text-stone-800">{testResult.metaUserName || testResult.metaUserId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Scopes</span>
-              <span className="text-gray-800">{testResult.scopes?.length ?? 0} permissions</span>
+              <span className="text-stone-500">Scopes</span>
+              <span className="text-stone-800">{testResult.scopes?.length ?? 0} permissions</span>
             </div>
           </div>
 

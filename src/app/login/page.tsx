@@ -54,7 +54,7 @@ function LoginForm() {
             <span className="text-2xl">⚡</span>
           </div>
           <h1 className="text-2xl font-bold text-white">Hermes Support</h1>
-          <p className="text-gray-400 text-sm mt-1">Admin Dashboard</p>
+          <p className="text-stone-400 text-sm mt-1">Admin Dashboard</p>
         </div>
 
         {/* Card */}
@@ -67,7 +67,7 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
@@ -75,19 +75,19 @@ function LoginForm() {
                 required
                 autoFocus
                 placeholder="admin@hermes.local"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
@@ -108,7 +108,7 @@ function LoginForm() {
         </div>
 
         {allowReg && (
-          <p className="text-center text-gray-400 text-sm mt-4">
+          <p className="text-center text-stone-400 text-sm mt-4">
             Belum punya akun?{' '}
             <Link href="/register" className="text-violet-400 hover:text-violet-300 font-medium">
               Daftar
@@ -116,7 +116,7 @@ function LoginForm() {
           </p>
         )}
 
-        <p className="text-center text-gray-500 text-xs mt-4">
+        <p className="text-center text-stone-500 text-xs mt-4">
           Hermes Infrastructure · Internal Tool
         </p>
       </div>

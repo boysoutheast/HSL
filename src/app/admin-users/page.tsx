@@ -81,8 +81,8 @@ export default function AdminUsersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Users</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <h1 className="text-2xl font-bold text-stone-900">Admin Users</h1>
+        <p className="text-sm text-stone-500 mt-0.5">
           {loading
             ? '...'
             : `${users.length} total · ${pendingUsers.length} pending approval`}
@@ -110,7 +110,7 @@ export default function AdminUsersPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
           Loading users...
         </div>
       ) : (
@@ -119,19 +119,19 @@ export default function AdminUsersPage() {
           empty="No users found."
         >
           {users.map((user) => (
-            <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={user.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-stone-900">
                   {user.name ?? '—'}
                 </span>
               </td>
-              <td className="px-4 py-3 text-gray-600">{user.email}</td>
+              <td className="px-4 py-3 text-stone-600">{user.email}</td>
               <td className="px-4 py-3">
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded font-medium ${
                     user.role === 'admin'
                       ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-gray-100 text-gray-600'
+                      : 'bg-stone-100 text-stone-600'
                   }`}
                 >
                   {user.role === 'admin' ? '👑 Admin' : 'User'}
@@ -140,7 +140,7 @@ export default function AdminUsersPage() {
               <td className="px-4 py-3">
                 <StatusBadge status={user.status} />
               </td>
-              <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">
                 {formatDate(user.createdAt)}
               </td>
               <td className="px-4 py-3">
@@ -177,7 +177,7 @@ export default function AdminUsersPage() {
                       {actionLoading === user.id ? '...' : 'Deactivate'}
                     </button>
                   ) : (
-                    <span className="text-xs text-gray-400 italic">Inactive</span>
+                    <span className="text-xs text-stone-400 italic">Inactive</span>
                   )}
                 </div>
               </td>

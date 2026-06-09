@@ -34,7 +34,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
   executing: 'bg-blue-100 text-blue-800',
-  completed: 'bg-gray-100 text-gray-600',
+  completed: 'bg-stone-100 text-stone-600',
   failed: 'bg-red-100 text-red-800',
 }
 
@@ -49,7 +49,7 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-600'
+  const cls = STATUS_COLORS[status] ?? 'bg-stone-100 text-stone-600'
   const label = STATUS_LABELS[status] ?? status
   return (
     <span className={`text-xs px-2 py-1 rounded-full font-medium ${cls}`}>
@@ -109,8 +109,8 @@ export default function TestLaunchesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Test Launches</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Test Launches</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${launches.length} launch`}
           </p>
         </div>
@@ -130,39 +130,39 @@ export default function TestLaunchesPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>
       ) : (
         <Table
           headers={['Nama', 'Akun', 'Budget/Hari', 'Objective', 'Status', 'Creatives', 'Created', 'Actions']}
           empty="No test launches found."
         >
           {launches.map((launch) => (
-            <tr key={launch.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={launch.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
-                <p className="font-medium text-gray-900">{launch.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="font-medium text-stone-900">{launch.name}</p>
+                <p className="text-xs text-stone-400 mt-0.5">
                   Mode: {launch.launchMode === 'new_test' ? 'New Test' : 'Duplicate Winner'}
                 </p>
               </td>
               <td className="px-4 py-3">
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-stone-700">
                   {launch.metaAccount.accountName ?? launch.metaAccount.adAccountId}
                 </p>
-                <p className="text-xs text-gray-400">{launch.metaAccount.adAccountId}</p>
+                <p className="text-xs text-stone-400">{launch.metaAccount.adAccountId}</p>
               </td>
-              <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
                 Rp {Number(launch.dailyBudget).toLocaleString('id-ID')}
               </td>
-              <td className="px-4 py-3 text-gray-600">
+              <td className="px-4 py-3 text-stone-600">
                 {OBJECTIVE_LABELS[launch.objective] ?? launch.objective}
               </td>
               <td className="px-4 py-3">
                 <StatusBadge status={launch.status} />
               </td>
-              <td className="px-4 py-3 text-gray-600 text-center">
+              <td className="px-4 py-3 text-stone-600 text-center">
                 {launch.creatives.length}
               </td>
-              <td className="px-4 py-3 text-gray-500 text-sm whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-500 text-sm whitespace-nowrap">
                 {new Date(launch.createdAt).toLocaleDateString('id-ID', {
                   day: '2-digit',
                   month: 'short',

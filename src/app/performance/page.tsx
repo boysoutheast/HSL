@@ -6,8 +6,8 @@ export default function PerformancePage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Performance</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-stone-900">Performance</h1>
+        <p className="mt-1 text-sm text-stone-500">
           Performance reporting saat ini dibuka lewat Logs tab performance. Halaman ini jadi entry point yang jujur, bukan redirect diam-diam.
         </p>
       </div>

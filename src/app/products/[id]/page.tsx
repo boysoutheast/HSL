@@ -41,7 +41,7 @@ interface Cep {
   status: string
 }
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
+const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const textareaCls = `${inputCls} resize-none`
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -70,13 +70,13 @@ export default function ProductDetailPage() {
   useEffect(() => { fetchProduct() }, [fetchProduct])
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Loading...</div>
   }
 
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-gray-500">Product not found.</p>
+        <p className="text-stone-500">Product not found.</p>
         <Link href="/products" className="text-sm text-violet-600 hover:underline">Back to Products</Link>
       </div>
     )
@@ -92,13 +92,13 @@ export default function ProductDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm">
-        <Link href="/products" className="text-gray-500 hover:text-gray-700">Products</Link>
+        <Link href="/products" className="text-stone-500 hover:text-stone-700">Products</Link>
         <span className="text-gray-300">/</span>
-        <span className="font-medium text-gray-900">{product.name}</span>
+        <span className="font-medium text-stone-900">{product.name}</span>
       </div>
 
       {/* Tab nav */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-stone-200 mb-6">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
@@ -106,7 +106,7 @@ export default function ProductDetailPage() {
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === key
                 ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
             {label}
@@ -180,24 +180,24 @@ function InfoTab({ product, productId, onSaved }: { product: Product; productId:
   }
 
   return (
-    <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 max-w-2xl">
+    <form onSubmit={handleSave} className="bg-white rounded-xl border border-stone-200 p-6 space-y-4 max-w-2xl">
       {/* ── Main fields ── */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Name <span className="text-red-500">*</span></label>
         <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className={inputCls} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
         <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} className={textareaCls} placeholder="Deskripsi produk — ini yang dibaca Hermes untuk generate konten" />
-        <p className="text-xs text-gray-400 mt-1">Tulis selengkap mungkin. Hermes membaca ini sebagai referensi utama produk.</p>
+        <p className="text-xs text-stone-400 mt-1">Tulis selengkap mungkin. Hermes membaca ini sebagai referensi utama produk.</p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Price (Rp)</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Price (Rp)</label>
           <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className={inputCls} placeholder="75000" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Shopee URL</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Shopee URL</label>
           <input type="url" value={form.shopeeUrl} onChange={(e) => setForm({ ...form, shopeeUrl: e.target.value })} className={inputCls} placeholder="https://s.shopee.co.id/..." />
         </div>
       </div>
@@ -206,7 +206,7 @@ function InfoTab({ product, productId, onSaved }: { product: Product; productId:
       <button
         type="button"
         onClick={() => setShowAdvanced(v => !v)}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+        className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 transition-colors"
       >
         <span className={`transition-transform inline-block ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
         Detail Lanjutan (Main Benefit, Ingredients, Usage, Notes, Status)
@@ -215,26 +215,26 @@ function InfoTab({ product, productId, onSaved }: { product: Product; productId:
       {showAdvanced && (
         <div className="space-y-4 pt-2 border-t border-gray-100">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Main Benefit</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Main Benefit</label>
             <input type="text" value={form.mainBenefit} onChange={(e) => setForm({ ...form, mainBenefit: e.target.value })} className={inputCls} placeholder="Cerahkan kulit dalam 7 hari" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ingredients</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Ingredients</label>
               <textarea value={form.ingredients} onChange={(e) => setForm({ ...form, ingredients: e.target.value })} rows={3} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Usage Instruction</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Usage Instruction</label>
               <textarea value={form.usageInstruction} onChange={(e) => setForm({ ...form, usageInstruction: e.target.value })} rows={3} className={textareaCls} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
               <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Status</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls}>
                 <option value="active">active</option>
                 <option value="inactive">inactive</option>
@@ -342,7 +342,7 @@ function PhotosTab({ productId }: { productId: string }) {
       />
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-800">Photos ({loading ? '...' : photos.length})</h3>
+        <h3 className="text-base font-semibold text-stone-800">Photos ({loading ? '...' : photos.length})</h3>
         <button onClick={() => setShowUpload(!showUpload)} className="btn-primary">+ Upload Photo</button>
       </div>
 
@@ -350,21 +350,21 @@ function PhotosTab({ productId }: { productId: string }) {
         <form onSubmit={handleUpload} className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">File <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">File <span className="text-red-500">*</span></label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                 required
-                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-violet-600 file:text-white hover:file:bg-violet-700"
+                className="w-full text-sm text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-violet-600 file:text-white hover:file:bg-violet-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Label</label>
               <input type="text" value={uploadLabel} onChange={(e) => setUploadLabel(e.target.value)} placeholder="e.g. kemasan depan" className={inputCls} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
               <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className={inputCls}>
                 <option value="">— pilih —</option>
                 <option value="product">product</option>
@@ -385,18 +385,18 @@ function PhotosTab({ productId }: { productId: string }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading photos...</div>
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading photos...</div>
       ) : photos.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
           No photos yet.
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map((photo) => (
-            <div key={photo.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden group">
+            <div key={photo.id} className="bg-white rounded-xl border border-stone-200 overflow-hidden group">
               {/* Klik foto → buka lightbox */}
               <div
-                className="aspect-square bg-gray-100 cursor-zoom-in overflow-hidden"
+                className="aspect-square bg-stone-100 cursor-zoom-in overflow-hidden"
                 onClick={() => setLightboxPhoto(photo)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -414,15 +414,15 @@ function PhotosTab({ productId }: { productId: string }) {
                       type="text"
                       value={editLabelVal}
                       onChange={(e) => setEditLabelVal(e.target.value)}
-                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                      className="flex-1 border border-stone-300 rounded px-2 py-1 text-xs"
                     />
                     <button onClick={() => setEditLabelId(null)} className="btn-success btn-sm">OK</button>
                   </div>
                 ) : (
-                  <p className="text-xs font-medium text-gray-800 mb-1 truncate">{photo.label}</p>
+                  <p className="text-xs font-medium text-stone-800 mb-1 truncate">{photo.label}</p>
                 )}
                 {photo.category && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{photo.category}</span>
+                  <span className="text-xs bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded">{photo.category}</span>
                 )}
                 <div className="flex gap-1 mt-2">
                   <button
@@ -559,7 +559,7 @@ function CepsTab({ productId }: { productId: string }) {
       )}
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-800">
+        <h3 className="text-base font-semibold text-stone-800">
           CEPs ({loading ? '...' : ceps.length})
         </h3>
         <button onClick={() => { setCepText(''); setShowModal(true) }} className="btn-primary">
@@ -568,9 +568,9 @@ function CepsTab({ productId }: { productId: string }) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading CEPs...</div>
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading CEPs...</div>
       ) : ceps.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
           No CEPs yet. Add one manually or let Hermes write one.
         </div>
       ) : (
@@ -581,11 +581,11 @@ function CepsTab({ productId }: { productId: string }) {
                 <span className={`mt-0.5 flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${
                   cep.source === 'ai'
                     ? 'bg-violet-100 text-violet-600'
-                    : 'bg-gray-100 text-gray-500'
+                    : 'bg-stone-100 text-stone-500'
                 }`}>
                   {cep.source === 'ai' ? 'AI' : 'Manual'}
                 </span>
-                <p className="text-sm text-gray-700 leading-relaxed">&ldquo;{cep.cepText}&rdquo;</p>
+                <p className="text-sm text-stone-700 leading-relaxed">&ldquo;{cep.cepText}&rdquo;</p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
@@ -617,7 +617,7 @@ function CepsTab({ productId }: { productId: string }) {
             <strong>CEP</strong> (Content Entry Point) adalah kalimat pembuka yang langsung menyentuh pain point audiens — membuat mereka berhenti scroll dan merasa &ldquo;ini gue banget&rdquo;.
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hook Text <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Hook Text <span className="text-red-500">*</span></label>
             <textarea
               value={cepText}
               onChange={(e) => setCepText(e.target.value)}

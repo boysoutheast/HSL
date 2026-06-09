@@ -164,8 +164,8 @@ export default function AccountsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Instagram Accounts</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-stone-900">Instagram Accounts</h1>
+          <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${accounts.length} account${accounts.length !== 1 ? 's' : ''} total`}
           </p>
         </div>
@@ -195,14 +195,14 @@ export default function AccountsPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading accounts...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading accounts...</div>
       ) : (
         <Table
           headers={['Username', 'Display Name', 'Status', 'Purpose', 'Last Post', 'Characters', 'Actions']}
           empty="No accounts found."
         >
           {accounts.map((account) => (
-            <tr key={account.id} className="hover:bg-gray-50 transition-colors">
+            <tr key={account.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
                 <Link
                   href={`/accounts/${account.id}`}
@@ -211,15 +211,15 @@ export default function AccountsPage() {
                   @{account.username}
                 </Link>
               </td>
-              <td className="px-4 py-3 text-gray-700">{account.accountName ?? '—'}</td>
+              <td className="px-4 py-3 text-stone-700">{account.accountName ?? '—'}</td>
               <td className="px-4 py-3">
                 <StatusBadge status={account.status} />
               </td>
-              <td className="px-4 py-3 text-gray-500">{account.purpose ?? '—'}</td>
-              <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-500">{account.purpose ?? '—'}</td>
+              <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                 {formatDate(account.lastPostAt)}
               </td>
-              <td className="px-4 py-3 text-gray-600">
+              <td className="px-4 py-3 text-stone-600">
                 {account._count?.characters ?? '—'}
               </td>
               <td className="px-4 py-3">
@@ -259,7 +259,7 @@ export default function AccountsPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-stone-700 mb-1">
               Username <span className="text-red-500">*</span>
             </label>
             <input
@@ -268,25 +268,25 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               placeholder="tanpa @ — contoh: mybrand_id"
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Account Name</label>
             <input
               type="text"
               value={form.accountName}
               onChange={(e) => setForm({ ...form, accountName: e.target.value })}
               placeholder="Display name"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Purpose</label>
             <select
               value={form.purpose}
               onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="organic">organic</option>
               <option value="cpas">cpas</option>
@@ -296,13 +296,13 @@ export default function AccountsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Optional notes..."
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           {saveError && (
@@ -328,7 +328,7 @@ export default function AccountsPage() {
         title="Hapus Koneksi Akun"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-stone-600">
             Hapus akun <strong>@{deleteTarget?.username}</strong>? Tindakan ini tidak bisa dibatalkan dan akan menghapus semua karakter, topik, foto, dan CEP terkait.
           </p>
           {deleteError && (

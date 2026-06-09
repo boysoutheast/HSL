@@ -197,13 +197,13 @@ export default function AccountDetailPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Loading...</div>
   }
 
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-gray-500">Account not found.</p>
+        <p className="text-stone-500">Account not found.</p>
         <Link href="/accounts" className="text-sm text-violet-600 hover:underline">Back to Accounts</Link>
       </div>
     )
@@ -213,9 +213,9 @@ export default function AccountDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/accounts" className="text-sm text-gray-500 hover:text-gray-700">Accounts</Link>
+        <Link href="/accounts" className="text-sm text-stone-500 hover:text-stone-700">Accounts</Link>
         <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium text-gray-900">@{account.username}</span>
+        <span className="text-sm font-medium text-stone-900">@{account.username}</span>
       </div>
 
       <PageInfo
@@ -228,12 +228,12 @@ export default function AccountDetailPage() {
       />
 
       {/* Account Info Card */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">@{account.username}</h1>
+            <h1 className="text-2xl font-bold text-stone-900">@{account.username}</h1>
             {account.accountName && (
-              <p className="text-gray-600 mt-0.5">{account.accountName}</p>
+              <p className="text-stone-600 mt-0.5">{account.accountName}</p>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -244,55 +244,55 @@ export default function AccountDetailPage() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Purpose</p>
-            <p className="text-gray-800">{account.purpose ?? '—'}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Purpose</p>
+            <p className="text-stone-800">{account.purpose ?? '—'}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Last Post</p>
-            <p className="text-gray-800">{formatDate(account.lastPostAt)}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Last Post</p>
+            <p className="text-stone-800">{formatDate(account.lastPostAt)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Created</p>
-            <p className="text-gray-800">{formatDate(account.createdAt)}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Created</p>
+            <p className="text-stone-800">{formatDate(account.createdAt)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Hermes Assignments</p>
-            <p className="text-gray-800">{account._count?.assignments ?? 0}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Hermes Assignments</p>
+            <p className="text-stone-800">{account._count?.assignments ?? 0}</p>
           </div>
         </div>
 
         {account.notes && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 font-medium mb-1">Notes</p>
-            <p className="text-sm text-gray-700">{account.notes}</p>
+          <div className="mt-4 p-3 bg-stone-50 rounded-lg">
+            <p className="text-xs text-stone-500 font-medium mb-1">Notes</p>
+            <p className="text-sm text-stone-700">{account.notes}</p>
           </div>
         )}
       </div>
 
       {/* Posting Monitor */}
       {account.postingMonitor && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Posting Monitor</h2>
+        <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
+          <h2 className="text-base font-semibold text-stone-900 mb-4">Posting Monitor</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Status</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Status</p>
               <StatusBadge status={account.postingMonitor.status} />
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Current Views</p>
-              <p className="text-gray-800 font-medium">{account.postingMonitor.currentViews.toLocaleString()}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Current Views</p>
+              <p className="text-stone-800 font-medium">{account.postingMonitor.currentViews.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Growth/hr</p>
-              <p className="text-gray-800 font-medium">{account.postingMonitor.growthPerHour.toFixed(1)}%</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Growth/hr</p>
+              <p className="text-stone-800 font-medium">{account.postingMonitor.growthPerHour.toFixed(1)}%</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Assigned Hermes</p>
-              <p className="text-gray-800">{account.postingMonitor.hermesAgent?.name ?? '—'}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Assigned Hermes</p>
+              <p className="text-stone-800">{account.postingMonitor.hermesAgent?.name ?? '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Reason</p>
-              <p className="text-gray-800 truncate">{account.postingMonitor.reason ?? '—'}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Reason</p>
+              <p className="text-stone-800 truncate">{account.postingMonitor.reason ?? '—'}</p>
             </div>
           </div>
         </div>
@@ -301,7 +301,7 @@ export default function AccountDetailPage() {
       {/* Characters */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-stone-900">
             Characters ({account.characters.length})
           </h2>
           <button onClick={() => { setNewChar({ name: '', description: '', topicsRaw: '' }); setCharPhoto(null); setShowAddChar(true) }} className="btn-primary">
@@ -314,7 +314,7 @@ export default function AccountDetailPage() {
           empty="No characters yet. Add one to get started."
         >
           {account.characters.map((char) => (
-            <tr key={char.id} className="hover:bg-gray-50">
+            <tr key={char.id} className="hover:bg-stone-50">
               <td className="px-4 py-3">
                 <Link
                   href={`/accounts/${account.id}/characters/${char.id}`}
@@ -326,7 +326,7 @@ export default function AccountDetailPage() {
               <td className="px-4 py-3">
                 <StatusBadge status={char.status} />
               </td>
-              <td className="px-4 py-3 text-gray-500 max-w-sm truncate">{char.description}</td>
+              <td className="px-4 py-3 text-stone-500 max-w-sm truncate">{char.description}</td>
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Link
@@ -353,30 +353,30 @@ export default function AccountDetailPage() {
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title={`Edit @${account.username}`}>
         <form onSubmit={handleSaveAccount} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Username <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={accountForm.username}
               onChange={(e) => setAccountForm({ ...accountForm, username: e.target.value })}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Account Name</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Account Name</label>
             <input
               type="text"
               value={accountForm.accountName}
               onChange={(e) => setAccountForm({ ...accountForm, accountName: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Purpose</label>
             <select
               value={accountForm.purpose}
               onChange={(e) => setAccountForm({ ...accountForm, purpose: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="organic">organic</option>
               <option value="cpas">cpas</option>
@@ -386,12 +386,12 @@ export default function AccountDetailPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
             <textarea
               value={accountForm.notes}
               onChange={(e) => setAccountForm({ ...accountForm, notes: e.target.value })}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           {saveAccountError && (
@@ -413,13 +413,13 @@ export default function AccountDetailPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">Tambah Karakter</h2>
-              <button onClick={() => setShowAddChar(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+              <h2 className="font-semibold text-stone-900">Tambah Karakter</h2>
+              <button onClick={() => setShowAddChar(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
             </div>
 
             {/* 1. Upload Foto */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Foto Karakter</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Foto Karakter</label>
               <div
                 onDragOver={e => { e.preventDefault(); setDragOver(true) }}
                 onDragLeave={() => setDragOver(false)}
@@ -429,7 +429,7 @@ export default function AccountDetailPage() {
                   if (file && file.type.startsWith('image/')) setCharPhoto(file)
                 }}
                 className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  dragOver ? 'border-violet-400 bg-violet-50' : 'border-gray-300 hover:border-violet-300'
+                  dragOver ? 'border-violet-400 bg-violet-50' : 'border-stone-300 hover:border-violet-300'
                 }`}
                 onClick={() => document.getElementById('char-photo-input')?.click()}
               >
@@ -438,7 +438,7 @@ export default function AccountDetailPage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={URL.createObjectURL(charPhoto)} alt="preview" className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
                     <div className="text-left">
-                      <p className="text-sm font-medium text-gray-700">{charPhoto.name}</p>
+                      <p className="text-sm font-medium text-stone-700">{charPhoto.name}</p>
                       <button
                         onClick={e => { e.stopPropagation(); setCharPhoto(null) }}
                         className="text-xs text-red-500 hover:text-red-700 mt-0.5"
@@ -448,7 +448,7 @@ export default function AccountDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-400 space-y-1 py-2">
+                  <div className="text-stone-400 space-y-1 py-2">
                     <p className="text-2xl">📷</p>
                     <p className="text-sm">Drag & drop atau klik untuk upload</p>
                     <p className="text-xs">JPG, PNG, WEBP</p>
@@ -466,7 +466,7 @@ export default function AccountDetailPage() {
 
             {/* 2. Nama */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 Nama Karakter <span className="text-red-500">*</span>
               </label>
               <input
@@ -474,36 +474,36 @@ export default function AccountDetailPage() {
                 value={newChar.name}
                 onChange={e => setNewChar({ ...newChar, name: e.target.value })}
                 placeholder="Misal: Ibu Sari, Tante Dewi"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
             </div>
 
             {/* 3. Persona */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Persona</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Persona</label>
               <textarea
                 value={newChar.description}
                 onChange={e => setNewChar({ ...newChar, description: e.target.value })}
                 rows={4}
                 placeholder="Siapa karakter ini? Latar belakang, kepribadian, cara bicara, target audiens yang relate..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
               />
             </div>
 
             {/* 4. Topik Awal */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 Topik Awal
-                <span className="text-xs text-gray-400 font-normal ml-1">(pisahkan dengan Enter)</span>
+                <span className="text-xs text-stone-400 font-normal ml-1">(pisahkan dengan Enter)</span>
               </label>
               <textarea
                 value={newChar.topicsRaw}
                 onChange={e => setNewChar({ ...newChar, topicsRaw: e.target.value })}
                 rows={3}
                 placeholder={"Kaki kering diabetes\nEmotional keluarga\nSocial embarrassment"}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none font-mono text-xs"
+                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none font-mono text-xs"
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-stone-400 mt-1">
                 Topik bisa ditambah / diedit lagi di halaman detail karakter.
               </p>
             </div>

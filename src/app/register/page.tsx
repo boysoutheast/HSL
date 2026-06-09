@@ -47,47 +47,47 @@ export default function RegisterPage() {
             <span className="text-2xl">⚡</span>
           </div>
           <h1 className="text-2xl font-bold text-white">Daftar Akun</h1>
-          <p className="text-gray-400 text-sm mt-1">Hermes Support Library</p>
+          <p className="text-stone-400 text-sm mt-1">Hermes Support Library</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nama</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Nama</label>
               <input
                 type="text"
                 required
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 placeholder="Nama lengkap"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Email</label>
               <input
                 type="email"
                 required
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 placeholder="email@kamu.com"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Password</label>
               <input
                 type="password"
                 required
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 placeholder="Min. 8 karakter"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">
                 Konfirmasi Password
               </label>
               <input
@@ -96,7 +96,7 @@ export default function RegisterPage() {
                 value={form.confirm}
                 onChange={e => setForm({ ...form, confirm: e.target.value })}
                 placeholder="Ulangi password"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
@@ -116,7 +116,7 @@ export default function RegisterPage() {
           </form>
         </div>
 
-        <p className="text-center text-gray-400 text-sm mt-6">
+        <p className="text-center text-stone-400 text-sm mt-6">
           Sudah punya akun?{' '}
           <Link href="/login" className="text-violet-400 hover:text-violet-300 font-medium">
             Login

@@ -161,7 +161,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+      <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
         Loading settings...
       </div>
     )
@@ -170,8 +170,8 @@ export default function SettingsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Posting Monitor configuration parameters.</p>
+        <h1 className="text-2xl font-bold text-stone-900">Settings</h1>
+        <p className="text-sm text-stone-500 mt-0.5">Posting Monitor configuration parameters.</p>
       </div>
 
       <PageInfo
@@ -195,17 +195,17 @@ export default function SettingsPage() {
       />
 
       <form onSubmit={handleSave} className="max-w-2xl">
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+        <div className="bg-white rounded-xl border border-stone-200 divide-y divide-gray-100">
           {FIELD_META.map((field) => (
             <div key={field.key} className="px-6 py-5 flex items-start gap-6">
               <div className="flex-1 min-w-0">
                 <label
                   htmlFor={field.key}
-                  className="block text-sm font-semibold text-gray-800 mb-0.5"
+                  className="block text-sm font-semibold text-stone-800 mb-0.5"
                 >
                   {field.label}
                 </label>
-                <p className="text-xs text-gray-500 leading-relaxed">{field.description}</p>
+                <p className="text-xs text-stone-500 leading-relaxed">{field.description}</p>
               </div>
               <div className="flex-shrink-0 flex items-center gap-2">
                 <input
@@ -215,9 +215,9 @@ export default function SettingsPage() {
                   min="0"
                   value={settings[field.key] as number}
                   onChange={(e) => handleChange(field.key, e.target.value)}
-                  className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="w-24 border border-stone-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-violet-500"
                 />
-                <span className="text-xs text-gray-400 whitespace-nowrap w-16">{field.unit}</span>
+                <span className="text-xs text-stone-400 whitespace-nowrap w-16">{field.unit}</span>
               </div>
             </div>
           ))}

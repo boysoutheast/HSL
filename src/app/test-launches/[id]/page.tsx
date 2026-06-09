@@ -231,13 +231,13 @@ export default function TestLaunchDetailPage() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Memuat...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
   }
 
   if (!testLaunch) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-gray-500">Test Launch tidak ditemukan.</p>
+        <p className="text-stone-500">Test Launch tidak ditemukan.</p>
         <Link href="/test-launches" className="text-sm text-violet-600 hover:underline">← Kembali ke Test Launches</Link>
       </div>
     )
@@ -247,7 +247,7 @@ export default function TestLaunchDetailPage() {
   const placements = parsePlacements(testLaunch.placementsJson)
   const metaAccount = testLaunch.metaAccount
   const selectedPage = metaAccount?.pages?.find((p) => p.pageId === testLaunch.pageId)
-  const statusCls = STATUS_COLORS[testLaunch.status] ?? 'bg-gray-100 text-gray-600'
+  const statusCls = STATUS_COLORS[testLaunch.status] ?? 'bg-stone-100 text-stone-600'
   const statusLabel = STATUS_LABELS[testLaunch.status] ?? testLaunch.status
 
   return (
@@ -255,9 +255,9 @@ export default function TestLaunchDetailPage() {
 
       {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/test-launches" className="text-sm text-gray-500 hover:text-gray-700">Test Launches</Link>
+        <Link href="/test-launches" className="text-sm text-stone-500 hover:text-stone-700">Test Launches</Link>
         <span className="text-gray-300">/</span>
-        <span className="text-sm font-medium text-gray-900">{testLaunch.name}</span>
+        <span className="text-sm font-medium text-stone-900">{testLaunch.name}</span>
       </div>
 
       <PageInfo
@@ -319,11 +319,11 @@ export default function TestLaunchDetailPage() {
       )}
 
       {/* ── Main Header Card ────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{testLaunch.name}</h1>
-            <p className="text-gray-500 text-sm mt-0.5">
+            <h1 className="text-2xl font-bold text-stone-900">{testLaunch.name}</h1>
+            <p className="text-stone-500 text-sm mt-0.5">
               Dibuat {formatDate(testLaunch.createdAt)} · ID: <span className="font-mono text-xs">{testLaunch.id}</span>
             </p>
           </div>
@@ -352,52 +352,52 @@ export default function TestLaunchDetailPage() {
         {/* Summary Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 text-sm">
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Budget Harian</p>
-            <p className="text-gray-900 font-semibold">
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Budget Harian</p>
+            <p className="text-stone-900 font-semibold">
               Rp{Number(testLaunch.dailyBudget).toLocaleString('id-ID')}
             </p>
-            <p className="text-xs text-gray-400">{testLaunch.currency}</p>
+            <p className="text-xs text-stone-400">{testLaunch.currency}</p>
           </div>
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Objective</p>
-            <p className="text-gray-900">{OBJECTIVE_LABELS[testLaunch.objective] ?? testLaunch.objective}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Objective</p>
+            <p className="text-stone-900">{OBJECTIVE_LABELS[testLaunch.objective] ?? testLaunch.objective}</p>
           </div>
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Launch Mode</p>
-            <p className="text-gray-900">{LAUNCH_MODE_LABELS[testLaunch.launchMode] ?? testLaunch.launchMode}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Launch Mode</p>
+            <p className="text-stone-900">{LAUNCH_MODE_LABELS[testLaunch.launchMode] ?? testLaunch.launchMode}</p>
           </div>
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Meta Connection</p>
-            <p className="text-gray-900">{metaAccount?.name ?? metaAccount?.appId ?? testLaunch.metaAccountId}</p>
-            <p className="text-xs text-gray-400">{metaAccount?.status}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Meta Connection</p>
+            <p className="text-stone-900">{metaAccount?.name ?? metaAccount?.appId ?? testLaunch.metaAccountId}</p>
+            <p className="text-xs text-stone-400">{metaAccount?.status}</p>
           </div>
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Ad Account</p>
-            <p className="text-gray-900">{testLaunch.metaAdAccount?.adAccountName ?? testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? '—'}</p>
-            <p className="text-xs text-gray-400">{testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? 'belum dipilih'}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Ad Account</p>
+            <p className="text-stone-900">{testLaunch.metaAdAccount?.adAccountName ?? testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? '—'}</p>
+            <p className="text-xs text-stone-400">{testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? 'belum dipilih'}</p>
           </div>
 
           {selectedPage && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Facebook Page</p>
-              <p className="text-gray-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Facebook Page</p>
+              <p className="text-stone-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
             </div>
           )}
 
           {selectedPage?.igUsername && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Instagram</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Instagram</p>
               <p className="text-pink-700">@{selectedPage.igUsername}</p>
             </div>
           )}
 
           {testLaunch.destinationUrl && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Destination URL</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Destination URL</p>
               <a
                 href={testLaunch.destinationUrl}
                 target="_blank"
@@ -411,14 +411,14 @@ export default function TestLaunchDetailPage() {
 
           {testLaunch.sourceAdsetId && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Source Adset ID</p>
-              <p className="text-gray-900 font-mono text-xs">{testLaunch.sourceAdsetId}</p>
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Source Adset ID</p>
+              <p className="text-stone-900 font-mono text-xs">{testLaunch.sourceAdsetId}</p>
             </div>
           )}
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Placement</p>
-            <p className="text-gray-900">
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Placement</p>
+            <p className="text-stone-900">
               {testLaunch.placementMode === 'automatic'
                 ? '⚡ Automatic'
                 : placements.length > 0
@@ -429,23 +429,23 @@ export default function TestLaunchDetailPage() {
 
           {audience && (
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Audience</p>
-              <p className="text-gray-900">
+              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Audience</p>
+              <p className="text-stone-900">
                 {audience.ageMin}–{audience.ageMax} th · {audience.gender} · {audience.locations?.[0]?.key ?? '—'}
               </p>
             </div>
           )}
 
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Updated</p>
-            <p className="text-gray-700">{formatDate(testLaunch.updatedAt)}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Updated</p>
+            <p className="text-stone-700">{formatDate(testLaunch.updatedAt)}</p>
           </div>
         </div>
 
         {testLaunch.notes && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 font-medium mb-1">Notes</p>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{testLaunch.notes}</p>
+          <div className="mt-4 p-3 bg-stone-50 rounded-lg">
+            <p className="text-xs text-stone-500 font-medium mb-1">Notes</p>
+            <p className="text-sm text-stone-700 whitespace-pre-wrap">{testLaunch.notes}</p>
           </div>
         )}
       </div>
@@ -453,13 +453,13 @@ export default function TestLaunchDetailPage() {
       {/* ── Creatives ──────────────────────────────────────────────────── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-stone-900">
             Creatives ({testLaunch.creatives.length})
           </h2>
         </div>
 
         {testLaunch.creatives.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
+          <div className="bg-white rounded-xl border border-stone-200 p-8 text-center text-stone-400 text-sm">
             Tidak ada creative.
           </div>
         ) : (
@@ -467,7 +467,7 @@ export default function TestLaunchDetailPage() {
             {testLaunch.creatives
               .sort((a, b) => a.sortOrder - b.sortOrder)
               .map((creative) => (
-                <div key={creative.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                <div key={creative.id} className="bg-white rounded-xl border border-stone-200 p-4">
                   <div className="flex items-start gap-4">
                     {creative.creativeUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -477,38 +477,38 @@ export default function TestLaunchDetailPage() {
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center text-gray-400 text-xs">
+                      <div className="w-20 h-20 bg-stone-100 rounded-lg flex-shrink-0 flex items-center justify-center text-stone-400 text-xs">
                         No Image
                       </div>
                     )}
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[creative.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[creative.status] ?? 'bg-stone-100 text-stone-600'}`}>
                           {creative.status}
                         </span>
                         {creative.callToAction && (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                          <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">
                             CTA: {creative.callToAction}
                           </span>
                         )}
-                        <span className="text-xs text-gray-400">#{creative.sortOrder + 1}</span>
+                        <span className="text-xs text-stone-400">#{creative.sortOrder + 1}</span>
                       </div>
 
                       {creative.headline && (
-                        <p className="text-sm font-medium text-gray-900">{creative.headline}</p>
+                        <p className="text-sm font-medium text-stone-900">{creative.headline}</p>
                       )}
                       {creative.primaryText && (
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                          <span className="text-gray-400 text-xs mr-1">Primary:</span>{creative.primaryText}
+                        <p className="text-sm text-stone-700 whitespace-pre-wrap">
+                          <span className="text-stone-400 text-xs mr-1">Primary:</span>{creative.primaryText}
                         </p>
                       )}
                       {creative.hookText && (
-                        <p className="text-xs text-gray-500">
-                          <span className="text-gray-400">Hook:</span> {creative.hookText}
+                        <p className="text-xs text-stone-500">
+                          <span className="text-stone-400">Hook:</span> {creative.hookText}
                         </p>
                       )}
                       {creative.captionText && (
-                        <p className="text-xs text-gray-400 line-clamp-2">
+                        <p className="text-xs text-stone-400 line-clamp-2">
                           Caption: {creative.captionText}
                         </p>
                       )}
@@ -523,39 +523,39 @@ export default function TestLaunchDetailPage() {
       {/* ── Approval Request ────────────────────────────────────────────── */}
       {testLaunch.approvalRequest && (
         <div className="mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-3">Approval Request</h2>
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-base font-semibold text-stone-900 mb-3">Approval Request</h2>
+          <div className="bg-white rounded-xl border border-stone-200 p-5">
             <div className="flex items-center gap-3 mb-4">
               <StatusBadge status={testLaunch.approvalRequest.status} />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-stone-600">
                 {ACTION_TYPE_LABELS[testLaunch.approvalRequest.actionType] ?? testLaunch.approvalRequest.actionType}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Requested By</p>
-                <p className="text-gray-900">
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Requested By</p>
+                <p className="text-stone-900">
                   {testLaunch.approvalRequest.requestedBy.name ?? testLaunch.approvalRequest.requestedBy.email}
                 </p>
-                <p className="text-gray-400 text-xs">{formatDate(testLaunch.approvalRequest.createdAt)}</p>
+                <p className="text-stone-400 text-xs">{formatDate(testLaunch.approvalRequest.createdAt)}</p>
               </div>
 
               {testLaunch.approvalRequest.reviewedBy && (
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Reviewed By</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Reviewed By</p>
+                  <p className="text-stone-900">
                     {testLaunch.approvalRequest.reviewedBy.name ?? testLaunch.approvalRequest.reviewedBy.email}
                   </p>
-                  <p className="text-gray-400 text-xs">{formatDate(testLaunch.approvalRequest.reviewedAt)}</p>
+                  <p className="text-stone-400 text-xs">{formatDate(testLaunch.approvalRequest.reviewedAt)}</p>
                 </div>
               )}
             </div>
 
             {testLaunch.approvalRequest.requestNote && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500 font-medium mb-0.5">Catatan Request:</p>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{testLaunch.approvalRequest.requestNote}</p>
+              <div className="mt-3 p-3 bg-stone-50 rounded-lg">
+                <p className="text-xs text-stone-500 font-medium mb-0.5">Catatan Request:</p>
+                <p className="text-sm text-stone-700 whitespace-pre-wrap">{testLaunch.approvalRequest.requestNote}</p>
               </div>
             )}
 
@@ -572,29 +572,29 @@ export default function TestLaunchDetailPage() {
       {/* ── Worker Tasks ────────────────────────────────────────────────── */}
       {testLaunch.workerTasks.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-gray-900 mb-3">
+          <h2 className="text-base font-semibold text-stone-900 mb-3">
             Execution ({testLaunch.workerTasks.length} task)
           </h2>
 
           {testLaunch.workerTasks.map((task) => {
             const result = parseWorkerResult(task.resultJson)
             return (
-              <div key={task.id} className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
+              <div key={task.id} className="bg-white rounded-xl border border-stone-200 p-4 mb-3">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">
+                    <p className="font-semibold text-stone-900 text-sm">
                       {WORKER_TASK_TYPE_LABELS[task.type] ?? task.type}
                     </p>
-                    <p className="text-xs text-gray-400">{task.id}</p>
+                    <p className="text-xs text-stone-400">{task.id}</p>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${STATUS_COLORS[task.status] ?? 'bg-stone-100 text-stone-600'}`}>
                     {STATUS_LABELS[task.status] ?? task.status}
                   </span>
                 </div>
 
                 {/* Result card */}
                 {result && (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3 text-sm">
+                  <div className="bg-stone-50 rounded-lg p-3 mb-3 text-sm">
                     {result.mode === 'dry_run_no_write' ? (
                       <div className="flex items-center gap-2 text-amber-700">
                         <span>🟡</span>

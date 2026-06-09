@@ -294,8 +294,8 @@ export default function AgentsPage() {
       {/* ── Agents Table ── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Hermes Agents</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{agents.length} total · {activeCount} active</p>
+          <h1 className="text-2xl font-bold text-stone-900">Hermes Agents</h1>
+          <p className="text-sm text-stone-500 mt-0.5">{agents.length} total · {activeCount} active</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="btn-primary">+ Add Agent</button>
       </div>
@@ -311,7 +311,7 @@ export default function AgentsPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">Loading agents...</div>
+        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading agents...</div>
       ) : (
         <Table
           headers={['Name', 'Status', 'Assignments', 'Content Logs', 'Created', 'Notes', 'Actions']}
@@ -320,20 +320,20 @@ export default function AgentsPage() {
           {agents.map((agent) => (
             <tr
               key={agent.id}
-              className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedAgentId === agent.id ? 'bg-violet-50' : ''}`}
+              className={`hover:bg-stone-50 transition-colors cursor-pointer ${selectedAgentId === agent.id ? 'bg-violet-50' : ''}`}
               onClick={() => setSelectedAgentId(agent.id)}
             >
               <td className="px-4 py-3">
-                <p className="font-medium text-gray-900">{agent.name}</p>
-                <p className="text-xs text-gray-400 font-mono mt-0.5">{agent.id.substring(0, 12)}...</p>
+                <p className="font-medium text-stone-900">{agent.name}</p>
+                <p className="text-xs text-stone-400 font-mono mt-0.5">{agent.id.substring(0, 12)}...</p>
               </td>
               <td className="px-4 py-3"><StatusBadge status={agent.status} /></td>
-              <td className="px-4 py-3 text-gray-600">{agent._count?.assignments ?? 0}</td>
-              <td className="px-4 py-3 text-gray-600">{agent._count?.contentLogs ?? 0}</td>
-              <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+              <td className="px-4 py-3 text-stone-600">{agent._count?.assignments ?? 0}</td>
+              <td className="px-4 py-3 text-stone-600">{agent._count?.contentLogs ?? 0}</td>
+              <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
                 {new Date(agent.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </td>
-              <td className="px-4 py-3 text-gray-500 max-w-[200px]">
+              <td className="px-4 py-3 text-stone-500 max-w-[200px]">
                 <p className="truncate">{agent.notes ?? '—'}</p>
               </td>
               <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -363,20 +363,20 @@ export default function AgentsPage() {
       {/* ── Assignments Section ── */}
       <div className="mt-10">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-gray-900">Assignments</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Assign data yang boleh diakses agent yang dipilih. Klik baris agent di atas untuk memilih.</p>
+          <h2 className="text-lg font-bold text-stone-900">Assignments</h2>
+          <p className="text-sm text-stone-500 mt-0.5">Assign data yang boleh diakses agent yang dipilih. Klik baris agent di atas untuk memilih.</p>
         </div>
 
         {!selectedAgentId ? (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm bg-white border border-gray-200 rounded-xl">
+          <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white border border-stone-200 rounded-xl">
             Pilih agent dari tabel di atas untuk manage assignment.
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-xl">
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white border border-stone-200 rounded-xl">
+            <div className="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
               <div>
-                <p className="font-semibold text-gray-900">{selectedAgent?.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{checked.size} item{checked.size !== 1 ? 's' : ''} selected in current tab</p>
+                <p className="font-semibold text-stone-900">{selectedAgent?.name}</p>
+                <p className="text-xs text-stone-500 mt-0.5">{checked.size} item{checked.size !== 1 ? 's' : ''} selected in current tab</p>
               </div>
               <button onClick={handleSaveAssignment} disabled={saving} className="btn-success">
                 {saving ? 'Saving...' : 'Save Assignment'}
@@ -384,7 +384,7 @@ export default function AgentsPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 px-2 pt-1">
+            <div className="flex border-b border-stone-200 px-2 pt-1">
               {ASSIGN_TABS.map(({ label, type }) => (
                 <button
                   key={type}
@@ -392,7 +392,7 @@ export default function AgentsPage() {
                   className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                     activeAssignTab === type
                       ? 'border-violet-600 text-violet-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                      : 'border-transparent text-stone-500 hover:text-stone-700'
                   }`}
                 >
                   {label}
@@ -403,9 +403,9 @@ export default function AgentsPage() {
             {/* Checklist */}
             <div className="p-4">
               {loadingAssign ? (
-                <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading...</div>
+                <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading...</div>
               ) : assignItems.length === 0 ? (
-                <div className="flex items-center justify-center h-32 text-gray-400 text-sm">No items found.</div>
+                <div className="flex items-center justify-center h-32 text-stone-400 text-sm">No items found.</div>
               ) : (
                 <div className="space-y-1 max-h-[400px] overflow-y-auto">
                   {assignItems.map((item) => {
@@ -413,18 +413,18 @@ export default function AgentsPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${isChecked ? 'bg-violet-50' : 'hover:bg-gray-50'}`}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${isChecked ? 'bg-violet-50' : 'hover:bg-stone-50'}`}
                       >
                         <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleToggleCheck(item.id)}
-                            className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500 flex-shrink-0"
+                            className="w-4 h-4 text-violet-600 rounded border-stone-300 focus:ring-violet-500 flex-shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className={`text-sm font-medium truncate ${isChecked ? 'text-violet-900' : 'text-gray-800'}`}>{item.label}</p>
-                            {item.sublabel && <p className="text-xs text-gray-400 truncate">{item.sublabel}</p>}
+                            <p className={`text-sm font-medium truncate ${isChecked ? 'text-violet-900' : 'text-stone-800'}`}>{item.label}</p>
+                            {item.sublabel && <p className="text-xs text-stone-400 truncate">{item.sublabel}</p>}
                           </div>
                         </label>
                         {isChecked && (
@@ -452,24 +452,24 @@ export default function AgentsPage() {
       <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add Hermes Agent">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Agent Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Agent Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={newAgentName}
               onChange={(e) => setNewAgentName(e.target.value)}
               placeholder="e.g. hermes-agent-01"
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
             <textarea
               value={newAgentNotes}
               onChange={(e) => setNewAgentNotes(e.target.value)}
               placeholder="Optional notes about this agent..."
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -485,7 +485,7 @@ export default function AgentsPage() {
       {regenKey && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">API Key Baru — {regenKey.agentName}</h3>
+            <h3 className="text-lg font-semibold text-stone-900">API Key Baru — {regenKey.agentName}</h3>
             <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -495,7 +495,7 @@ export default function AgentsPage() {
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">New API Key</label>
+              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">New API Key</label>
               <code className="block bg-gray-900 text-green-400 text-sm px-3 py-3 rounded-lg font-mono break-all select-all">
                 {regenKey.key}
               </code>
@@ -534,7 +534,7 @@ export default function AgentsPage() {
             </p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">API Key</label>
+            <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">API Key</label>
             <div className="flex items-center gap-2">
               <code className="flex-1 block bg-gray-900 text-green-400 text-sm px-3 py-3 rounded-lg font-mono break-all">{newApiKey}</code>
               <button onClick={() => navigator.clipboard.writeText(newApiKey)} className="btn-info" title="Copy to clipboard">

@@ -53,7 +53,7 @@ interface Topic {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
+const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const textareaCls = `${inputCls} resize-none`
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -83,13 +83,13 @@ export default function CharacterDetailPage() {
   useEffect(() => { fetchCharacter() }, [fetchCharacter])
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Loading...</div>
+    return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Loading...</div>
   }
 
   if (!character) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-gray-500">Character not found.</p>
+        <p className="text-stone-500">Character not found.</p>
         <Link href={`/accounts/${accountId}`} className="text-sm text-violet-600 hover:underline">Back to Account</Link>
       </div>
     )
@@ -105,17 +105,17 @@ export default function CharacterDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm flex-wrap">
-        <Link href="/accounts" className="text-gray-500 hover:text-gray-700">Accounts</Link>
+        <Link href="/accounts" className="text-stone-500 hover:text-stone-700">Accounts</Link>
         <span className="text-gray-300">/</span>
-        <Link href={`/accounts/${accountId}`} className="text-gray-500 hover:text-gray-700">
+        <Link href={`/accounts/${accountId}`} className="text-stone-500 hover:text-stone-700">
           @{character.instagramAccount.username}
         </Link>
         <span className="text-gray-300">/</span>
-        <span className="font-medium text-gray-900">{character.name}</span>
+        <span className="font-medium text-stone-900">{character.name}</span>
       </div>
 
       {/* Tab nav */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
+      <div className="flex gap-1 border-b border-stone-200 mb-6">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
@@ -123,7 +123,7 @@ export default function CharacterDetailPage() {
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === key
                 ? 'border-violet-600 text-violet-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
             }`}
           >
             {label}
@@ -200,16 +200,16 @@ function InfoTab({ character, charId, onSaved }: { character: Character; charId:
         inputs={['name', 'persona (description)', 'advanced: behavior, speaking style, expression, movement, forbidden rules, status']}
         wiring={[{ label: '→ Hermes API', desc: 'data karakter dikirim via /api/hermes/library' }]}
       />
-      <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+      <form onSubmit={handleSave} className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
         {/* Nama */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nama <span className="text-red-500">*</span></label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Nama <span className="text-red-500">*</span></label>
           <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required className={inputCls} />
         </div>
 
         {/* Persona */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Persona</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Persona</label>
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -223,7 +223,7 @@ function InfoTab({ character, charId, onSaved }: { character: Character; charId:
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 transition-colors"
         >
           <span className={`transition-transform inline-block ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
           Detail Karakter Lanjutan
@@ -232,27 +232,27 @@ function InfoTab({ character, charId, onSaved }: { character: Character; charId:
         {showAdvanced && (
           <div className="space-y-3 pl-4 border-l-2 border-gray-100">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Behavior</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Behavior</label>
               <textarea value={form.behavior} onChange={(e) => setForm({ ...form, behavior: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Speaking Style</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Speaking Style</label>
               <textarea value={form.speakingStyle} onChange={(e) => setForm({ ...form, speakingStyle: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Expression Style</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Expression Style</label>
               <textarea value={form.expressionStyle} onChange={(e) => setForm({ ...form, expressionStyle: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Movement Style</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Movement Style</label>
               <textarea value={form.movementStyle} onChange={(e) => setForm({ ...form, movementStyle: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Forbidden Rules</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Forbidden Rules</label>
               <textarea value={form.forbiddenRules} onChange={(e) => setForm({ ...form, forbiddenRules: e.target.value })} rows={2} className={textareaCls} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Status</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={inputCls}>
                 <option value="active">active</option>
                 <option value="inactive">inactive</option>
@@ -392,8 +392,8 @@ function PhotosTab({ charId }: { charId: string }) {
 
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-base font-semibold text-gray-800">Foto Referensi</h3>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h3 className="text-base font-semibold text-stone-800">Foto Referensi</h3>
+          <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${photos.filter(p => p.status === 'active').length} foto aktif`}
           </p>
         </div>
@@ -407,17 +407,17 @@ function PhotosTab({ charId }: { charId: string }) {
         <form onSubmit={handleUpload} className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">File <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">File <span className="text-red-500">*</span></label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                 required
-                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-violet-600 file:text-white hover:file:bg-violet-700"
+                className="w-full text-sm text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-violet-600 file:text-white hover:file:bg-violet-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Label</label>
               <input
                 type="text"
                 value={uploadLabel}
@@ -427,7 +427,7 @@ function PhotosTab({ charId }: { charId: string }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
               <select value={uploadCategory} onChange={(e) => setUploadCategory(e.target.value)} className={inputCls}>
                 <option value="">— pilih —</option>
                 <option value="portrait">portrait</option>
@@ -448,15 +448,15 @@ function PhotosTab({ charId }: { charId: string }) {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading photos...</div>
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading photos...</div>
       ) : photos.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
           No photos yet. Upload a photo to get started.
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {photos.map((photo) => (
-            <div key={photo.id} className="relative group rounded-xl overflow-hidden aspect-square bg-gray-100 border border-gray-200">
+            <div key={photo.id} className="relative group rounded-xl overflow-hidden aspect-square bg-stone-100 border border-stone-200">
               {/* Klik foto → buka lightbox */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -722,7 +722,7 @@ function TopicsTab({ charId }: { charId: string }) {
 
       {/* ── Topics List ── */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-800">
+        <h3 className="text-base font-semibold text-stone-800">
           Topics ({loading ? '...' : topics.length})
         </h3>
         <button
@@ -734,9 +734,9 @@ function TopicsTab({ charId }: { charId: string }) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm">Loading topics...</div>
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading topics...</div>
       ) : topics.length === 0 ? (
-        <div className="flex items-center justify-center h-32 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
           No topics yet.
         </div>
       ) : (
@@ -745,17 +745,17 @@ function TopicsTab({ charId }: { charId: string }) {
             const isExpanded = expandedTopicId === topic.id
             const ceps = topicCeps[topic.id] ?? []
             return (
-              <div key={topic.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div key={topic.id} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
                 {/* Topic row */}
                 <div className="flex items-center justify-between px-4 py-3">
                   <button
                     onClick={() => toggleExpand(topic.id)}
                     className="flex items-center gap-3 text-left flex-1 min-w-0"
                   >
-                    <span className="text-gray-400 text-sm">{isExpanded ? '▼' : '▶'}</span>
+                    <span className="text-stone-400 text-sm">{isExpanded ? '▼' : '▶'}</span>
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{topic.name}</p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{topic.description}</p>
+                      <p className="font-medium text-stone-900 truncate">{topic.name}</p>
+                      <p className="text-xs text-stone-400 truncate mt-0.5">{topic.description}</p>
                     </div>
                     <StatusBadge status={topic.status} />
                   </button>
@@ -782,9 +782,9 @@ function TopicsTab({ charId }: { charId: string }) {
 
                 {/* Expanded: Active CEPs */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 px-4 py-4 bg-gray-50">
+                  <div className="border-t border-gray-100 px-4 py-4 bg-stone-50">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-medium text-gray-700">
+                      <p className="text-sm font-medium text-stone-700">
                         CEPs ({loadingCeps === topic.id ? '...' : ceps.length})
                       </p>
                       <button
@@ -796,9 +796,9 @@ function TopicsTab({ charId }: { charId: string }) {
                     </div>
 
                     {loadingCeps === topic.id ? (
-                      <p className="text-xs text-gray-400 text-center py-4">Loading CEPs...</p>
+                      <p className="text-xs text-stone-400 text-center py-4">Loading CEPs...</p>
                     ) : ceps.length === 0 ? (
-                      <p className="text-xs text-gray-400 text-center py-4">No CEPs yet. Add one manually or let Hermes write one.</p>
+                      <p className="text-xs text-stone-400 text-center py-4">No CEPs yet. Add one manually or let Hermes write one.</p>
                     ) : (
                       <div className="space-y-1.5">
                         {ceps.map((cep) => (
@@ -807,11 +807,11 @@ function TopicsTab({ charId }: { charId: string }) {
                               <span className={`mt-0.5 flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${
                                 cep.source === 'ai'
                                   ? 'bg-violet-100 text-violet-600'
-                                  : 'bg-gray-100 text-gray-500'
+                                  : 'bg-stone-100 text-stone-500'
                               }`}>
                                 {cep.source === 'ai' ? 'AI' : 'Manual'}
                               </span>
-                              <p className="text-sm text-gray-700 leading-relaxed">&ldquo;{cep.cepText}&rdquo;</p>
+                              <p className="text-sm text-stone-700 leading-relaxed">&ldquo;{cep.cepText}&rdquo;</p>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <button
@@ -851,7 +851,7 @@ function TopicsTab({ charId }: { charId: string }) {
       >
         <form onSubmit={handleSaveTopic} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={topicForm.name}
@@ -861,7 +861,7 @@ function TopicsTab({ charId }: { charId: string }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Description <span className="text-red-500">*</span></label>
             <textarea
               value={topicForm.description}
               onChange={(e) => setTopicForm({ ...topicForm, description: e.target.value })}
@@ -895,7 +895,7 @@ function TopicsTab({ charId }: { charId: string }) {
             <strong>CEP</strong> (Content Entry Point) adalah kalimat pembuka yang langsung menyentuh pain point audiens — membuat mereka berhenti scroll dan merasa &ldquo;ini gue banget&rdquo;.
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hook Text <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Hook Text <span className="text-red-500">*</span></label>
             <textarea
               value={cepText}
               onChange={(e) => setCepText(e.target.value)}

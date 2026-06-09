@@ -38,14 +38,14 @@ export default async function CharactersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Characters</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{characters.length} character{characters.length !== 1 ? 's' : ''} total</p>
+          <h1 className="text-2xl font-bold text-stone-900">Characters</h1>
+          <p className="text-sm text-stone-500 mt-0.5">{characters.length} character{characters.length !== 1 ? 's' : ''} total</p>
         </div>
         {/* + Add Character disabled — use Account Detail page to create */}
         <button
           title="Tambah karakter via halaman Account Detail"
           disabled
-          className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400"
+          className="cursor-not-allowed rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-medium text-stone-400"
         >
           + Add Character
         </button>
@@ -74,10 +74,10 @@ export default async function CharactersPage() {
         empty="No characters found."
       >
         {characters.map((char) => (
-          <tr key={char.id} className="hover:bg-gray-50 transition-colors">
+          <tr key={char.id} className="hover:bg-stone-50 transition-colors">
             <td className="px-4 py-3">
-              <p className="font-medium text-gray-900">{char.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="font-medium text-stone-900">{char.name}</p>
+              <p className="text-xs text-stone-400 mt-0.5">
                 {new Date(char.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </td>
@@ -87,16 +87,16 @@ export default async function CharactersPage() {
             <td className="px-4 py-3">
               <StatusBadge status={char.status} />
             </td>
-            <td className="px-4 py-3 text-gray-500 max-w-[240px]">
+            <td className="px-4 py-3 text-stone-500 max-w-[240px]">
               <p className="truncate">{char.description}</p>
             </td>
-            <td className="px-4 py-3 text-gray-500 max-w-[180px]">
+            <td className="px-4 py-3 text-stone-500 max-w-[180px]">
               <p className="truncate">{char.speakingStyle ?? '—'}</p>
             </td>
-            <td className="px-4 py-3 text-gray-600">
+            <td className="px-4 py-3 text-stone-600">
               {char._count?.topics ?? '—'}
             </td>
-            <td className="px-4 py-3 text-gray-600">
+            <td className="px-4 py-3 text-stone-600">
               {char._count?.photoReferences ?? '—'}
             </td>
           </tr>
