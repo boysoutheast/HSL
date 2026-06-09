@@ -184,7 +184,23 @@ export async function DELETE(
     return NextResponse.json({ error: 'MetaConnection not found' }, { status: 404 })
   }
 
-  // Cascade delete: businesses, adAccounts, pages have onDelete: Cascade
+  const relatedLaunchCount = await prisma.testLaunch.count({
+    where: { metaAccountId: params.id },
+  })
+
+  if (relatedLaunchCount > 0) {
+    return NextResponse.json(
+      {
+        error: `Koneksi tidak bisa dihapus karena masih dipakai ${relatedLaunchCount} test launch. Hapus atau pindahkan test launch dulu.`,
+        code: 'META_CONNECTION_IN_USE',
+        relatedLaunchCount,
+      },
+      { status: 409 },
+    )
+  }
+
+  // Cascade delete: businesses, adAccounts, pages have onDelete: Cascade.
+  // test_launches still RESTRICT by DB migration, so guard above is required.
   await prisma.metaAccount.delete({
     where: { id: params.id },
   })
