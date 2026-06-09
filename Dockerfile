@@ -32,6 +32,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/start.sh ./start.sh
+RUN chmod +x ./start.sh
 
 EXPOSE 3000
 ENV PORT 3000
