@@ -46,6 +46,8 @@ const navGroups: NavGroup[] = [
       { label: 'All Launches', href: '/test-launches' },
       { label: 'New Launch', href: '/test-launches/new' },
       { label: 'Campaign Monitor', href: '/campaign-monitor' },
+      { label: 'Action Center', href: '/action-center' },
+      { label: 'Rules', href: '/rules-editor' },
       { label: 'Approvals', href: '/approval-requests', adminOnly: true },
     ],
   },
