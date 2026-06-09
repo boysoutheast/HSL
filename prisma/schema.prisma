@@ -457,6 +457,8 @@ model TestLaunch {
   launchMode      String   @map("launch_mode")         // new_test | duplicate_winner
   sourceAdsetId   String?  @map("source_adset_id")    // for duplicate_winner
   notes           String?
+  // ── Conversion (required for OUTCOME_SALES) ──
+  pixelId         String?  @map("pixel_id")           // Meta pixel ID for conversion tracking
   // status lifecycle: draft → pending_approval → approved/rejected → executing → completed/failed
   status          String   @default("draft")
   errorMessage    String?  @map("error_message")

@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     currency?: string
     pageId?: string
     igAccountId?: string
+    pixelId?: string
     placementMode?: string
     placementsJson?: string
     audienceJson?: string
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
       currency: body.currency ?? 'IDR',
       pageId: body.pageId,
       igAccountId: body.igAccountId,
+      pixelId: body.pixelId,
       placementMode: body.placementMode ?? 'automatic',
       placementsJson: body.placementsJson,
       audienceJson: body.audienceJson,

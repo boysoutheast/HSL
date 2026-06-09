@@ -75,6 +75,7 @@ interface FormData {
   gender: 'all' | 'male' | 'female'
   // Step 5
   creatives: Creative[]
+  pixelId: string
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -96,6 +97,13 @@ const CTA_OPTIONS = [
   { value: 'SIGN_UP', label: 'Sign Up' },
 ]
 
+const PIXEL_OPTIONS = [
+  { id: '1360774452473859', name: 'Taracare Brand (Aktif)' },
+  { id: '1576663299586793', name: 'Klinik Dokter Dataset Pixel' },
+  { id: '1516726336224849', name: 'LBLO' },
+  { id: '1635207137470687', name: 'TTC - Trading Pixel Dataset' },
+]
+
 const PLACEMENT_OPTIONS = [
   { value: 'facebook_feed', label: 'Facebook Feed' },
   { value: 'facebook_stories', label: 'Facebook Stories' },
@@ -111,7 +119,7 @@ const GENDER_OPTIONS = [
   { value: 'female', label: 'Perempuan' },
 ]
 
-const STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Creatives'] as const
+const STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
 type Step = typeof STEPS[number]
 
 const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
@@ -158,12 +166,14 @@ export default function NewTestLaunchPage() {
     ageMax: 45,
     gender: 'all',
     creatives: [emptyCreative()],
+    pixelId: '',
   })
 
   // ── UI State ─────────────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<Page | null>(null)
+  const [selectedPixel, setSelectedPixel] = useState<{id: string; name: string} | null>(null)
 
   // ── Fetch Meta Connections on mount ─────────────────────────────────────
   const fetchMetaConnections = useCallback(async () => {
@@ -264,6 +274,9 @@ export default function NewTestLaunchPage() {
     if (form.creatives.length === 0 || !form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())) {
       setSaveError('Minimal 1 creative dengan image URL atau primary text.'); return
     }
+    if (form.objective === 'OUTCOME_SALES' && !form.pixelId) {
+      setSaveError('OUTCOME_SALES memerlukan pixel. Pilih pixel di step Pixel.'); return
+    }
 
     setSaving(true)
     setSaveError(null)
@@ -298,6 +311,7 @@ export default function NewTestLaunchPage() {
           notes: form.notes.trim() || undefined,
           pageId: selectedPage?.pageId || undefined,
           igAccountId: selectedPage?.igBusinessAccountId || undefined,
+          pixelId: form.pixelId || undefined,
           placementMode: form.placementMode,
           placementsJson: placementsJson !== undefined ? placementsJson : undefined,
           audienceJson,
@@ -917,8 +931,85 @@ export default function NewTestLaunchPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentStep('Creatives')}
+                onClick={() => {
+                  const next = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
+                  setCurrentStep(next)
+                }}
                 className="btn-primary"
+              >
+                {form.objective === 'OUTCOME_SALES' ? 'Lanjut ke Pixel →' : 'Lanjut ke Creatives →'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 4: Pixel (OUTCOME_SALES only) ───────────────────────────── */}
+        {currentStep === 'Pixel' && (
+          <div className="space-y-5">
+            <PageInfo
+              purpose="Pilih Meta Pixel untuk tracking conversions. Diperlukan untuk objective Sales."
+              inputs={['Pixel']}
+              wiring={[
+                { label: '→ Creative', desc: 'tambahkan creative untuk iklan' },
+              ]}
+            />
+
+            <div className={sectionCls}>
+              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pilih Meta Pixel</h2>
+              <p className="text-xs text-gray-500 mb-3">
+                Pixel melacak conversions di website Anda. Pilih salah satu dari pixel yang tersedia di ad account.
+              </p>
+              <div className="space-y-2">
+                {PIXEL_OPTIONS.map((px) => (
+                  <button
+                    key={px.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPixel(px)
+                      setForm((f) => ({ ...f, pixelId: px.id }))
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                      selectedPixel?.id === px.id
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{px.name}</p>
+                        <p className="text-xs text-gray-400 font-mono">{px.id}</p>
+                      </div>
+                      {selectedPixel?.id === px.id && (
+                        <span className="ml-auto text-indigo-500 text-sm font-medium">✓ Dipilih</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {!form.pixelId && (
+                <p className="text-xs text-amber-600 mt-2">
+                  ⚠️ Pixel wajib dipilih untuk objective Sales.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-3 pb-6">
+              <button type="button" onClick={() => setCurrentStep('Audience')} className="btn-ghost">
+                ← Kembali
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!form.pixelId) { alert('Pilih pixel terlebih dahulu.'); return }
+                  setCurrentStep('Creatives')
+                }}
+                disabled={!form.pixelId}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Lanjut ke Creatives →
               </button>
@@ -1070,7 +1161,10 @@ export default function NewTestLaunchPage() {
             </div>
 
             <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Audience')} className="btn-ghost">
+              <button type="button" onClick={() => {
+                const prev = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Audience'
+                setCurrentStep(prev)
+              }} className="btn-ghost">
                 ← Kembali
               </button>
               <button
