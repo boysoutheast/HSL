@@ -25,6 +25,7 @@ function getAutoTheme(): Theme {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // On mount, read what inline script already applied to <html>
+    if (typeof document === 'undefined') return 'light'
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
   })
   const [isAuto, setIsAuto] = useState(true)

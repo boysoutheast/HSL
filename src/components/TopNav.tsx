@@ -29,11 +29,30 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Meta',
-    href: '/meta-connections',
+    label: 'Posts',
+    href: '/posts',
     items: [
+      { label: 'All Posts', href: '/posts' },
+      { label: 'Schedule', href: '/posts/schedule' },
+      { label: 'Drafts', href: '/posts/drafts' },
+    ],
+  },
+  {
+    label: 'Community',
+    href: '/community',
+    items: [
+      { label: 'Comments', href: '/community/comments' },
+      { label: 'Auto Reply Rules', href: '/community/auto-reply' },
+      { label: 'Auto Like', href: '/community/auto-like' },
+      { label: 'Spam Rules', href: '/community/spam' },
+    ],
+  },
+  {
+    label: 'Accounts',
+    href: '/accounts',
+    items: [
+      { label: 'Connected Accounts', href: '/accounts' },
       { label: 'Meta Connections', href: '/meta-connections' },
-      { label: 'Accounts', href: '/accounts' },
       { label: 'Products', href: '/products' },
       { label: 'Photos', href: '/photos' },
     ],
@@ -48,21 +67,14 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Approvals',
-    href: '/approval-requests',
+    label: 'Admin',
+    href: '/admin-users',
     adminOnly: true,
     items: [
-      { label: 'Pending', href: '/approval-requests', adminOnly: true },
       { label: 'Users', href: '/admin-users', adminOnly: true },
-    ],
-  },
-  {
-    label: 'Worker',
-    href: '/agents',
-    items: [
       { label: 'Agents', href: '/agents', adminOnly: true },
-      { label: 'Settings', href: '/settings', adminOnly: true },
       { label: 'API Docs', href: '/docs' },
+      { label: 'Settings', href: '/settings', adminOnly: true },
     ],
   },
 ]
