@@ -51,14 +51,22 @@ export async function GET(req: NextRequest) {
   const tasksWithPayload = tasks.map((task) => {
     const result: any = {
       ...task,
-      payload: task.payloadJson ? JSON.parse(task.payloadJson) : null,
+      payload: null,
+      result: null,
     }
-    if (task.resultJson) {
-      try {
-        result.result = JSON.parse(task.resultJson)
-      } catch {
-        result.result = null
+    try {
+      if (task.payloadJson) {
+        result.payload = JSON.parse(task.payloadJson)
       }
+    } catch {
+      result.payload = null
+    }
+    try {
+      if (task.resultJson) {
+        result.result = JSON.parse(task.resultJson)
+      }
+    } catch {
+      result.result = null
     }
     return result
   })
