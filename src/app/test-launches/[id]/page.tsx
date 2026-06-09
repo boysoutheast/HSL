@@ -54,6 +54,8 @@ interface ApprovalRequest {
 interface WorkerTask {
   id: string
   type: string
+  payloadJson?: string | null
+  resultJson?: string | null
   status: string
   priority: number
   attempts: number
@@ -169,6 +171,11 @@ function parsePlacements(placementsJson: string | null): string[] {
   try { return JSON.parse(placementsJson) } catch { return [] }
 }
 
+function parseWorkerResult(resultJson: string | null | undefined): { ok: boolean; mode: string; campaignId?: string; message?: string } | null {
+  if (!resultJson) return null
+  try { return JSON.parse(resultJson) } catch { return null }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TestLaunchDetailPage() {
@@ -280,6 +287,23 @@ export default function TestLaunchDetailPage() {
                   <p className="text-sm text-yellow-900">{testLaunch.approvalRequest.requestNote}</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Approved / Execution Banner ─────────────────────────────────── */}
+      {testLaunch.status === 'approved' && testLaunch.approvalRequest?.status === 'approved' && (
+        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">✅</span>
+            <div>
+              <h3 className="font-semibold text-green-900 mb-1">Approved — siap diproses Hermes Worker</h3>
+              <p className="text-sm text-green-800">
+                Test Launch ini sudah diapprove pada {formatDate(testLaunch.approvalRequest.reviewedAt)}.
+                <br />
+                Direview oleh: <strong>{testLaunch.approvalRequest.reviewedBy?.name ?? testLaunch.approvalRequest.reviewedBy?.email ?? '—'}</strong>
+              </p>
             </div>
           </div>
         </div>
@@ -551,38 +575,74 @@ export default function TestLaunchDetailPage() {
       {testLaunch.workerTasks.length > 0 && (
         <div>
           <h2 className="text-base font-semibold text-gray-900 mb-3">
-            Worker Tasks ({testLaunch.workerTasks.length})
+            Execution ({testLaunch.workerTasks.length} task)
           </h2>
-          <Table
-            headers={['Type', 'Status', 'Priority', 'Attempts', 'Worker ID', 'Created', 'Last Error']}
-            empty="No worker tasks."
-          >
-            {testLaunch.workerTasks.map((task) => (
-              <tr key={task.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm">
-                  {WORKER_TASK_TYPE_LABELS[task.type] ?? task.type}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
+
+          {testLaunch.workerTasks.map((task) => {
+            const result = parseWorkerResult(task.resultJson)
+            return (
+              <div key={task.id} className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {WORKER_TASK_TYPE_LABELS[task.type] ?? task.type}
+                    </p>
+                    <p className="text-xs text-gray-400">{task.id}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
                     {STATUS_LABELS[task.status] ?? task.status}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-sm">{task.priority}</td>
-                <td className="px-4 py-3 text-gray-600 text-sm">
-                  {task.attempts}/{task.maxAttempts}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs font-mono">
-                  {task.workerId ?? '—'}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                  {formatDate(task.createdAt)}
-                </td>
-                <td className="px-4 py-3 text-red-500 text-xs max-w-xs truncate">
-                  {task.lastError ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </Table>
+                </div>
+
+                {/* Result card */}
+                {result && (
+                  <div className="bg-gray-50 rounded-lg p-3 mb-3 text-sm">
+                    {result.mode === 'dry_run_no_write' ? (
+                      <div className="flex items-center gap-2 text-amber-700">
+                        <span>🟡</span>
+                        <span>Dry-run — tidak ada Meta Ads yang di-write. Mode aman.</span>
+                      </div>
+                    ) : result.ok ? (
+                      <div className="flex items-center gap-2 text-green-700">
+                        <span>✅</span>
+                        <span>Campaign berhasil dibuat{result.campaignId ? ` (ID: ${result.campaignId})` : ''}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-700">
+                        <span>❌</span>
+                        <span>Gagal: {result.message ?? 'Unknown error'}</span>
+                      </div>
+                    )}
+
+                    {/* Show campaign name + ad account from payload */}
+                    {task.payloadJson && (() => {
+                      try {
+                        const payload = JSON.parse(task.payloadJson)
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                            <div><span className="text-gray-400">Campaign:</span> {payload.name ?? '—'}</div>
+                            <div><span className="text-gray-400">Objective:</span> {payload.objective ?? '—'}</div>
+                            <div><span className="text-gray-400">Budget:</span> {payload.dailyBudget ? `Rp${Number(payload.dailyBudget).toLocaleString('id-ID')}` : '—'}</div>
+                            <div><span className="text-gray-400">URL:</span> <span className="truncate block max-w-[200px]">{payload.destinationUrl ?? '—'}</span></div>
+                            <div><span className="text-gray-400">Creative:</span> {payload.creatives?.length ?? 0}</div>
+                            <div><span className="text-gray-400">Target:</span> {payload.audience ? `${payload.audience.ageMin}-${payload.audience.ageMax} th` : '—'}</div>
+                          </div>
+                        )
+                      } catch { return null }
+                    })()}
+                  </div>
+                )}
+
+                {/* Meta info row */}
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">
+                  <span>Attempts: {task.attempts}/{task.maxAttempts}</span>
+                  <span>Created: {formatDate(task.createdAt)}</span>
+                  {task.completedAt && <span>Done: {formatDate(task.completedAt)}</span>}
+                  {task.lastError && <span className="text-red-500">Error: {task.lastError}</span>}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

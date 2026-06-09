@@ -43,7 +43,20 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  return NextResponse.json({ testLaunch })
+  const metaAdAccount = testLaunch.metaAdAccountId
+    ? await prisma.metaAdAccount.findUnique({
+        where: { id: testLaunch.metaAdAccountId },
+        select: {
+          id: true,
+          adAccountId: true,
+          adAccountName: true,
+          currency: true,
+          accountStatus: true,
+        },
+      })
+    : null
+
+  return NextResponse.json({ testLaunch: { ...testLaunch, metaAdAccount } })
 }
 
 export async function PATCH(
