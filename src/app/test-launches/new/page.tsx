@@ -122,9 +122,9 @@ const GENDER_OPTIONS = [
 const STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
 type Step = typeof STEPS[number]
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
-const labelCls = 'block text-sm font-medium text-gray-700 mb-1'
-const sectionCls = 'bg-white rounded-xl border border-gray-200 p-5 space-y-4'
+const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
+const labelCls = 'block text-sm font-medium text-stone-700 mb-1'
+const sectionCls = 'bg-white rounded-xl border border-stone-200 p-5 space-y-4'
 
 function emptyCreative(): Creative {
   return { id: crypto.randomUUID(), imageUrl: '', primaryText: '', headline: '', caption: '', callToAction: 'LEARN_MORE' }
@@ -379,7 +379,7 @@ export default function NewTestLaunchPage() {
                     ? 'bg-violet-600 text-white'
                     : i < stepIndex
                     ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
-                    : 'bg-gray-100 text-gray-400 cursor-default'
+                    : 'bg-stone-100 text-stone-400 cursor-default'
                 }`}
               >
                 <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">
@@ -531,7 +531,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.launchMode === opt.value
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <input
@@ -633,7 +633,7 @@ export default function NewTestLaunchPage() {
                       className={`text-left p-4 rounded-xl border-2 transition-all ${
                         selectedPage?.id === page.id
                           ? 'border-violet-500 bg-violet-50'
-                          : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                          : 'border-stone-200 hover:border-violet-300 hover:bg-gray-50'
                       }`}
                     >
                       {/* Page icon + name */}
@@ -739,7 +739,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.placementMode === mode
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <input
@@ -769,7 +769,7 @@ export default function NewTestLaunchPage() {
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors text-sm ${
                             checked
                               ? 'border-violet-500 bg-violet-50 text-violet-700'
-                              : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                              : 'border-stone-200 text-gray-600 hover:bg-gray-50'
                           }`}
                         >
                           <input
@@ -883,7 +883,7 @@ export default function NewTestLaunchPage() {
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.gender === opt.value
                           ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                          : 'border-stone-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
                       <input
@@ -903,7 +903,7 @@ export default function NewTestLaunchPage() {
               {/* Location */}
               <div>
                 <label className={labelCls}>Location</label>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-lg border border-stone-200 text-sm">
                   <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -971,7 +971,7 @@ export default function NewTestLaunchPage() {
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                       selectedPixel?.id === px.id
                         ? 'border-violet-500 bg-violet-50'
-                        : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
+                        : 'border-stone-200 hover:border-violet-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1047,7 +1047,7 @@ export default function NewTestLaunchPage() {
 
               <div className="space-y-4">
                 {form.creatives.map((creative, idx) => (
-                  <div key={creative.id} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                  <div key={creative.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-gray-50">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-semibold text-gray-500 uppercase">Creative #{idx + 1}</p>
                       {form.creatives.length > 1 && (
@@ -1140,7 +1140,7 @@ export default function NewTestLaunchPage() {
             )}
 
             {/* Summary before submit */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-5 space-y-2 text-sm">
+            <div className="bg-gray-50 rounded-xl border border-stone-200 p-5 space-y-2 text-sm">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ringkasan Launch</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                 <p className="text-gray-500">Nama</p>

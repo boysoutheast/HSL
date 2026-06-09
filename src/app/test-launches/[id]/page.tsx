@@ -142,7 +142,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
   executing: 'bg-blue-100 text-blue-800',
-  completed: 'bg-gray-100 text-gray-600',
+  completed: 'bg-stone-100 text-stone-600',
   failed: 'bg-red-100 text-red-800',
 }
 
@@ -617,13 +617,15 @@ export default function TestLaunchDetailPage() {
                       try {
                         const payload = JSON.parse(task.payloadJson)
                         return (
-                          <div className="mt-2 pt-2 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                            <div><span className="text-gray-400">Campaign:</span> {payload.name ?? '—'}</div>
-                            <div><span className="text-gray-400">Objective:</span> {payload.objective ?? '—'}</div>
-                            <div><span className="text-gray-400">Budget:</span> {payload.dailyBudget ? `Rp${Number(payload.dailyBudget).toLocaleString('id-ID')}` : '—'}</div>
-                            <div><span className="text-gray-400">URL:</span> <span className="truncate block max-w-[200px]">{payload.destinationUrl ?? '—'}</span></div>
-                            <div><span className="text-gray-400">Creative:</span> {payload.creatives?.length ?? 0}</div>
-                            <div><span className="text-gray-400">Target:</span> {payload.audience ? `${payload.audience.ageMin}-${payload.audience.ageMax} th` : '—'}</div>
+                          <div className="mt-2 pt-2 border-t border-stone-200 grid grid-cols-2 gap-2 text-xs text-stone-600">
+                            <div><span className="text-stone-400">Campaign:</span> {payload.name ?? '—'}</div>
+                            <div><span className="text-stone-400">Objective:</span> {payload.objective ?? '—'}</div>
+                            <div><span className="text-stone-400">Budget:</span> {payload.dailyBudget ? `Rp${Number(payload.dailyBudget).toLocaleString('id-ID')}` : '—'}</div>
+                            <div><span className="text-stone-400">URL:</span> <span className="truncate block max-w-[200px]">{payload.destinationUrl ?? '—'}</span></div>
+                            <div><span className="text-stone-400">Creative:</span> {payload.creatives?.length ?? 0}</div>
+                            <div><span className="text-stone-400">Target:</span> {payload.audience ? `${payload.audience.ageMin}-${payload.audience.ageMax} th` : '—'}</div>
+                            <div><span className="text-stone-400">Campaign ID:</span> {result?.campaignId ?? payload.campaignId ?? '—'}</div>
+                            <div><span className="text-stone-400">Mode:</span> {result?.mode ?? 'unknown'}</div>
                           </div>
                         )
                       } catch { return null }
@@ -632,7 +634,7 @@ export default function TestLaunchDetailPage() {
                 )}
 
                 {/* Meta info row */}
-                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-400">
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-stone-400">
                   <span>Attempts: {task.attempts}/{task.maxAttempts}</span>
                   <span>Created: {formatDate(task.createdAt)}</span>
                   {task.completedAt && <span>Done: {formatDate(task.completedAt)}</span>}
@@ -645,8 +647,8 @@ export default function TestLaunchDetailPage() {
       )}
 
       {/* ── Back Link ──────────────────────────────────────────────────── */}
-      <div className="mt-8 pt-4 border-t border-gray-200">
-        <Link href="/test-launches" className="text-sm text-gray-500 hover:text-gray-700">
+      <div className="mt-8 pt-4 border-t border-stone-200">
+        <Link href="/test-launches" className="text-sm text-stone-500 hover:text-stone-700">
           ← Kembali ke Test Launches
         </Link>
       </div>
