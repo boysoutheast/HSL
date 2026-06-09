@@ -29,27 +29,6 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Posts',
-    href: '/posts',
-    items: [
-      { label: 'All Posts', href: '/posts' },
-      { label: 'Schedule', href: '/posts/schedule' },
-      { label: 'Drafts', href: '/posts/drafts' },
-      { label: 'Stats', href: '/posts/stats' },
-    ],
-  },
-  {
-    label: 'Community',
-    href: '/community',
-    items: [
-      { label: 'Comments', href: '/community/comments' },
-      { label: 'Chat', href: '/community/chat' },
-      { label: 'Auto Reply Rules', href: '/community/auto-reply' },
-      { label: 'Auto Like', href: '/community/auto-like' },
-      { label: 'Spam Rules', href: '/community/spam' },
-    ],
-  },
-  {
     label: 'Accounts',
     href: '/accounts',
     items: [
@@ -141,32 +120,28 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
             )}
           </div>
         </div>
-      </div>
 
-      {/* ── Sub nav (classic secondary tabs) ── */}
-      <div className="bg-stone-100 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-700">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center gap-0">
+        {/* ── Sub-nav bar ── */}
+        {subItems.length > 0 && (
+          <div className="flex h-9 items-center gap-1 border-t border-stone-100 dark:border-stone-800 -mb-px">
             {subItems.map(item => {
-              const active = isActive(pathname, item.href)
-              const external = item.href.startsWith('http') || item.href === '/docs'
-              const cls = `inline-block px-4 py-2 text-sm border-b-2 transition-colors ${
-                active
-                  ? 'border-stone-600 dark:border-violet-400 text-stone-900 dark:text-stone-50 font-medium bg-white dark:bg-stone-900 -mb-px'
-                  : 'border-transparent text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200 dark:hover:bg-stone-800'
-              }`
-              return external ? (
-                <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className={cls}>
-                  {item.label}
-                </a>
-              ) : (
-                <Link key={item.href} href={item.href} className={cls}>
+              const active = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center h-full px-3 text-xs font-medium border-b transition-colors ${
+                    active
+                      ? 'text-stone-900 dark:text-stone-50 border-stone-900 dark:border-violet-400'
+                      : 'text-stone-400 dark:text-stone-500 border-transparent hover:text-stone-700 dark:hover:text-stone-200'
+                  }`}
+                >
                   {item.label}
                 </Link>
               )
             })}
           </div>
-        </div>
+        )}
       </div>
     </header>
   )

@@ -1,0 +1,11 @@
+{
+  "version": "5.22.0",
+  "checksum": "70cbbc7d034b61dc8292e689252a4a622b1b9f99ba281cfd3ca14a3d3d188993",
+  "steps": [
+    {
+      "tag": "raw",
+      "sql": "DROP TABLE IF EXISTS \"meta_post_stats\" CASCADE;\nDROP TABLE IF EXISTS \"meta_chat_messages\" CASCADE;\nDROP TABLE IF EXISTS \"meta_chat_threads\" CASCADE;\nDROP TABLE IF EXISTS \"auto_reply_rules\" CASCADE;\nDROP TABLE IF EXISTS \"meta_schedules\" CASCADE;\nDROP TABLE IF EXISTS \"meta_posts\" CASCADE;\nDROP TABLE IF EXISTS \"meta_comments\" CASCADE;"
+    }
+  ],
+  "migrationEngineVersion": "5.22.0"
+}

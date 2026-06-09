@@ -358,11 +358,6 @@ model MetaAccount {
   businesses   MetaBusiness[]
   adAccounts   MetaAdAccount[]
   pages        MetaPage[]
-  comments     MetaComment[]
-  posts        MetaPost[]
-  schedules    MetaSchedule[]
-  chatThreads  MetaChatThread[]
-  autoReplyRules AutoReplyRule[]
   testLaunches TestLaunch[]
 
   @@index([userId])
@@ -429,46 +424,11 @@ model MetaPage {
   updatedAt            DateTime @updatedAt @map("updated_at")
 
   metaAccount MetaAccount   @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  comments    MetaComment[]
-  posts       MetaPost[]
-  schedules   MetaSchedule[]
-  autoReplyRules AutoReplyRule[]
-  chatThreads MetaChatThread[]
 
   @@unique([metaAccountId, pageId])
   @@index([metaAccountId])
   @@index([pageId])
   @@map("meta_pages")
-}
-
-model MetaComment {
-  id              String    @id @default(cuid())
-  metaAccountId   String    @map("meta_account_id")
-  metaPageId      String?   @map("meta_page_id")
-  metaCommentId   String    @map("meta_comment_id")
-  metaPostId      String?   @map("meta_post_id")
-  platform        String    @default("facebook")
-  authorName      String?   @map("author_name")
-  authorMetaId    String?   @map("author_meta_id")
-  message         String
-  sentiment       String    @default("neutral")
-  moderationState String    @default("pending") @map("moderation_state")
-  repliedAt       DateTime? @map("replied_at")
-  deletedAt       DateTime? @map("deleted_at")
-  commentedAt     DateTime? @map("commented_at")
-  fetchedAt       DateTime? @map("fetched_at")
-  rawJson         String?   @map("raw_json")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  metaPage    MetaPage?   @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
-
-  @@unique([metaAccountId, metaCommentId])
-  @@index([metaAccountId, moderationState])
-  @@index([metaPageId])
-  @@index([commentedAt])
-  @@map("meta_comments")
 }
 
 model TestLaunch {
@@ -581,145 +541,3 @@ model WorkerTask {
   @@map("worker_tasks")
 }
 
-model MetaPost {
-  id             String    @id @default(cuid())
-  metaAccountId  String    @map("meta_account_id")
-  metaPageId     String?   @map("meta_page_id")
-  metaPostId     String?   @map("meta_post_id")
-  platform       String    @default("facebook")
-  postType       String    @default("feed") @map("post_type")
-  title          String?
-  message        String?
-  mediaUrlsJson  String?   @map("media_urls_json")
-  linkUrl        String?   @map("link_url")
-  status         String    @default("draft")
-  publishedAt    DateTime? @map("published_at")
-  lastSyncedAt   DateTime? @map("last_synced_at")
-  rawJson        String?   @map("raw_json")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  metaAccount MetaAccount    @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  metaPage    MetaPage?      @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
-  schedules   MetaSchedule[]
-  stats       MetaPostStat[]
-
-  @@unique([metaAccountId, metaPostId])
-  @@index([metaAccountId, status])
-  @@index([metaPageId])
-  @@map("meta_posts")
-}
-
-model MetaSchedule {
-  id                     String    @id @default(cuid())
-  metaAccountId          String    @map("meta_account_id")
-  metaPageId             String?   @map("meta_page_id")
-  metaPostId             String?   @map("meta_post_id")
-  title                  String?
-  platform               String    @default("facebook")
-  postType               String    @default("feed") @map("post_type")
-  payloadJson            String    @map("payload_json")
-  scheduledFor           DateTime  @map("scheduled_for")
-  status                 String    @default("pending")
-  executeAfter           DateTime? @map("execute_after")
-  lastError              String?   @map("last_error")
-  attempts               Int       @default(0)
-  publishedMetaPostId    String?   @map("published_meta_post_id")
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
-
-  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  metaPage    MetaPage?   @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
-  metaPost    MetaPost?   @relation(fields: [metaPostId], references: [id], onDelete: SetNull)
-
-  @@index([metaAccountId, status, scheduledFor])
-  @@index([metaPageId])
-  @@map("meta_schedules")
-}
-
-model AutoReplyRule {
-  id             String    @id @default(cuid())
-  metaAccountId  String    @map("meta_account_id")
-  metaPageId     String?   @map("meta_page_id")
-  name           String
-  triggerType    String    @default("contains") @map("trigger_type")
-  triggerValue   String    @map("trigger_value")
-  responseType   String    @default("static") @map("response_type")
-  responseValue  String    @map("response_value")
-  isActive       Boolean   @default(true) @map("is_active")
-  matchCount     Int       @default(0) @map("match_count")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  metaPage    MetaPage?   @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
-
-  @@index([metaAccountId, isActive])
-  @@index([metaPageId])
-  @@map("auto_reply_rules")
-}
-
-model MetaChatThread {
-  id             String    @id @default(cuid())
-  metaAccountId  String    @map("meta_account_id")
-  metaPageId     String?   @map("meta_page_id")
-  threadMetaId   String    @map("thread_meta_id")
-  customerMetaId String?   @map("customer_meta_id")
-  customerName   String?   @map("customer_name")
-  platform       String    @default("facebook")
-  unreadCount    Int       @default(0) @map("unread_count")
-  lastMessageAt  DateTime? @map("last_message_at")
-  lastSyncedAt   DateTime? @map("last_synced_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  metaAccount MetaAccount       @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  metaPage    MetaPage?         @relation(fields: [metaPageId], references: [id], onDelete: SetNull)
-  messages    MetaChatMessage[]
-
-  @@unique([metaAccountId, threadMetaId])
-  @@index([metaAccountId, lastMessageAt])
-  @@map("meta_chat_threads")
-}
-
-model MetaChatMessage {
-  id             String    @id @default(cuid())
-  threadId       String    @map("thread_id")
-  messageMetaId  String    @map("message_meta_id")
-  senderMetaId   String?   @map("sender_meta_id")
-  senderName     String?   @map("sender_name")
-  body           String?
-  direction      String    @default("inbound")
-  attachmentJson String?   @map("attachment_json")
-  readAt         DateTime? @map("read_at")
-  sentAt         DateTime? @map("sent_at")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  thread MetaChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-
-  @@unique([threadId, messageMetaId])
-  @@index([threadId, sentAt])
-  @@map("meta_chat_messages")
-}
-
-model MetaPostStat {
-  id          String    @id @default(cuid())
-  metaPostId  String    @map("meta_post_id")
-  statDate    DateTime  @map("stat_date")
-  impressions Int       @default(0)
-  reach      Int       @default(0)
-  reactions  Int       @default(0)
-  comments   Int       @default(0)
-  shares     Int       @default(0)
-  clicks     Int       @default(0)
-  rawJson    String?   @map("raw_json")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  updatedAt  DateTime  @updatedAt @map("updated_at")
-
-  metaPost MetaPost @relation(fields: [metaPostId], references: [id], onDelete: Cascade)
-
-  @@unique([metaPostId, statDate])
-  @@index([statDate])
-  @@map("meta_post_stats")
-}
