@@ -16,20 +16,20 @@ export default function PageInfo({ purpose, inputs, wiring }: PageInfoProps) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="mb-6 rounded-xl border border-stone-200 bg-white shadow-sm">
+    <div className="mb-6 rounded border border-stone-300 bg-white shadow-sm">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left rounded-xl"
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
       >
         <div className="flex items-center gap-2">
-          <span className="text-violet-500 text-sm">ℹ️</span>
+          <span className="text-stone-400 text-sm">ℹ️</span>
           <span className="text-sm font-medium text-stone-700">{purpose}</span>
         </div>
         <span className="text-stone-400 text-xs font-medium">{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-stone-100 pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="px-4 pb-4 border-t border-stone-200 pt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
           {inputs && inputs.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Yang perlu diisi</p>

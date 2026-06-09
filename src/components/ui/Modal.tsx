@@ -37,9 +37,9 @@ export default function Modal({
       />
       {/* Panel */}
       <div
-        className={`relative z-10 w-full ${maxWidth} bg-white rounded-2xl shadow-xl border border-stone-200 mx-4`}
+        className={`relative z-10 w-full ${maxWidth} bg-white rounded border border-stone-300 shadow-lg mx-4`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-stone-200">
           <h2 className="text-base font-semibold text-stone-800">{title}</h2>
           <button
             onClick={onClose}

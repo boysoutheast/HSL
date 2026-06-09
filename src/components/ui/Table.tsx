@@ -8,7 +8,7 @@ interface TableProps {
 
 export default function Table({ headers, children, empty = 'No records found.' }: TableProps) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
+    <div className="overflow-x-auto rounded border border-stone-300 bg-white">
       <table className="min-w-full divide-y divide-stone-200 text-sm">
         <thead className="bg-stone-50">
           <tr>
@@ -23,7 +23,7 @@ export default function Table({ headers, children, empty = 'No records found.' }
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-stone-100">
+        <tbody className="divide-y divide-stone-200">
           {React.Children.count(children) === 0 ? (
             <tr>
               <td

@@ -37,7 +37,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   if (noShell) return <>{children}</>
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-100">
       <TopNav onLogout={handleLogout} user={currentUser} />
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
     </div>
