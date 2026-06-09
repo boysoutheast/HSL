@@ -36,6 +36,7 @@ const navGroups: NavGroup[] = [
       { label: 'Meta Connections', href: '/meta-connections' },
       { label: 'Products', href: '/products' },
       { label: 'Photos', href: '/photos' },
+      { label: 'Media Library', href: '/media-library' },
     ],
   },
   {
@@ -44,6 +45,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'All Launches', href: '/test-launches' },
       { label: 'New Launch', href: '/test-launches/new' },
+      { label: 'Campaign Monitor', href: '/campaign-monitor' },
       { label: 'Approvals', href: '/approval-requests', adminOnly: true },
     ],
   },

@@ -577,6 +577,10 @@ model MediaAsset {
   moderationStatus String    @default("PENDING") // PENDING | APPROVED | REJECTED
   generationPrompt String?   @map("generation_prompt")
   generatedByModel String?   @map("generated_by_model")
+  primaryText      String?   @map("primary_text") @db.VarChar(125)
+  headline         String?   @map("headline") @db.VarChar(255)
+  linkUrl          String?   @map("link_url")
+  ctaButton        String?   @map("cta_button")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   archivedAt       DateTime? @map("archived_at")
