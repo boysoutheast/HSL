@@ -375,13 +375,11 @@ export default function TestLaunchDetailPage() {
             <p className="text-xs text-gray-400">{metaAccount?.status}</p>
           </div>
 
-          {testLaunch.metaAdAccount && (
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Ad Account</p>
-              <p className="text-gray-900">{testLaunch.metaAdAccount.adAccountName ?? testLaunch.metaAdAccount.adAccountId}</p>
-              <p className="text-xs text-gray-400">{testLaunch.metaAdAccount.adAccountId}</p>
-            </div>
-          )}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Ad Account</p>
+            <p className="text-gray-900">{testLaunch.metaAdAccount?.adAccountName ?? testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? '—'}</p>
+            <p className="text-xs text-gray-400">{testLaunch.metaAdAccount?.adAccountId ?? testLaunch.metaAdAccountId ?? 'belum dipilih'}</p>
+          </div>
 
           {selectedPage && (
             <div>
