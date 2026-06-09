@@ -17,6 +17,50 @@ interface AutomationAction {
   campaignSession: { id: string; name: string } | null
 }
 
+interface CreativeRotation {
+  id: string
+  status: string
+  strategy: string
+  triggerReason: string | null
+  oldMetaAdId: string | null
+  newMetaAdId: string | null
+  startedAt: string
+  activatedAt: string | null
+  oldAdPausedAt: string | null
+  completedAt: string | null
+  campaignSession: { id: string; name: string }
+  automationAction: { id: string; actionType: string; status: string; createdAt: string }
+  oldCreativeVariant: { id: string; name: string; status: string } | null
+  newCreativeVariant: { id: string; name: string; status: string }
+}
+
+interface CreativeReservation {
+  id: string
+  status: string
+  expiresAt: string
+  creativeVariant: { id: string; name: string; status: string; product: { id: string; name: string } }
+  campaignSession: { id: string; name: string; status: string }
+  automationAction: { id: string; actionType: string; status: string; createdAt: string }
+}
+
+interface CampaignSession {
+  id: string
+  name: string
+  status: string
+  productId: string
+  metaAdAccountId: string | null
+  dailyBudget: string
+  phase: string
+  metaAdAccount: { id: string; adAccountId: string; adAccountName: string } | null
+}
+
+interface CreativeExhaustion {
+  productId: string
+  productName: string
+  readyCount: number
+  reservedCount: number
+}
+
 const TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'PENDING', label: 'Pending' },
@@ -126,6 +170,13 @@ export default function ActionCenterPage() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [cancelLoading, setCancelLoading] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<CampaignSession[]>([])
+  const [rotations, setRotations] = useState<CreativeRotation[]>([])
+  const [reservations, setReservations] = useState<CreativeReservation[]>([])
+  const [readyVariants, setReadyVariants] = useState<Record<string, number>>({})
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
+  const [topUpLoading, setTopUpLoading] = useState(false)
+  const [topUpPanelOpen, setTopUpPanelOpen] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -163,6 +214,78 @@ export default function ActionCenterPage() {
       return () => clearTimeout(t)
     }
   }, [toast])
+
+  const fetchCreativeTopUpData = useCallback(async () => {
+    try {
+      // Fetch sessions (for selection)
+      const [sessionsRes, rotationsRes, reservationsRes, variantsRes] = await Promise.all([
+        fetch('/api/admin/campaign-sessions?status=RUNNING', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/admin/creative-rotations?strategy=NO_GAP&limit=10', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/admin/creative-reservations?status=RESERVED', { cache: 'no-store', credentials: 'include' }),
+        fetch('/api/admin/creative-variants?status=READY', { cache: 'no-store', credentials: 'include' }),
+      ])
+
+      if (sessionsRes.ok) {
+        const d = await sessionsRes.json()
+        setSessions(d.sessions ?? [])
+      }
+      if (rotationsRes.ok) {
+        const d = await rotationsRes.json()
+        setRotations(d.rotations ?? [])
+      }
+      if (reservationsRes.ok) {
+        const d = await reservationsRes.json()
+        setReservations(d.reservations ?? [])
+      }
+      if (variantsRes.ok) {
+        const d = await variantsRes.json()
+        const variants: Array<{ productId: string }> = d.variants ?? []
+        const counts: Record<string, number> = {}
+        for (const v of variants) {
+          counts[v.productId] = (counts[v.productId] ?? 0) + 1
+        }
+        setReadyVariants(counts)
+      }
+    } catch {
+      // silent failure — top-up panel degrades gracefully
+    }
+  }, [])
+
+  useEffect(() => {
+    if (topUpPanelOpen) {
+      fetchCreativeTopUpData()
+    }
+  }, [topUpPanelOpen, fetchCreativeTopUpData])
+
+  const handleTriggerTopUp = async () => {
+    if (!selectedSessionId) {
+      setToast('Please select a campaign session first.')
+      return
+    }
+    setTopUpLoading(true)
+    try {
+      const res = await fetch(`/api/admin/campaign-sessions/${selectedSessionId}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'TOP_UP_CREATIVE',
+          priority: 3,
+          payload: {},
+        }),
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setToast(`Top-up action queued: ${data.action?.id}`)
+      setSelectedSessionId('')
+      fetchData()
+      fetchCreativeTopUpData()
+    } catch {
+      setToast('Failed to trigger top-up action.')
+    } finally {
+      setTopUpLoading(false)
+    }
+  }
 
   const handleCancel = async (id: string) => {
     setCancelLoading(id)
@@ -232,6 +355,158 @@ export default function ActionCenterPage() {
           { label: '→ Meta API', desc: 'Executed actions call Meta Marketing API' },
         ]}
       />
+
+      {/* Creative Top-Up Panel */}
+      <div className="border border-violet-200 bg-violet-50 rounded-lg p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-violet-900">Creative Top-Up</h2>
+            <button
+              onClick={() => setTopUpPanelOpen(!topUpPanelOpen)}
+              className="text-xs text-violet-600 hover:text-violet-800 underline"
+            >
+              {topUpPanelOpen ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {topUpPanelOpen && (
+            <button
+              onClick={fetchCreativeTopUpData}
+              className="text-xs text-stone-500 hover:text-stone-700"
+            >
+              Refresh
+            </button>
+          )}
+        </div>
+
+        {topUpPanelOpen && (
+          <div className="space-y-4">
+            {/* Reserve creative count + exhaustion alert */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Ready variants count */}
+              <div className="bg-white rounded border border-stone-200 p-3">
+                <p className="text-xs text-stone-500 uppercase tracking-wide mb-1">READY Variants</p>
+                <p className="text-2xl font-bold text-stone-800">
+                  {Object.values(readyVariants).reduce((a, b) => a + b, 0)}
+                </p>
+                <p className="text-xs text-stone-400 mt-0.5">across all products</p>
+              </div>
+              {/* Active reservations */}
+              <div className="bg-white rounded border border-stone-200 p-3">
+                <p className="text-xs text-stone-500 uppercase tracking-wide mb-1">Reserved</p>
+                <p className="text-2xl font-bold text-amber-600">{reservations.length}</p>
+                <p className="text-xs text-stone-400 mt-0.5">variants in use</p>
+              </div>
+              {/* Recent rotations */}
+              <div className="bg-white rounded border border-stone-200 p-3">
+                <p className="text-xs text-stone-500 uppercase tracking-wide mb-1">NO_GAP Rotations</p>
+                <p className="text-2xl font-bold text-green-600">{rotations.length}</p>
+                <p className="text-xs text-stone-400 mt-0.5">recent top-ups</p>
+              </div>
+            </div>
+
+            {/* Exhaustion alerts */}
+            {sessions.map((session) => {
+              const ready = readyVariants[session.productId] ?? 0
+              const reserved = reservations.filter((r) => r.campaignSession.id === session.id).length
+              if (ready > 0) return null
+              return (
+                <div key={session.id} className="flex items-center gap-2 bg-red-50 border border-red-200 rounded p-2 text-sm text-red-700">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>
+                    <strong>{session.name}</strong>: 0 READY variants available
+                    {reserved > 0 ? ` (${reserved} reserved)` : ''} — top-up will fail until new creatives are added
+                  </span>
+                </div>
+              )
+            })}
+
+            {/* Recent rotations table */}
+            {rotations.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Recent NO_GAP Rotations</p>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-white border border-stone-200">
+                      <tr>
+                        {['Campaign', 'New Creative', 'Old Ad', 'New Ad', 'Status', 'Started'].map((h) => (
+                          <th key={h} className="px-2 py-1.5 text-left text-stone-500 font-medium whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-100">
+                      {rotations.slice(0, 5).map((r) => (
+                        <tr key={r.id} className="bg-white">
+                          <td className="px-2 py-1.5 text-stone-700 max-w-[120px] truncate">{r.campaignSession.name}</td>
+                          <td className="px-2 py-1.5 text-stone-600 max-w-[100px] truncate">{r.newCreativeVariant.name}</td>
+                          <td className="px-2 py-1.5 text-stone-500 font-mono text-[10px]">{r.oldMetaAdId ?? '—'}</td>
+                          <td className="px-2 py-1.5 text-stone-500 font-mono text-[10px]">{r.newMetaAdId ?? '—'}</td>
+                          <td className="px-2 py-1.5">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              r.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                              r.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                              'bg-stone-100 text-stone-600'
+                            }`}>
+                              {r.status}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1.5 text-stone-400 whitespace-nowrap">
+                            {new Date(r.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Trigger Top-Up */}
+            <div className="flex items-center gap-3 bg-white rounded border border-stone-200 p-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-stone-600 mb-1">
+                  Select Campaign Session
+                </label>
+                <select
+                  value={selectedSessionId}
+                  onChange={(e) => setSelectedSessionId(e.target.value)}
+                  className="w-full text-sm border border-stone-300 rounded px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                >
+                  <option value="">— choose a running session —</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.phase})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleTriggerTopUp}
+                disabled={!selectedSessionId || topUpLoading}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-5"
+              >
+                {topUpLoading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Triggering...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Trigger Top-Up
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
