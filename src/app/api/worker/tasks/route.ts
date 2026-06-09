@@ -24,11 +24,15 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type')
+    const status = searchParams.get('status')
     const metaAccountId = searchParams.get('metaAccountId')
 
     const where: Record<string, unknown> = {}
     if (type) {
       where.type = type
+    }
+    if (status) {
+      where.status = status
     }
     if (metaAccountId) {
       where.payloadJson = { contains: `"metaAccountId":"${metaAccountId}"` }
@@ -37,7 +41,7 @@ export async function GET(req: NextRequest) {
     const tasks = await prisma.workerTask.findMany({
       where,
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
-      take: 10,
+      take: 50,
       include: {
         testLaunch: {
           select: {
