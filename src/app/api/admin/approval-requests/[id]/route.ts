@@ -130,6 +130,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         callToAction: c.callToAction || 'LEARN_MORE',
       })),
       name: testLaunch.name || `HSL Launch ${now.toISOString()}`,
+      pixelId: testLaunch.pixelId || '',
       snapshotAt: now.toISOString(),
     }
 
