@@ -8,13 +8,13 @@ datasource db {
 }
 
 model HermesAgent {
-  id          String   @id @default(cuid())
-  name        String
-  apiKeyHash  String   @unique @map("api_key_hash")
-  status      String   @default("active")
-  notes       String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  name       String
+  apiKeyHash String   @unique @map("api_key_hash")
+  status     String   @default("active")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   assignments     Assignment[]
   contentLogs     GeneratedContentLog[]
@@ -131,6 +131,8 @@ model Product {
   photoReferences PhotoReference[]
   ceps            Cep[]
   contentLogs     GeneratedContentLog[]
+  mediaAssets     MediaAsset[]
+  CreativeVariant CreativeVariant[]
 
   @@map("products")
 }
@@ -194,13 +196,13 @@ model GeneratedContentLog {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  hermesAgent        HermesAgent      @relation(fields: [hermesAgentId], references: [id])
-  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id])
-  character          Character?       @relation(fields: [characterId], references: [id])
-  topic              Topic?           @relation(fields: [topicId], references: [id])
-  cep                Cep?             @relation(fields: [cepId], references: [id])
-  product            Product?         @relation(fields: [productId], references: [id])
-  referenceImage     PhotoReference?  @relation(fields: [referenceImageId], references: [id])
+  hermesAgent        HermesAgent         @relation(fields: [hermesAgentId], references: [id])
+  instagramAccount   InstagramAccount    @relation(fields: [instagramAccountId], references: [id])
+  character          Character?          @relation(fields: [characterId], references: [id])
+  topic              Topic?              @relation(fields: [topicId], references: [id])
+  cep                Cep?                @relation(fields: [cepId], references: [id])
+  product            Product?            @relation(fields: [productId], references: [id])
+  referenceImage     PhotoReference?     @relation(fields: [referenceImageId], references: [id])
   performanceTracker PerformanceTracker?
 
   @@map("generated_content_logs")
@@ -221,8 +223,8 @@ model PerformanceTracker {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  contentLog       GeneratedContentLog @relation(fields: [generatedContentLogId], references: [id])
-  instagramAccount InstagramAccount    @relation(fields: [instagramAccountId], references: [id])
+  contentLog       GeneratedContentLog   @relation(fields: [generatedContentLogId], references: [id])
+  instagramAccount InstagramAccount      @relation(fields: [instagramAccountId], references: [id])
   snapshots        PerformanceSnapshot[]
 
   @@map("performance_trackers")
@@ -303,8 +305,17 @@ model AdminUser {
   products          Product[]
   metaAccounts      MetaAccount[]
   testLaunches      TestLaunch[]
-  approvalRequests  ApprovalRequest[] @relation("ApprovalRequester")
-  approvalsReviewed ApprovalRequest[] @relation("ApprovalReviewer")
+  approvalRequests  ApprovalRequest[]  @relation("ApprovalRequester")
+  approvalsReviewed ApprovalRequest[]  @relation("ApprovalReviewer")
+  mediaAssets       MediaAsset[]
+  creativeVariants  CreativeVariant[]
+  metaMediaBindings MetaMediaBinding[]
+  campaignSessions  CampaignSession[]
+  metaEntities      MetaEntity[]
+  metricSnapshots   MetricSnapshot[]
+  automationRules   AutomationRule[]
+  automationActions AutomationAction[]
+  workerLeases      WorkerLease[]
 
   @@map("admin_users")
 }
@@ -325,36 +336,36 @@ model Session {
 // ── META ADS LAUNCHER MODELS ─────────────────────────────────────────────────
 
 model MetaAccount {
-  id                     String    @id @default(cuid())
-  userId                 String    @map("user_id")
-  name                   String?   // user-friendly connection name
+  id                       String    @id @default(cuid())
+  userId                   String    @map("user_id")
+  name                     String? // user-friendly connection name
   // ── Meta App Credentials ──
-  appId                  String?   @map("app_id")
-  appSecretEncrypted     String?   @map("app_secret_encrypted")
+  appId                    String?   @map("app_id")
+  appSecretEncrypted       String?   @map("app_secret_encrypted")
   // ── Tokens ──
-  shortLivedTokenEncrypted String? @map("short_lived_token_encrypted")
-  longLivedTokenEncrypted   String? @map("long_lived_token_encrypted")
-  tokenExpiry            DateTime? @map("token_expiry")
+  shortLivedTokenEncrypted String?   @map("short_lived_token_encrypted")
+  longLivedTokenEncrypted  String?   @map("long_lived_token_encrypted")
+  tokenExpiry              DateTime? @map("token_expiry")
   // ── User Meta Identity ──
-  metaUserId             String?   @map("meta_user_id")    // Meta user ID
-  metaUserName           String?   @map("meta_user_name")  // Meta user name
-  scopesJson             String?   @map("scopes_json")     // granted OAuth scopes
+  metaUserId               String?   @map("meta_user_id") // Meta user ID
+  metaUserName             String?   @map("meta_user_name") // Meta user name
+  scopesJson               String?   @map("scopes_json") // granted OAuth scopes
   // ── Default Selection ──
-  defaultAdAccountId     String?   @map("default_ad_account_id")
-  accountName            String?   @map("account_name")
-  currency               String    @default("IDR")
-  timezone               String    @default("Asia/Jakarta")
-  pixelId                String?   @map("pixel_id")
+  defaultAdAccountId       String?   @map("default_ad_account_id")
+  accountName              String?   @map("account_name")
+  currency                 String    @default("IDR")
+  timezone                 String    @default("Asia/Jakarta")
+  pixelId                  String?   @map("pixel_id")
   // ── Status ──
-  status                 String    @default("connected")  // connected | expired | needs_reconnect | revoked
-  lastMetaCallAt         DateTime? @map("last_meta_call_at")  // last successful Meta API call
-  lastTokenCheckAt       DateTime? @map("last_token_check_at") // last token debug/health check
-  lastSyncAt             DateTime? @map("last_sync_at")
-  notes                  String?
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  status                   String    @default("connected") // connected | expired | needs_reconnect | revoked
+  lastMetaCallAt           DateTime? @map("last_meta_call_at") // last successful Meta API call
+  lastTokenCheckAt         DateTime? @map("last_token_check_at") // last token debug/health check
+  lastSyncAt               DateTime? @map("last_sync_at")
+  notes                    String?
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
 
-  user         AdminUser    @relation(fields: [userId], references: [id])
+  user         AdminUser       @relation(fields: [userId], references: [id])
   businesses   MetaBusiness[]
   adAccounts   MetaAdAccount[]
   pages        MetaPage[]
@@ -365,17 +376,17 @@ model MetaAccount {
 }
 
 model MetaBusiness {
-  id                 String   @id @default(cuid())
-  metaAccountId      String   @map("meta_account_id")
-  businessId         String   @map("business_id")       // Meta BM ID
-  businessName       String?  @map("business_name")
-  verificationStatus String?  @map("verification_status")
-  isSelected         Boolean  @default(false) @map("is_selected")
+  id                 String    @id @default(cuid())
+  metaAccountId      String    @map("meta_account_id")
+  businessId         String    @map("business_id") // Meta BM ID
+  businessName       String?   @map("business_name")
+  verificationStatus String?   @map("verification_status")
+  isSelected         Boolean   @default(false) @map("is_selected")
   lastSyncedAt       DateTime? @map("last_synced_at")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  metaAccount MetaAccount     @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
   adAccounts  MetaAdAccount[]
 
   @@unique([metaAccountId, businessId])
@@ -385,22 +396,26 @@ model MetaBusiness {
 }
 
 model MetaAdAccount {
-  id             String   @id @default(cuid())
-  metaAccountId  String   @map("meta_account_id")
-  metaBusinessId String?  @map("meta_business_id")     // FK to meta_businesses.id
-  businessId     String?  @map("business_id")          // Meta BM ID
-  adAccountId    String   @map("ad_account_id")        // act_XXXXXXXXX
-  adAccountName  String?  @map("ad_account_name")
-  accountStatus  Int      @default(1) @map("account_status")  // 1=active, 2=disabled
-  currency       String?  // IDR, USD, etc
-  timezoneName   String?  @map("timezone_name")
-  isDefault      Boolean  @default(false) @map("is_default")
+  id             String    @id @default(cuid())
+  metaAccountId  String    @map("meta_account_id")
+  metaBusinessId String?   @map("meta_business_id") // FK to meta_businesses.id
+  businessId     String?   @map("business_id") // Meta BM ID
+  adAccountId    String    @map("ad_account_id") // act_XXXXXXXXX
+  adAccountName  String?   @map("ad_account_name")
+  accountStatus  Int       @default(1) @map("account_status") // 1=active, 2=disabled
+  currency       String? // IDR, USD, etc
+  timezoneName   String?   @map("timezone_name")
+  isDefault      Boolean   @default(false) @map("is_default")
   lastSyncedAt   DateTime? @map("last_synced_at")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  metaAccount  MetaAccount   @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  business     MetaBusiness? @relation(fields: [metaBusinessId], references: [id])
+  metaAccount      MetaAccount        @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  business         MetaBusiness?      @relation(fields: [metaBusinessId], references: [id])
+  MetaMediaBinding MetaMediaBinding[]
+  CampaignSession  CampaignSession[]
+  MetaEntity       MetaEntity[]
+  WorkerLease      WorkerLease[]
 
   @@unique([metaAccountId, adAccountId])
   @@index([metaAccountId])
@@ -410,20 +425,20 @@ model MetaAdAccount {
 }
 
 model MetaPage {
-  id                   String   @id @default(cuid())
-  metaAccountId        String   @map("meta_account_id")
-  pageId               String   @map("page_id")          // Facebook Page ID
-  pageName             String?  @map("page_name")
-  pageAccessTokenEncrypted String? @map("page_access_token_encrypted")
-  igBusinessAccountId  String?  @map("ig_business_account_id")  // Instagram Business Account ID
-  igUsername           String?  @map("ig_username")
-  igName               String?  @map("ig_name")
-  isActive             Boolean  @default(true) @map("is_active")
-  lastSyncedAt         DateTime? @map("last_synced_at")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                       String    @id @default(cuid())
+  metaAccountId            String    @map("meta_account_id")
+  pageId                   String    @map("page_id") // Facebook Page ID
+  pageName                 String?   @map("page_name")
+  pageAccessTokenEncrypted String?   @map("page_access_token_encrypted")
+  igBusinessAccountId      String?   @map("ig_business_account_id") // Instagram Business Account ID
+  igUsername               String?   @map("ig_username")
+  igName                   String?   @map("ig_name")
+  isActive                 Boolean   @default(true) @map("is_active")
+  lastSyncedAt             DateTime? @map("last_synced_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
 
-  metaAccount MetaAccount   @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  metaAccount MetaAccount @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
 
   @@unique([metaAccountId, pageId])
   @@index([metaAccountId])
@@ -435,41 +450,42 @@ model TestLaunch {
   id              String   @id @default(cuid())
   userId          String   @map("user_id")
   metaAccountId   String   @map("meta_account_id")
-  metaBusinessId  String?  @map("meta_business_id")   // which BM to use
+  metaBusinessId  String?  @map("meta_business_id") // which BM to use
   metaAdAccountId String?  @map("meta_ad_account_id") // which ad account
   productId       String?  @map("product_id")
   name            String
-  objective       String   @default("OUTCOME_LEADS")  // OUTCOME_LEADS | OUTCOME_SALES | OUTCOME_TRAFFIC
+  objective       String   @default("OUTCOME_LEADS") // OUTCOME_LEADS | OUTCOME_SALES | OUTCOME_TRAFFIC
   dailyBudget     Decimal  @map("daily_budget") @db.Decimal(12, 2)
   currency        String   @default("IDR")
   // ── Page & Instagram Selection (per-launch) ──
-  pageId          String?  @map("page_id")             // chosen Facebook Page
-  igAccountId     String?  @map("ig_account_id")       // chosen Instagram Business Account
+  pageId          String?  @map("page_id") // chosen Facebook Page
+  igAccountId     String?  @map("ig_account_id") // chosen Instagram Business Account
   // ── Placement ──
   placementMode   String   @default("automatic") @map("placement_mode") // automatic | manual
-  placementsJson  String?  @map("placements_json")     // ["facebook_feed","instagram_reels",...]
+  placementsJson  String?  @map("placements_json") // ["facebook_feed","instagram_reels",...]
   // ── Audience ──
-  audienceJson    String?  @map("audience_json")       // {ageMin, ageMax, gender, locations, interests}
-  targetingJson   String?  @map("targeting_json")      // raw Meta targeting (built from audienceJson)
+  audienceJson    String?  @map("audience_json") // {ageMin, ageMax, gender, locations, interests}
+  targetingJson   String?  @map("targeting_json") // raw Meta targeting (built from audienceJson)
   // ── Destination ──
   destinationUrl  String?  @map("destination_url")
   // ── Launch Mode ──
-  launchMode      String   @map("launch_mode")         // new_test | duplicate_winner
-  sourceAdsetId   String?  @map("source_adset_id")    // for duplicate_winner
+  launchMode      String   @map("launch_mode") // new_test | duplicate_winner
+  sourceAdsetId   String?  @map("source_adset_id") // for duplicate_winner
   notes           String?
   // ── Conversion (required for OUTCOME_SALES) ──
-  pixelId         String?  @map("pixel_id")           // Meta pixel ID for conversion tracking
+  pixelId         String?  @map("pixel_id") // Meta pixel ID for conversion tracking
   // status lifecycle: draft → pending_approval → approved/rejected → executing → completed/failed
   status          String   @default("draft")
   errorMessage    String?  @map("error_message")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  user            AdminUser            @relation(fields: [userId], references: [id])
-  metaAccount     MetaAccount          @relation(fields: [metaAccountId], references: [id])
-  creatives       TestLaunchCreative[]
-  approvalRequest ApprovalRequest?
-  workerTasks     WorkerTask[]
+  user             AdminUser            @relation(fields: [userId], references: [id])
+  metaAccount      MetaAccount          @relation(fields: [metaAccountId], references: [id])
+  creatives        TestLaunchCreative[]
+  approvalRequest  ApprovalRequest?
+  workerTasks      WorkerTask[]
+  campaignSessions CampaignSession[]
 
   @@index([userId])
   @@index([status])
@@ -477,20 +493,20 @@ model TestLaunch {
 }
 
 model TestLaunchCreative {
-  id             String   @id @default(cuid())
-  testLaunchId   String   @map("test_launch_id")
-  creativeUrl    String?  @map("creative_url")    // uploaded image/video URL
-  captionText    String?  @map("caption_text")
-  hookText       String?  @map("hook_text")
-  headline       String?
-  primaryText    String?  @map("primary_text")    // ad primary text (main body)
-adHeadline     String?  @map("ad_headline")     // ad headline
-callToAction   String?  @map("call_to_action")  // LEARN_MORE | SHOP_NOW | SIGN_UP
-  sortOrder      Int      @default(0) @map("sort_order")
-  status         String   @default("pending")     // pending | testing | winner | killed
-  notes          String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  testLaunchId String   @map("test_launch_id")
+  creativeUrl  String?  @map("creative_url") // uploaded image/video URL
+  captionText  String?  @map("caption_text")
+  hookText     String?  @map("hook_text")
+  headline     String?
+  primaryText  String?  @map("primary_text") // ad primary text (main body)
+  adHeadline   String?  @map("ad_headline") // ad headline
+  callToAction String?  @map("call_to_action") // LEARN_MORE | SHOP_NOW | SIGN_UP
+  sortOrder    Int      @default(0) @map("sort_order")
+  status       String   @default("pending") // pending | testing | winner | killed
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   testLaunch TestLaunch @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
 
@@ -500,39 +516,39 @@ callToAction   String?  @map("call_to_action")  // LEARN_MORE | SHOP_NOW | SIGN_
 
 model ApprovalRequest {
   id            String    @id @default(cuid())
-  testLaunchId  String    @unique @map("test_launch_id")  // 1-to-1 with TestLaunch
+  testLaunchId  String    @unique @map("test_launch_id") // 1-to-1 with TestLaunch
   requestedById String    @map("requested_by_id")
   reviewedById  String?   @map("reviewed_by_id")
-  actionType    String    @map("action_type")             // create_campaign | duplicate_adset | increase_budget | pause_ad
-  status        String    @default("pending")             // pending | approved | rejected
+  actionType    String    @map("action_type") // create_campaign | duplicate_adset | increase_budget | pause_ad
+  status        String    @default("pending") // pending | approved | rejected
   requestNote   String?   @map("request_note")
   reviewNote    String?   @map("review_note")
   createdAt     DateTime  @default(now()) @map("created_at")
   reviewedAt    DateTime? @map("reviewed_at")
 
-  testLaunch   TestLaunch @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
-  requestedBy  AdminUser  @relation("ApprovalRequester", fields: [requestedById], references: [id])
-  reviewedBy   AdminUser? @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
+  testLaunch  TestLaunch @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
+  requestedBy AdminUser  @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  reviewedBy  AdminUser? @relation("ApprovalReviewer", fields: [reviewedById], references: [id])
 
   @@index([status])
   @@map("approval_requests")
 }
 
 model WorkerTask {
-  id            String    @id @default(cuid())
-  type          String    // create_campaign | create_full_launch | pause_ad | scale_adset | kill_ad | clone_adset
-  payloadJson   String    @map("payload_json")   // JSON string with full task params
-  resultJson    String?   @map("result_json")    // JSON string with result data (optional, set when task completes)
-  status        String    @default("pending")    // pending | processing | completed | failed | cancelled
-  priority      Int       @default(5)            // 1=highest 10=lowest
-  attempts      Int       @default(0)
-  maxAttempts   Int       @default(3) @map("max_attempts")
-  lastError     String?   @map("last_error")
-  workerId      String?   @map("worker_id")      // which Worker instance claimed this
-  testLaunchId  String?   @map("test_launch_id") // nullable — tasks can exist without a launch
-  createdAt     DateTime  @default(now()) @map("created_at")
-  startedAt     DateTime? @map("started_at")
-  completedAt   DateTime? @map("completed_at")
+  id           String    @id @default(cuid())
+  type         String // create_campaign | create_full_launch | pause_ad | scale_adset | kill_ad | clone_adset
+  payloadJson  String    @map("payload_json") // JSON string with full task params
+  resultJson   String?   @map("result_json") // JSON string with result data (optional, set when task completes)
+  status       String    @default("pending") // pending | processing | completed | failed | cancelled
+  priority     Int       @default(5) // 1=highest 10=lowest
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3) @map("max_attempts")
+  lastError    String?   @map("last_error")
+  workerId     String?   @map("worker_id") // which Worker instance claimed this
+  testLaunchId String?   @map("test_launch_id") // nullable — tasks can exist without a launch
+  createdAt    DateTime  @default(now()) @map("created_at")
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
 
   testLaunch TestLaunch? @relation(fields: [testLaunchId], references: [id])
 
@@ -541,3 +557,386 @@ model WorkerTask {
   @@map("worker_tasks")
 }
 
+// ── PLATFORM MODELS ───────────────────────────────────────────────────────────
+
+model MediaAsset {
+  id               String    @id @default(cuid())
+  userId           String    @map("user_id")
+  productId        String?   @map("product_id")
+  type             String // IMAGE | VIDEO
+  source           String // USER_UPLOAD | AI_GENERATED
+  storageProvider  String    @map("storage_provider")
+  storagePath      String    @map("storage_path")
+  publicUrl        String?   @map("public_url")
+  mimeType         String    @map("mime_type")
+  fileSizeBytes    Int       @map("file_size_bytes")
+  width            Int?
+  height           Int?
+  checksum         String
+  status           String    @default("PROCESSING") // PROCESSING | READY | FAILED | ARCHIVED
+  moderationStatus String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  generationPrompt String?   @map("generation_prompt")
+  generatedByModel String?   @map("generated_by_model")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  archivedAt       DateTime? @map("archived_at")
+
+  user              AdminUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product           Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
+  creativeVariants  CreativeVariant[]
+  metaMediaBindings MetaMediaBinding[]
+
+  @@map("media_assets")
+}
+
+model CreativeVariant {
+  id               String    @id @default(cuid())
+  userId           String    @map("user_id")
+  productId        String    @map("product_id")
+  mediaAssetId     String    @map("media_asset_id")
+  name             String
+  primaryText      String    @map("primary_text") @db.VarChar(125)
+  headline         String    @db.VarChar(255)
+  description      String?
+  linkUrl          String    @map("link_url")
+  ctaButton        String    @map("cta_button")
+  status           String    @default("DRAFT") // DRAFT | READY | RESERVED | ACTIVE | ARCHIVED
+  usageCount       Int       @default(0) @map("usage_count")
+  lastUsedAt       DateTime? @map("last_used_at")
+  qualityScore     Float?
+  createdFromCepId String?   @map("created_from_cep_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user                  AdminUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product               Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mediaAsset            MediaAsset             @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  reservations          CreativeReservation[]
+  rotationsOld          CreativeRotation[]     @relation("OldCreativeVariant")
+  rotationsNew          CreativeRotation[]     @relation("NewCreativeVariant")
+  campaignCreativeLinks CampaignCreativeLink[]
+
+  @@map("creative_variants")
+}
+
+model MetaMediaBinding {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  mediaAssetId    String    @map("media_asset_id")
+  metaAdAccountId String    @map("meta_ad_account_id")
+  metaImageHash   String?   @map("meta_image_hash")
+  metaVideoId     String?   @map("meta_video_id")
+  status          String    @default("PENDING") // PENDING | UPLOADED | FAILED | ARCHIVED
+  lastVerifiedAt  DateTime? @map("last_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user          AdminUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaAsset    MediaAsset    @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+  metaAdAccount MetaAdAccount @relation(fields: [metaAdAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaAssetId, metaAdAccountId])
+  @@map("meta_media_bindings")
+}
+
+model CampaignSession {
+  id                     String    @id @default(cuid())
+  userId                 String    @map("user_id")
+  testLaunchId           String?   @map("test_launch_id")
+  productId              String    @map("product_id")
+  metaAdAccountId        String?   @map("meta_ad_account_id")
+  name                   String
+  objective              String    @default("OUTCOME_LEADS")
+  status                 String    @default("DRAFT") // DRAFT | APPROVAL_REQUIRED | QUEUED | CREATING | RUNNING | PAUSED | KILLED | COMPLETED | ERROR
+  phase                  String    @default("TESTING") // TESTING | SCALING | MAINTENANCE | EXITED
+  automationEnabled      Boolean   @default(true) @map("automation_enabled")
+  timezone               String    @default("Asia/Jakarta")
+  currency               String    @default("IDR")
+  dailyBudget            Decimal   @map("daily_budget") @db.Decimal(12, 2)
+  monitorIntervalMinutes Int       @default(15) @map("monitor_interval_minutes")
+  nextMonitorAt          DateTime? @map("next_monitor_at")
+  lastMonitorAt          DateTime? @map("last_monitor_at")
+  lastActionAt           DateTime? @map("last_action_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  user                 AdminUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testLaunch           TestLaunch?            @relation(fields: [testLaunchId], references: [id], onDelete: SetNull)
+  metaAdAccount        MetaAdAccount?         @relation(fields: [metaAdAccountId], references: [id], onDelete: SetNull)
+  metaEntities         MetaEntity[]
+  creativeLinks        CampaignCreativeLink[]
+  metricSnapshots      MetricSnapshot[]
+  automationRules      AutomationRule[]
+  automationActions    AutomationAction[]
+  creativeReservations CreativeReservation[]
+  creativeRotations    CreativeRotation[]
+  RuleExecution        RuleExecution[]
+
+  @@map("campaign_sessions")
+}
+
+model MetaEntity {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  campaignSessionId  String   @map("campaign_session_id")
+  metaAdAccountId    String   @map("meta_ad_account_id")
+  entityType         String // CAMPAIGN | ADSET | AD | CREATIVE
+  metaEntityId       String   @map("meta_entity_id")
+  parentMetaEntityId String?  @map("parent_meta_entity_id")
+  name               String
+  configuredStatus   String?  @map("configured_status")
+  effectiveStatus    String?  @map("effective_status")
+  deliveryStatus     String?  @map("delivery_status")
+  rawStateJson       String?  @map("raw_state_json")
+  lastSyncedAt       DateTime @map("last_synced_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user                  AdminUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignSession       CampaignSession        @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  metaAdAccount         MetaAdAccount          @relation(fields: [metaAdAccountId], references: [id], onDelete: Cascade)
+  campaignCreativeLinks CampaignCreativeLink[]
+  MetricSnapshot        MetricSnapshot[]
+
+  @@unique([metaAdAccountId, entityType, metaEntityId])
+  @@map("meta_entities")
+}
+
+model CampaignCreativeLink {
+  id                String    @id @default(cuid())
+  campaignSessionId String    @map("campaign_session_id")
+  creativeVariantId String    @map("creative_variant_id")
+  metaAdEntityId    String    @map("meta_ad_entity_id")
+  rotationSequence  Int       @map("rotation_sequence")
+  role              String    @default("INITIAL") // INITIAL | REPLACEMENT | BACKUP | CONTROL
+  activatedAt       DateTime? @map("activated_at")
+  retiredAt         DateTime? @map("retired_at")
+  retireReason      String?   @map("retire_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  campaignSession CampaignSession @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  creativeVariant CreativeVariant @relation(fields: [creativeVariantId], references: [id], onDelete: Cascade)
+  metaAdEntity    MetaEntity      @relation(fields: [metaAdEntityId], references: [id], onDelete: Cascade)
+
+  @@map("campaign_creative_links")
+}
+
+model MetricSnapshot {
+  id                   String   @id @default(cuid())
+  userId               String   @map("user_id")
+  campaignSessionId    String   @map("campaign_session_id")
+  metaEntityId         String   @map("meta_entity_id")
+  entityType           String // CAMPAIGN | ADSET | AD | CREATIVE
+  windowStart          DateTime @map("window_start")
+  windowEnd            DateTime @map("window_end")
+  attributionWindow    String   @map("attribution_window")
+  spend                Float
+  impressions          Int
+  reach                Int?
+  clicks               Int
+  linkClicks           Int?
+  cpc                  Float?
+  ctr                  Float?
+  cpm                  Float?
+  leads                Int?
+  purchases            Int?
+  purchaseValue        Float?   @map("purchase_value")
+  roas                 Float?
+  frequency            Float?
+  rawMetricsJson       String?  @map("raw_metrics_json")
+  dataFreshnessSeconds Int?     @map("data_freshness_seconds")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  user            AdminUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignSession CampaignSession @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  metaEntity      MetaEntity      @relation(fields: [metaEntityId], references: [id], onDelete: Cascade)
+
+  @@index([metaEntityId, windowEnd])
+  @@index([campaignSessionId, windowEnd])
+  @@map("metric_snapshots")
+}
+
+model AutomationRule {
+  id                      String    @id @default(cuid())
+  userId                  String    @map("user_id")
+  campaignSessionId       String?   @map("campaign_session_id")
+  name                    String
+  description             String?
+  version                 Int       @default(1)
+  status                  String    @default("DRAFT") // DRAFT | ACTIVE | PAUSED | ARCHIVED
+  scope                   String // CAMPAIGN | ADSET | AD
+  ruleCategory            String // THRESHOLD | SCHEDULE | PHASE_TRANSITION | CREATIVE_ROTATION | COMPOSITE
+  conditionTreeJson       String    @map("condition_tree_json")
+  actionSpecJson          String    @map("action_spec_json")
+  evaluationWindowMinutes Int?      @map("evaluation_window_minutes")
+  minimumDataAgeMinutes   Int?      @map("minimum_data_age_minutes")
+  cooldownMinutes         Int       @default(60) @map("cooldown_minutes")
+  priority                Int       @default(5)
+  timezone                String    @default("Asia/Jakarta")
+  maxFireCount            Int?      @map("max_fire_count")
+  lastFiredAt             DateTime? @map("last_fired_at")
+  fireCount               Int       @default(0) @map("fire_count")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user            AdminUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignSession CampaignSession? @relation(fields: [campaignSessionId], references: [id], onDelete: SetNull)
+  ruleExecutions  RuleExecution[]
+
+  @@map("automation_rules")
+}
+
+model RuleExecution {
+  id                   String   @id @default(cuid())
+  ruleId               String   @map("rule_id")
+  ruleVersion          Int      @map("rule_version")
+  campaignSessionId    String   @map("campaign_session_id")
+  targetMetaEntityId   String?  @map("target_meta_entity_id")
+  evaluatedAt          DateTime @map("evaluated_at")
+  matched              Boolean
+  conditionResultJson  String   @map("condition_result_json")
+  metricReferencesJson String?  @map("metric_references_json")
+  reasonText           String?  @map("reason_text")
+  actionCreatedId      String?  @map("action_created_id")
+  deduplicationKey     String   @map("deduplication_key")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  rule              AutomationRule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  campaignSession   CampaignSession    @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  automationActions AutomationAction[]
+
+  @@index([ruleId, campaignSessionId])
+  @@map("rule_executions")
+}
+
+model AutomationAction {
+  id                 String    @id @default(cuid())
+  userId             String    @map("user_id")
+  campaignSessionId  String    @map("campaign_session_id")
+  ruleExecutionId    String?   @map("rule_execution_id")
+  source             String // USER | RULE | SCHEDULE | SYSTEM
+  actionType         String // PAUSE_CAMPAIGN | RESUME_CAMPAIGN | PAUSE_ADSET | RESUME_ADSET | UPDATE_BUDGET | CREATE_CAMPAIGN | CREATE_AD | REPLACE_AD | ADD_CREATIVE | NOTIFY
+  targetEntityType   String?
+  targetMetaEntityId String?   @map("target_meta_entity_id")
+  payloadJson        String    @map("payload_json")
+  preconditionJson   String?   @map("precondition_json")
+  status             String    @default("PENDING") // PENDING | SUCCEEDED | FAILED | CANCELLED | UNCERTAIN
+  idempotencyKey     String    @map("idempotency_key")
+  priority           Int
+  requestedAt        DateTime  @map("requested_at")
+  executedAt         DateTime? @map("executed_at")
+  confirmedAt        DateTime? @map("confirmed_at")
+  errorCode          String?   @map("error_code")
+  errorMessage       String?   @map("error_message")
+  metaResponseJson   String?   @map("meta_response_json")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user            AdminUser             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignSession CampaignSession       @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  ruleExecution   RuleExecution?        @relation(fields: [ruleExecutionId], references: [id], onDelete: SetNull)
+  reservations    CreativeReservation[]
+  rotations       CreativeRotation[]
+
+  @@unique([idempotencyKey])
+  @@map("automation_actions")
+}
+
+model CreativeReservation {
+  id                 String   @id @default(cuid())
+  creativeVariantId  String   @map("creative_variant_id")
+  campaignSessionId  String   @map("campaign_session_id")
+  automationActionId String   @map("automation_action_id")
+  reservedByWorkerId String?  @map("reserved_by_worker_id")
+  status             String   @default("RESERVED") // RESERVED | CONSUMED | RELEASED
+  expiresAt          DateTime @map("expires_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  creativeVariant  CreativeVariant  @relation(fields: [creativeVariantId], references: [id], onDelete: Cascade)
+  campaignSession  CampaignSession  @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  automationAction AutomationAction @relation(fields: [automationActionId], references: [id], onDelete: Cascade)
+
+  @@map("creative_reservations")
+}
+
+model CreativeRotation {
+  id                   String    @id @default(cuid())
+  campaignSessionId    String    @map("campaign_session_id")
+  automationActionId   String    @map("automation_action_id")
+  oldMetaAdId          String?   @map("old_meta_ad_id")
+  newMetaAdId          String?   @map("new_meta_ad_id")
+  oldCreativeVariantId String?   @map("old_creative_variant_id")
+  newCreativeVariantId String    @map("new_creative_variant_id")
+  strategy             String // NO_GAP | STOP_FIRST
+  triggerReason        String?   @map("trigger_reason")
+  startedAt            DateTime  @map("started_at")
+  activatedAt          DateTime? @map("activated_at")
+  oldAdPausedAt        DateTime? @map("old_ad_paused_at")
+  completedAt          DateTime? @map("completed_at")
+  status               String    @default("PENDING") // PENDING | IN_PROGRESS | COMPLETED | FAILED | CANCELLED
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  campaignSession    CampaignSession  @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+  automationAction   AutomationAction @relation(fields: [automationActionId], references: [id], onDelete: Cascade)
+  oldCreativeVariant CreativeVariant? @relation("OldCreativeVariant", fields: [oldCreativeVariantId], references: [id], onDelete: SetNull)
+  newCreativeVariant CreativeVariant  @relation("NewCreativeVariant", fields: [newCreativeVariantId], references: [id], onDelete: SetNull)
+
+  @@map("creative_rotations")
+}
+
+model WorkerRegistry {
+  id              String   @id @default(cuid())
+  workerId        String   @unique @map("worker_id")
+  mode            String
+  instanceId      String?
+  version         String?
+  status          String   @default("ACTIVE") // ACTIVE | IDLE | STOPPED | ERROR
+  startedAt       DateTime @map("started_at")
+  lastHeartbeatAt DateTime @map("last_heartbeat_at")
+  activeTaskCount Int      @default(0) @map("active_task_count")
+  maxConcurrency  Int      @default(5) @map("max_concurrency")
+  metadataJson    String?  @map("metadata_json")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  leases     WorkerLease[]
+  heartbeats WorkerHeartbeatEvent[]
+
+  @@map("worker_registry")
+}
+
+model WorkerLease {
+  id              String   @id @default(cuid())
+  leaseType       String // AD_ACCOUNT_MONITOR | RECONCILE_PARTITION | HEALTH_PARTITION
+  ownerWorkerId   String   @map("owner_worker_id")
+  userId          String?  @map("user_id")
+  metaAdAccountId String?  @map("meta_ad_account_id")
+  partitionKey    String   @map("partition_key")
+  leaseExpiresAt  DateTime @map("lease_expires_at")
+  heartbeatAt     DateTime @map("heartbeat_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  ownerWorker   WorkerRegistry @relation(fields: [ownerWorkerId], references: [id], onDelete: Cascade)
+  user          AdminUser?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  metaAdAccount MetaAdAccount? @relation(fields: [metaAdAccountId], references: [id], onDelete: SetNull)
+
+  @@map("worker_leases")
+}
+
+model WorkerHeartbeatEvent {
+  id           String   @id @default(cuid())
+  workerId     String   @map("worker_id")
+  severity     String // INFO | WARNING | ERROR | FATAL
+  eventType    String   @map("event_type")
+  message      String
+  metadataJson String?  @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  worker WorkerRegistry @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_heartbeat_events")
+}
