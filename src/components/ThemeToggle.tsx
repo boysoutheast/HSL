@@ -15,7 +15,7 @@ export default function ThemeToggle() {
     >
       <span>{isDark ? '☀️' : '🌙'}</span>
       <span>{isDark ? 'Day' : 'Night'}</span>
-      {isAuto && <span className="text-[10px] text-stone-400">AUTO</span>}
+      {isAuto && <span className="text-[10px] text-stone-400 dark:text-stone-500">AUTO</span>}
     </button>
   )
 }

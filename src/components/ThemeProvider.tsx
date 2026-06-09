@@ -23,12 +23,14 @@ function getAutoTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light')
+  const [theme, setTheme] = useState<Theme>(() => {
+    // On mount, read what inline script already applied to <html>
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  })
   const [isAuto, setIsAuto] = useState(true)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // First launch: determine auto vs manual
     const saved = localStorage.getItem('hsl-theme-mode') // 'auto' | 'manual'
     const savedTheme = localStorage.getItem('hsl-theme') as Theme | null
 
@@ -36,7 +38,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTheme(savedTheme)
       setIsAuto(false)
     } else {
-      // Auto mode: use time-based theme
       setTheme(getAutoTheme())
       setIsAuto(true)
     }

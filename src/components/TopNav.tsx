@@ -80,14 +80,14 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
   const subItems = activeGroup.items.filter(item => !item.adminOnly || isAdmin)
 
   return (
-    <header className="sticky top-0 z-40 bg-white border-b-2 border-stone-300 shadow-sm">
+    <header className="sticky top-0 z-40 bg-white dark:bg-stone-900 border-b-2 border-stone-300 dark:border-stone-700 shadow-sm">
       {/* ── Top bar (classic tab nav) ── */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex h-11 items-center justify-between gap-2">
 
           {/* Brand */}
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-base font-bold tracking-tight text-stone-900">Hermes</span>
+            <span className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-50">Hermes</span>
             <span className="bg-violet-700 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">HSL</span>
           </div>
 
@@ -101,8 +101,8 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
                   href={group.href}
                   className={`relative h-full flex items-center px-4 text-sm font-medium transition-colors ${
                     active
-                      ? 'text-stone-900 border-b-2 border-stone-900 -mb-px'
-                      : 'text-stone-500 hover:text-stone-800 border-b-2 border-transparent hover:-mb-px'
+                      ? 'text-stone-900 dark:text-stone-50 border-b-2 border-stone-900 dark:border-violet-400 -mb-px'
+                      : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 border-b-2 border-transparent'
                   }`}
                 >
                   {group.label}
@@ -130,7 +130,7 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
       </div>
 
       {/* ── Sub nav (classic secondary tabs) ── */}
-      <div className="bg-stone-100 border-t border-stone-200">
+      <div className="bg-stone-100 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-700">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex items-center gap-0">
             {subItems.map(item => {
@@ -138,8 +138,8 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
               const external = item.href.startsWith('http') || item.href === '/docs'
               const cls = `inline-block px-4 py-2 text-sm border-b-2 transition-colors ${
                 active
-                  ? 'border-stone-600 text-stone-900 font-medium bg-white -mb-px'
-                  : 'border-transparent text-stone-500 hover:text-stone-800 hover:bg-stone-200'
+                  ? 'border-stone-600 dark:border-violet-400 text-stone-900 dark:text-stone-50 font-medium bg-white dark:bg-stone-900 -mb-px'
+                  : 'border-transparent text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 hover:bg-stone-200 dark:hover:bg-stone-800'
               }`
               return external ? (
                 <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className={cls}>
