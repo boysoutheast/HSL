@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import ThemeToggle from './ThemeToggle'
 
 interface User {
   id: string
@@ -111,13 +112,14 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
           </nav>
 
           {/* User + logout */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {user && (
               <div className="hidden text-right sm:block">
-                <p className="text-xs font-semibold text-stone-700">{user.name ?? user.email}</p>
-                <p className="text-[11px] text-stone-400">{user.role === 'admin' ? 'Admin' : 'User'}</p>
+                <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">{user.name ?? user.email}</p>
+                <p className="text-[11px] text-stone-400 dark:text-stone-500">{user.role === 'admin' ? 'Admin' : 'User'}</p>
               </div>
             )}
+            <ThemeToggle />
             {onLogout && (
               <button onClick={onLogout} className="btn-ghost btn-sm">
                 Logout

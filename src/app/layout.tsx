@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import LayoutShell from '@/components/LayoutShell'
+import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: 'Hermes Support Library',
@@ -13,9 +14,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="bg-stone-100">
-        <LayoutShell>{children}</LayoutShell>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50 transition-colors">
+        <ThemeProvider>
+          <LayoutShell>{children}</LayoutShell>
+        </ThemeProvider>
       </body>
     </html>
   )

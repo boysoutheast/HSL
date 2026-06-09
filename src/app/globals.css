@@ -2,67 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base (classic grey pastel) ───────────────────────────────────────── */
-body { @apply bg-stone-100 text-stone-900; }
+/* ── Base (classic grey pastel + dark mode) ────────────────────────── */
+body { @apply bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50; }
+html { @apply transition-colors duration-300; }
 
-/* ── Badge system ──────────────────────────────────────────────────────── */
-.badge-active     { @apply bg-violet-200 text-violet-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-inactive   { @apply bg-stone-200 text-stone-600 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-pending    { @apply bg-amber-200 text-amber-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-monitoring { @apply bg-blue-200 text-blue-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-hot        { @apply bg-orange-200 text-orange-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-ready      { @apply bg-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-growing    { @apply bg-cyan-200 text-cyan-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-error      { @apply bg-red-200 text-red-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-connected  { @apply bg-violet-200 text-violet-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-expired    { @apply bg-amber-200 text-amber-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-reconnect  { @apply bg-red-200 text-red-800 text-xs px-2.5 py-1 rounded font-medium; }
-.badge-revoked    { @apply bg-stone-200 text-stone-600 text-xs px-2.5 py-1 rounded font-medium; }
+/* ── Badge system ──────────────────────────────────────────────────── */
+.badge-active     { @apply bg-violet-200 text-violet-800 dark:bg-violet-900 dark:text-violet-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-inactive   { @apply bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-pending    { @apply bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-monitoring { @apply bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-hot        { @apply bg-orange-200 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-ready      { @apply bg-emerald-200 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-growing    { @apply bg-cyan-200 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-error      { @apply bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-connected  { @apply bg-violet-200 text-violet-800 dark:bg-violet-900 dark:text-violet-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-expired    { @apply bg-amber-200 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-reconnect  { @apply bg-red-200 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs px-2.5 py-1 rounded font-medium; }
+.badge-revoked    { @apply bg-stone-200 text-stone-600 dark:bg-stone-700 dark:text-stone-300 text-xs px-2.5 py-1 rounded font-medium; }
 
-/* ── Button system (classic — sharp, clear) ──────────────────────────── */
+/* ── Button system (classic + dark mode) ──────────────────────────── */
 .btn-primary {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-violet-700 hover:bg-violet-800 text-white text-sm font-medium rounded border border-violet-800 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-violet-700 hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-700 text-white text-sm font-medium rounded border border-violet-800 dark:border-violet-700 transition-all disabled:opacity-50;
 }
 .btn-success {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium rounded border border-emerald-800 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-sm font-medium rounded border border-emerald-800 dark:border-emerald-700 transition-all disabled:opacity-50;
 }
 .btn-warning {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded border border-amber-700 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white text-sm font-medium rounded border border-amber-700 dark:border-amber-600 transition-all disabled:opacity-50;
 }
 .btn-danger {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-sm font-medium rounded border border-red-800 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-red-700 hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-700 text-white text-sm font-medium rounded border border-red-800 dark:border-red-700 transition-all disabled:opacity-50;
 }
 .btn-info {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-sm font-medium rounded border border-cyan-800 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-700 hover:bg-cyan-800 dark:bg-cyan-600 dark:hover:bg-cyan-700 text-white text-sm font-medium rounded border border-cyan-800 dark:border-cyan-700 transition-all disabled:opacity-50;
 }
 .btn-purple {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-violet-700 hover:bg-violet-800 text-white text-sm font-medium rounded border border-violet-800 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-violet-700 hover:bg-violet-800 dark:bg-violet-600 dark:hover:bg-violet-700 text-white text-sm font-medium rounded border border-violet-800 dark:border-violet-700 transition-all disabled:opacity-50;
 }
 .btn-ghost {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-stone-100 text-stone-700 text-sm font-medium rounded border border-stone-300 hover:border-stone-400 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-stone-100 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 text-sm font-medium rounded border border-stone-300 hover:border-stone-400 dark:border-stone-600 dark:hover:border-stone-500 transition-all disabled:opacity-50;
 }
 .btn-outline {
-  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-stone-50 text-violet-700 text-sm font-medium rounded border border-violet-300 hover:border-violet-400 transition-all disabled:opacity-50;
+  @apply inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-stone-50 dark:bg-stone-900 dark:hover:bg-stone-800 text-violet-700 dark:text-violet-400 text-sm font-medium rounded border border-violet-300 hover:border-violet-400 dark:border-violet-600 dark:hover:border-violet-500 transition-all disabled:opacity-50;
 }
 .btn-sm { @apply !px-3 !py-1.5 !text-xs; }
 
-/* ── Card (classic) ──────────────────────────────────────────────────── */
+/* ── Card (classic + dark mode) ──────────────────────────────────── */
 .card {
-  @apply bg-white rounded border border-stone-300 shadow-sm;
+  @apply bg-white dark:bg-stone-900 rounded border border-stone-300 dark:border-stone-700 shadow-sm;
 }
 .card-hover {
-  @apply bg-white rounded border border-stone-300 shadow-sm hover:shadow-md hover:border-stone-400 transition-all;
+  @apply bg-white dark:bg-stone-900 rounded border border-stone-300 dark:border-stone-700 shadow-sm hover:shadow-md hover:border-stone-400 dark:hover:border-stone-600 transition-all;
 }
 
-/* ── Input / Form ────────────────────────────────────────────────────── */
+/* ── Input / Form (classic + dark mode) ────────────────────────────── */
 .input-field {
-  @apply w-full border border-stone-300 rounded px-3 py-2 text-sm bg-white text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all;
+  @apply w-full border border-stone-300 dark:border-stone-600 rounded px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-50 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 dark:focus:ring-violet-400 dark:focus:border-violet-400 transition-all;
 }
 
-/* ── Section header ──────────────────────────────────────────────────── */
+/* ── Section header (dark mode) ────────────────────────────────────── */
 .section-title {
-  @apply text-lg font-semibold text-stone-800;
+  @apply text-lg font-semibold text-stone-800 dark:text-stone-100;
 }
 .section-sub {
-  @apply text-sm text-stone-500;
+  @apply text-sm text-stone-500 dark:text-stone-400;
+}
+
+/* ── Header / Nav (dark mode) ──────────────────────────────────────── */
+.dark header {
+  @apply bg-stone-900 border-stone-700;
+}
+.dark .btn-ghost:disabled {
+  @apply opacity-50;
 }
