@@ -16,62 +16,66 @@ async function getWorkerAgent(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const agent = await getWorkerAgent(req)
-  if (!agent) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  try {
+    const agent = await getWorkerAgent(req)
+    if (!agent) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-  const { searchParams } = new URL(req.url)
-  const type = searchParams.get('type')
-  const metaAccountId = searchParams.get('metaAccountId')
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get('type')
+    const metaAccountId = searchParams.get('metaAccountId')
 
-  const where: Record<string, unknown> = {}
-  if (type) {
-    where.type = type
-  }
-  if (metaAccountId) {
-    where.payloadJson = { contains: `"metaAccountId":"${metaAccountId}"` }
-  }
+    const where: Record<string, unknown> = {}
+    if (type) {
+      where.type = type
+    }
+    if (metaAccountId) {
+      where.payloadJson = { contains: `"metaAccountId":"${metaAccountId}"` }
+    }
 
-  const tasks = await prisma.workerTask.findMany({
-    where,
-    orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
-    take: 10,
-    include: {
-      testLaunch: {
-        select: {
-          name: true,
-          status: true,
+    const tasks = await prisma.workerTask.findMany({
+      where,
+      orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+      take: 10,
+      include: {
+        testLaunch: {
+          select: {
+            name: true,
+            status: true,
+          },
         },
       },
-    },
-  })
+    })
 
-  // Parse payloadJson + resultJson into payload/result fields
-  const tasksWithPayload = tasks.map((task) => {
-    const result: any = {
-      ...task,
-      payload: null,
-      result: null,
-    }
-    try {
-      if (task.payloadJson) {
-        result.payload = JSON.parse(task.payloadJson)
+    const tasksWithPayload = tasks.map((task) => {
+      const result: any = {
+        ...task,
+        payload: null,
+        result: null,
       }
-    } catch {
-      result.payload = null
-    }
-    try {
-      if (task.resultJson) {
-        result.result = JSON.parse(task.resultJson)
+      try {
+        if (task.payloadJson) {
+          result.payload = JSON.parse(task.payloadJson)
+        }
+      } catch {
+        result.payload = null
       }
-    } catch {
-      result.result = null
-    }
-    return result
-  })
+      try {
+        if (task.resultJson) {
+          result.result = JSON.parse(task.resultJson)
+        }
+      } catch {
+        result.result = null
+      }
+      return result
+    })
 
-  return NextResponse.json({ tasks: tasksWithPayload })
+    return NextResponse.json({ tasks: tasksWithPayload })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: 'Worker tasks GET failed', message }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
