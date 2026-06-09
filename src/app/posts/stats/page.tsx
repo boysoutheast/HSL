@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import PageInfo from '@/components/ui/PageInfo'
 import Table from '@/components/ui/Table'
 import StatusBadge from '@/components/ui/StatusBadge'
-import Modal from '@/components/ui/Modal'
 
 interface MetaPost {
   id: string
@@ -12,35 +11,33 @@ interface MetaPost {
   message: string | null
   status: string
   postType: string | null
-  mediaUrlsJson: string | null
-  linkUrl: string | null
   publishedAt: string | null
   createdAt: string
   metaPage: { id: string; pageId: string; pageName: string } | null
-  _count: { schedules: number }
+  _count: { stats: number }
 }
 
-interface PostsResponse {
-  posts: MetaPost[]
+interface ContentResponse {
+  content: MetaPost[]
   total: number
+  pages: number
   stats: { draft: number; published: number; scheduled: number; failed: number }
   pagination: { page: number; limit: number; total: number }
 }
 
-export default function PostsPage() {
-  const [data, setData] = useState<PostsResponse | null>(null)
+export default function StatsPage() {
+  const [data, setData] = useState<ContentResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<string>('')
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; postId: string | null }>({ open: false, postId: null })
-  const [deleting, setDeleting] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const fetchPosts = async () => {
+  const fetchContent = async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/posts?limit=100')
-      if (!res.ok) throw new Error('Failed to fetch posts')
+      const res = await fetch('/api/admin/content?limit=100')
+      if (!res.ok) throw new Error('Failed to fetch content')
       const json = await res.json()
       setData(json)
     } catch (err) {
@@ -51,25 +48,16 @@ export default function PostsPage() {
   }
 
   useEffect(() => {
-    fetchPosts()
+    fetchContent()
   }, [])
 
-  const handleDelete = async () => {
-    if (!deleteModal.postId) return
-    setDeleting(true)
-    try {
-      const res = await fetch(`/api/admin/posts/${deleteModal.postId}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Failed to delete')
-      setDeleteModal({ open: false, postId: null })
-      fetchPosts()
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed')
-    } finally {
-      setDeleting(false)
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchContent()
+    setRefreshing(false)
   }
 
-  const filteredPosts = data?.posts.filter(p => {
+  const filteredContent = data?.content.filter(p => {
     if (!filter) return true
     const q = filter.toLowerCase()
     return (
@@ -83,25 +71,46 @@ export default function PostsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="section-title">Posts</h1>
-          <p className="section-sub">Manage scheduled and published content across Meta platforms.</p>
+          <h1 className="section-title">Content Stats</h1>
+          <p className="section-sub">Overview of published content performance and statistics.</p>
         </div>
-        <a href="/posts/new" className="btn-primary">
-          + New Post
-        </a>
+        <button
+          onClick={handleRefresh}
+          className="btn-secondary"
+          disabled={refreshing}
+        >
+          {refreshing ? 'Refreshing...' : '🔄 Refresh Stats'}
+        </button>
       </div>
 
       <PageInfo
-        purpose="Create and manage posts across Facebook Pages and Instagram Business accounts."
-        inputs={['Content text', 'Media (image/video)', 'Schedule date & time', 'Target Page']}
+        purpose="View statistics and performance metrics for published posts. See which content is performing well across your Meta pages."
+        inputs={['Post title and preview', 'Platform/Page', 'Published date', 'Engagement stats (likes, comments, shares)']}
+        wiring={[
+          { label: 'Meta Insights', desc: 'Likes, comments, shares, and reach data from Meta Graph API' },
+          { label: 'Post Type', desc: 'Feed, story, reel, or video post performance breakdown' },
+        ]}
       />
 
+      {/* Summary Cards */}
       {data && (
-        <div className="flex gap-4 text-sm">
-          <span className="badge-active">Published: {data.stats.published}</span>
-          <span className="badge-pending">Scheduled: {data.stats.scheduled}</span>
-          <span className="badge-inactive">Draft: {data.stats.draft}</span>
-          {data.stats.failed > 0 && <span className="badge-error">Failed: {data.stats.failed}</span>}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="card p-4 text-center">
+            <p className="text-3xl font-bold text-violet-600">{data.stats.published}</p>
+            <p className="text-sm text-stone-500 mt-1">Published</p>
+          </div>
+          <div className="card p-4 text-center">
+            <p className="text-3xl font-bold text-orange-500">{data.stats.scheduled}</p>
+            <p className="text-sm text-stone-500 mt-1">Scheduled</p>
+          </div>
+          <div className="card p-4 text-center">
+            <p className="text-3xl font-bold text-stone-400">{data.stats.draft}</p>
+            <p className="text-sm text-stone-500 mt-1">Drafts</p>
+          </div>
+          <div className="card p-4 text-center">
+            <p className="text-3xl font-bold text-red-500">{data.stats.failed}</p>
+            <p className="text-sm text-stone-500 mt-1">Failed</p>
+          </div>
         </div>
       )}
 
@@ -109,14 +118,11 @@ export default function PostsPage() {
         <div className="px-4 py-3 border-b border-stone-200 flex gap-3 items-center">
           <input
             type="text"
-            placeholder="Filter posts..."
+            placeholder="Filter content..."
             value={filter}
             onChange={e => setFilter(e.target.value)}
             className="input-field text-sm flex-1"
           />
-          <button onClick={fetchPosts} className="btn-secondary text-sm" disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
         </div>
 
         {loading && !data ? (
@@ -127,10 +133,10 @@ export default function PostsPage() {
           <div className="px-4 py-8 text-center text-red-600">{error}</div>
         ) : (
           <Table
-            headers={['Title', 'Platform', 'Status', 'Published', 'Schedules']}
-            empty="No posts found."
+            headers={['Title', 'Platform', 'Status', 'Published', 'Stats Records']}
+            empty="No published content found."
           >
-            {filteredPosts.map(p => (
+            {filteredContent.map(p => (
               <tr key={p.id}>
                 <td className="px-4 py-3">
                   <a href={`/posts/${p.id}`} className="text-violet-700 hover:underline font-medium">
@@ -155,40 +161,19 @@ export default function PostsPage() {
                       })
                     : '—'}
                 </td>
-                <td className="px-4 py-3 text-stone-500">{p._count.schedules}</td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => setDeleteModal({ open: true, postId: p.id })}
-                    className="text-red-500 hover:text-red-700 text-sm"
+                  <a
+                    href={`/posts/${p.id}#stats`}
+                    className="text-violet-600 hover:text-violet-800 text-sm"
                   >
-                    Delete
-                  </button>
+                    {p._count.stats} records
+                  </a>
                 </td>
               </tr>
             ))}
           </Table>
         )}
       </div>
-
-      <Modal
-        open={deleteModal.open}
-        onClose={() => setDeleteModal({ open: false, postId: null })}
-        title="Delete Post"
-      >
-        <p className="text-stone-600 mb-4">Are you sure you want to delete this post? This action cannot be undone.</p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setDeleteModal({ open: false, postId: null })}
-            className="btn-secondary"
-            disabled={deleting}
-          >
-            Cancel
-          </button>
-          <button onClick={handleDelete} className="btn-error" disabled={deleting}>
-            {deleting ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </Modal>
     </div>
   )
 }

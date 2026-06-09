@@ -1,15 +1,103 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import PageInfo from '@/components/ui/PageInfo'
 import Table from '@/components/ui/Table'
+import StatusBadge from '@/components/ui/StatusBadge'
+import Modal from '@/components/ui/Modal'
 
-const rules = [
-  { id: '1', name: 'Harga Tanya → Auto Balas', trigger: 'contain:harga|berapa|berapa rupiah', reply: 'Halo! Produk kami tersedia mulai Rp75.000. Mau info lebih lanjut?', platform: 'Facebook', status: 'active', matchCount: 34 },
-  { id: '2', name: 'Kirim → Lokasi → Auto Balas', trigger: 'contain:kirim|ke jakarta|ke bandung', reply: 'Kami kirim ke seluruh Indonesia via JNE/SiCepat. Ongkir starts from Rp12.000!', platform: 'Facebook', status: 'active', matchCount: 18 },
-  { id: '3', name: 'Wangi → Testimoni Positive', trigger: 'sentiment:positive,wangi|enak|bagus', reply: 'Terima kasih! Senang produk kami cocok untuk kulit Anda. Bisa share review di Google ya!', platform: 'Both', status: 'active', matchCount: 56 },
-  { id: '4', name: 'PROMO Mention → Diskon', trigger: 'contain:promo|diskon|kode promo', reply: 'Follow kami untuk update promo terbaru! Setiap bulan ada program affiliate juga lho 😊', platform: 'Instagram', status: 'paused', matchCount: 5 },
-  { id: '5', name: 'Banded/Recalled Product', trigger: 'contain:jelek|tidak cocok|alergi', reply: 'Mohon maaf jika kurang nyaman. Silakan hubungi DM kami untuk komplain dan kompensasi.', platform: 'Both', status: 'active', matchCount: 2 },
-]
+interface AutoReplyRule {
+  id: string
+  name: string
+  triggerType: string
+  triggerValue: string
+  responseType: string
+  responseValue: string
+  isActive: boolean
+  createdAt: string
+  metaPage: { pageName: string; pageId: string } | null
+  metaAccount: { id: string; name: string } | null
+}
+
+interface AutoReplyResponse {
+  rules: AutoReplyRule[]
+  total: number
+  page: number
+  pages: number
+}
 
 export default function AutoReplyPage() {
+  const [data, setData] = useState<AutoReplyResponse | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<string>('')
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; ruleId: string | null }>({ open: false, ruleId: null })
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  const fetchRules = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/admin/auto-reply?limit=100')
+      if (!res.ok) throw new Error('Failed to fetch rules')
+      const json = await res.json()
+      setData(json)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchRules()
+  }, [])
+
+  const handleToggle = async (rule: AutoReplyRule) => {
+    setToggleLoading(rule.id)
+    try {
+      const res = await fetch(`/api/admin/auto-reply/${rule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !rule.isActive }),
+      })
+      if (!res.ok) throw new Error('Failed to toggle')
+      fetchRules()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Toggle failed')
+    } finally {
+      setToggleLoading(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteModal.ruleId) return
+    setActionLoading(true)
+    try {
+      const res = await fetch(`/api/admin/auto-reply/${deleteModal.ruleId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setDeleteModal({ open: false, ruleId: null })
+      fetchRules()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const filteredRules = data?.rules.filter(r => {
+    if (!filter) return true
+    const q = filter.toLowerCase()
+    return (
+      r.name.toLowerCase().includes(q) ||
+      r.triggerValue.toLowerCase().includes(q) ||
+      r.metaPage?.pageName.toLowerCase().includes(q)
+    )
+  }) ?? []
+
+  const activeCount = data?.rules.filter(r => r.isActive).length ?? 0
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -32,21 +120,105 @@ export default function AutoReplyPage() {
         ]}
       />
 
+      {data && (
+        <div className="flex gap-4 text-sm">
+          <span className="badge-active">Active: {activeCount}</span>
+          <span className="badge-inactive">Inactive: {(data.rules.length - activeCount)}</span>
+          <span className="text-stone-500">Total: {data.total}</span>
+        </div>
+      )}
+
       <div className="card">
-        <Table
-          headers={['Rule Name', 'Trigger', 'Platform', 'Status', 'Matches']}
-        >
-          {rules.map(r => (
-            <tr key={r.id}>
-              <td className="px-4 py-3"><a href={`/community/auto-reply/${r.id}`} className="text-violet-700 hover:underline font-medium">{r.name}</a></td>
-              <td className="px-4 py-3"><code className="text-xs bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded max-w-[200px] truncate block">{r.trigger}</code></td>
-              <td className="px-4 py-3">{r.platform}</td>
-              <td className="px-4 py-3"><span className={`badge-${r.status === 'active' ? 'active' : 'inactive'}`}>{r.status}</span></td>
-              <td className="px-4 py-3">{r.matchCount}</td>
-            </tr>
-          ))}
-        </Table>
+        <div className="px-4 py-3 border-b border-stone-200 flex gap-3 items-center">
+          <input
+            type="text"
+            placeholder="Filter rules..."
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            className="input-field text-sm flex-1"
+          />
+          <button onClick={fetchRules} className="btn-secondary text-sm" disabled={loading}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+
+        {loading && !data ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin h-6 w-6 border-2 border-violet-600 border-t-transparent rounded-full" />
+          </div>
+        ) : error ? (
+          <div className="px-4 py-8 text-center text-red-600">{error}</div>
+        ) : (
+          <Table
+            headers={['Rule Name', 'Trigger', 'Reply Preview', 'Platform', 'Status', 'Actions']}
+            empty="No auto-reply rules found."
+          >
+            {filteredRules.map(r => (
+              <tr key={r.id}>
+                <td className="px-4 py-3">
+                  <a href={`/community/auto-reply/${r.id}`} className="text-violet-700 hover:underline font-medium">
+                    {r.name}
+                  </a>
+                </td>
+                <td className="px-4 py-3">
+                  <code className="text-xs bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded max-w-[200px] truncate block">
+                    {r.triggerType}:{r.triggerValue}
+                  </code>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-stone-500 text-sm truncate max-w-[250px] block">
+                    {r.responseValue.substring(0, 50)}...
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-stone-600">{r.metaPage?.pageName ?? 'All Pages'}</td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={r.isActive ? 'active' : 'inactive'} />
+                </td>
+                <td className="px-4 py-3 flex gap-2">
+                  <button
+                    onClick={() => handleToggle(r)}
+                    disabled={toggleLoading === r.id}
+                    className={`text-sm font-medium disabled:opacity-50 ${
+                      r.isActive ? 'text-orange-500 hover:text-orange-700' : 'text-green-600 hover:text-green-800'
+                    }`}
+                  >
+                    {toggleLoading === r.id ? '...' : r.isActive ? 'Pause' : 'Activate'}
+                  </button>
+                  <a href={`/community/auto-reply/${r.id}`} className="text-violet-600 hover:text-violet-800 text-sm">
+                    Edit
+                  </a>
+                  <button
+                    onClick={() => setDeleteModal({ open: true, ruleId: r.id })}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
       </div>
+
+      <Modal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, ruleId: null })}
+        title="Delete Rule"
+      >
+        <p className="text-stone-600 mb-4">Are you sure you want to delete this auto-reply rule? This action cannot be undone.</p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setDeleteModal({ open: false, ruleId: null })}
+            className="btn-secondary"
+            disabled={actionLoading}
+          >
+            Cancel
+          </button>
+          <button onClick={handleDelete} className="btn-error" disabled={actionLoading}>
+            {actionLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

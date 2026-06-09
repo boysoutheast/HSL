@@ -35,6 +35,7 @@ const navGroups: NavGroup[] = [
       { label: 'All Posts', href: '/posts' },
       { label: 'Schedule', href: '/posts/schedule' },
       { label: 'Drafts', href: '/posts/drafts' },
+      { label: 'Stats', href: '/posts/stats' },
     ],
   },
   {
@@ -42,6 +43,7 @@ const navGroups: NavGroup[] = [
     href: '/community',
     items: [
       { label: 'Comments', href: '/community/comments' },
+      { label: 'Chat', href: '/community/chat' },
       { label: 'Auto Reply Rules', href: '/community/auto-reply' },
       { label: 'Auto Like', href: '/community/auto-like' },
       { label: 'Spam Rules', href: '/community/spam' },
