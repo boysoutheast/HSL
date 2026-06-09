@@ -140,7 +140,7 @@ function LogsPageInner() {
             onClick={() => switchTab(key)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === key
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-violet-600 text-violet-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -169,7 +169,7 @@ function LogsPageInner() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
                 <option value="">All</option>
                 <option value="generated">Generated</option>
@@ -201,7 +201,7 @@ function LogsPageInner() {
                       <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-gray-500 whitespace-nowrap text-xs">{formatDate(log.postedAt ?? log.createdAt)}</td>
                         <td className="px-4 py-3 text-gray-700 font-medium">{log.hermesAgent.name}</td>
-                        <td className="px-4 py-3 text-indigo-700">@{log.instagramAccount.username}</td>
+                        <td className="px-4 py-3 text-violet-700">@{log.instagramAccount.username}</td>
                         <td className="px-4 py-3 text-gray-600">{log.character?.name ?? <span className="text-gray-300">—</span>}</td>
                         <td className="px-4 py-3 text-gray-600 max-w-[120px]"><p className="truncate">{log.topic?.name ?? '—'}</p></td>
                         <td className="px-4 py-3 text-gray-500 max-w-[160px]">
@@ -217,7 +217,7 @@ function LogsPageInner() {
                         </td>
                         <td className="px-4 py-3">
                           <details className="group">
-                            <summary className="text-xs text-indigo-600 hover:underline cursor-pointer font-medium list-none">View Prompt</summary>
+                            <summary className="text-xs text-violet-600 hover:underline cursor-pointer font-medium list-none">View Prompt</summary>
                             <div className="mt-2 max-w-sm">
                               <div className="bg-gray-900 text-gray-100 text-xs p-3 rounded-lg max-h-48 overflow-y-auto font-mono whitespace-pre-wrap">{log.prompt}</div>
                               {log.script && (
@@ -291,9 +291,9 @@ function LogsPageInner() {
                   ) : (
                     perfRows.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-indigo-700">@{row.instagramAccount.username}</td>
+                        <td className="px-4 py-3 font-medium text-violet-700">@{row.instagramAccount.username}</td>
                         <td className="px-4 py-3 max-w-[180px]">
-                          <a href={row.postUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline truncate block">{row.postUrl}</a>
+                          <a href={row.postUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 hover:underline truncate block">{row.postUrl}</a>
                         </td>
                         <td className="px-4 py-3 font-medium text-gray-900">{row.views.toLocaleString()}</td>
                         <td className="px-4 py-3 text-gray-700">{row.likes.toLocaleString()}</td>

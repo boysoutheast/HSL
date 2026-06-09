@@ -85,16 +85,16 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
   const subItems = activeGroup.items.filter(item => !item.adminOnly || isAdmin)
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-stone-200 bg-white shadow-sm">
       <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight text-gray-900">Hermes</span>
-                <span className="rounded bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">HSL</span>
+                <span className="text-lg font-bold tracking-tight text-stone-800">Hermes</span>
+                <span className="rounded bg-violet-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">HSL</span>
               </div>
-              <p className="text-xs text-gray-500">Support Library</p>
+              <p className="text-xs text-stone-400">Support Library</p>
             </div>
           </div>
 
@@ -106,7 +106,7 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
                   key={group.label}
                   href={group.href}
                   className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition ${
-                    active ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    active ? 'bg-violet-600 text-white shadow-sm' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                   }`}
                 >
                   <span>{group.icon}</span>
@@ -119,23 +119,23 @@ export default function TopNav({ user, onLogout }: { user?: User | null; onLogou
           <div className="flex items-center gap-2">
             {user && (
               <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium text-gray-900">{user.name ?? user.email}</p>
-                <p className="text-xs text-gray-500">{user.role === 'admin' ? 'Admin' : 'User'}</p>
+                <p className="text-sm font-medium text-stone-800">{user.name ?? user.email}</p>
+                <p className="text-xs text-stone-400">{user.role === 'admin' ? 'Admin' : 'User'}</p>
               </div>
             )}
             {onLogout && (
-              <button onClick={onLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+              <button onClick={onLogout} className="btn-ghost">
                 Logout
               </button>
             )}
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
           {subItems.map(item => {
             const active = isActive(pathname, item.href)
             const external = item.href.startsWith('http') || item.href === '/docs'
-            const cls = `rounded-lg px-3 py-1.5 text-sm transition ${active ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-gray-600 hover:bg-gray-100'}`
+            const cls = `rounded-lg border px-3 py-1.5 text-sm transition ${active ? 'border-violet-200 bg-violet-50 text-violet-700' : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'}`
             return external ? (
               <a key={item.href} href={item.href} target="_blank" rel="noreferrer" className={cls}>
                 {item.label}

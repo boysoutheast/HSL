@@ -50,7 +50,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         {/* Logo / title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-indigo-600 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-violet-600 rounded-2xl mb-4">
             <span className="text-2xl">⚡</span>
           </div>
           <h1 className="text-2xl font-bold text-white">Hermes Support</h1>
@@ -75,7 +75,7 @@ function LoginForm() {
                 required
                 autoFocus
                 placeholder="admin@hermes.local"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
@@ -87,7 +87,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
             </div>
 
@@ -100,7 +100,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium rounded-lg text-sm transition-colors"
+              className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-medium rounded-lg text-sm transition-colors"
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
@@ -110,7 +110,7 @@ function LoginForm() {
         {allowReg && (
           <p className="text-center text-gray-400 text-sm mt-4">
             Belum punya akun?{' '}
-            <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">
+            <Link href="/register" className="text-violet-400 hover:text-violet-300 font-medium">
               Daftar
             </Link>
           </p>

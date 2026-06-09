@@ -19,7 +19,7 @@ export default function DocsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-bold">H</span>
           </div>
           <div>
@@ -37,7 +37,7 @@ export default function DocsPage() {
               key={key}
               onClick={() => setTab(key)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-                tab === key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-50'
+                tab === key ? 'bg-violet-600 text-white' : 'text-gray-600 hover:bg-gray-50'
               }`}
             >
               {label}

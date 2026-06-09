@@ -85,7 +85,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Active Accounts"
           value={data.totalActiveAccounts}
-          color="bg-indigo-500"
+          color="bg-violet-500"
           href="/accounts"
           description="Instagram accounts"
         />

@@ -173,7 +173,7 @@ export default function PhotosPage() {
           <select
             value={filterCharacter}
             onChange={(e) => setFilterCharacter(e.target.value)}
-            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="ALL">All Characters</option>
             {characters.map((c) => (
@@ -186,7 +186,7 @@ export default function PhotosPage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             {categories.map((c) => (
               <option key={c} value={c}>{c === 'ALL' ? 'All Categories' : c}</option>
@@ -198,7 +198,7 @@ export default function PhotosPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="ALL">All</option>
             <option value="active">Active</option>

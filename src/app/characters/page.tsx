@@ -81,7 +81,7 @@ export default async function CharactersPage() {
                 {new Date(char.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </td>
-            <td className="px-4 py-3 text-indigo-700 font-medium">
+            <td className="px-4 py-3 text-violet-700 font-medium">
               @{char.instagramAccount.username}
             </td>
             <td className="px-4 py-3">

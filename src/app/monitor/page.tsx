@@ -32,7 +32,7 @@ const FILTER_OPTIONS = [
 ]
 
 const FILTER_ACTIVE_COLORS: Record<string, string> = {
-  ALL: 'bg-indigo-600 text-white',
+  ALL: 'bg-violet-600 text-white',
   READY_UPLOAD: 'bg-emerald-600 text-white',
   STILL_GROWING: 'bg-cyan-600 text-white',
   HOT_VIDEO: 'bg-orange-500 text-white',
@@ -148,7 +148,7 @@ export default function MonitorPage() {
               onClick={() => setFilter(value)}
               className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
                 isActive
-                  ? FILTER_ACTIVE_COLORS[value] ?? 'bg-indigo-600 text-white'
+                  ? FILTER_ACTIVE_COLORS[value] ?? 'bg-violet-600 text-white'
                   : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
               }`}
             >
@@ -197,7 +197,7 @@ export default function MonitorPage() {
               ) : (
                 filtered.map((entry) => (
                   <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-indigo-700">
+                    <td className="px-4 py-3 font-medium text-violet-700">
                       <a
                         href={`https://instagram.com/${entry.instagramAccount.username}`}
                         target="_blank"

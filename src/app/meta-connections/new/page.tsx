@@ -14,7 +14,7 @@ interface TestResult {
   error?: string
 }
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 
 export default function NewMetaConnectionPage() {
   const router = useRouter()
@@ -136,9 +136,9 @@ export default function NewMetaConnectionPage() {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                 s < step
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-violet-600 text-white'
                   : s === step
-                  ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-400'
+                  ? 'bg-violet-100 text-violet-700 ring-2 ring-violet-400'
                   : 'bg-gray-100 text-gray-400'
               }`}
             >
@@ -146,7 +146,7 @@ export default function NewMetaConnectionPage() {
             </div>
             <span
               className={`text-sm font-medium ${
-                s === step ? 'text-indigo-700' : s < step ? 'text-gray-500' : 'text-gray-400'
+                s === step ? 'text-violet-700' : s < step ? 'text-gray-500' : 'text-gray-400'
               }`}
             >
               {s === 1 ? 'Input Credentials' : s === 2 ? 'Review' : 'Connect'}
@@ -264,7 +264,7 @@ export default function NewMetaConnectionPage() {
                   {testResult.scopes.map((scope) => (
                     <span
                       key={scope}
-                      className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium"
+                      className="bg-violet-100 text-violet-700 text-xs px-2 py-0.5 rounded-full font-medium"
                     >
                       {scope}
                     </span>

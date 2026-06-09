@@ -204,7 +204,7 @@ export default function AccountDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-gray-500">Account not found.</p>
-        <Link href="/accounts" className="text-sm text-indigo-600 hover:underline">Back to Accounts</Link>
+        <Link href="/accounts" className="text-sm text-violet-600 hover:underline">Back to Accounts</Link>
       </div>
     )
   }
@@ -318,7 +318,7 @@ export default function AccountDetailPage() {
               <td className="px-4 py-3">
                 <Link
                   href={`/accounts/${account.id}/characters/${char.id}`}
-                  className="font-medium text-indigo-700 hover:underline"
+                  className="font-medium text-violet-700 hover:underline"
                 >
                   {char.name}
                 </Link>
@@ -359,7 +359,7 @@ export default function AccountDetailPage() {
               value={accountForm.username}
               onChange={(e) => setAccountForm({ ...accountForm, username: e.target.value })}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
@@ -368,7 +368,7 @@ export default function AccountDetailPage() {
               type="text"
               value={accountForm.accountName}
               onChange={(e) => setAccountForm({ ...accountForm, accountName: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
@@ -376,7 +376,7 @@ export default function AccountDetailPage() {
             <select
               value={accountForm.purpose}
               onChange={(e) => setAccountForm({ ...accountForm, purpose: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="organic">organic</option>
               <option value="cpas">cpas</option>
@@ -391,7 +391,7 @@ export default function AccountDetailPage() {
               value={accountForm.notes}
               onChange={(e) => setAccountForm({ ...accountForm, notes: e.target.value })}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           {saveAccountError && (
@@ -429,7 +429,7 @@ export default function AccountDetailPage() {
                   if (file && file.type.startsWith('image/')) setCharPhoto(file)
                 }}
                 className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  dragOver ? 'border-indigo-400 bg-indigo-50' : 'border-gray-300 hover:border-indigo-300'
+                  dragOver ? 'border-violet-400 bg-violet-50' : 'border-gray-300 hover:border-violet-300'
                 }`}
                 onClick={() => document.getElementById('char-photo-input')?.click()}
               >
@@ -474,7 +474,7 @@ export default function AccountDetailPage() {
                 value={newChar.name}
                 onChange={e => setNewChar({ ...newChar, name: e.target.value })}
                 placeholder="Misal: Ibu Sari, Tante Dewi"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
             </div>
 
@@ -486,7 +486,7 @@ export default function AccountDetailPage() {
                 onChange={e => setNewChar({ ...newChar, description: e.target.value })}
                 rows={4}
                 placeholder="Siapa karakter ini? Latar belakang, kepribadian, cara bicara, target audiens yang relate..."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
               />
             </div>
 
@@ -501,7 +501,7 @@ export default function AccountDetailPage() {
                 onChange={e => setNewChar({ ...newChar, topicsRaw: e.target.value })}
                 rows={3}
                 placeholder={"Kaki kering diabetes\nEmotional keluarga\nSocial embarrassment"}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono text-xs"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none font-mono text-xs"
               />
               <p className="text-xs text-gray-400 mt-1">
                 Topik bisa ditambah / diedit lagi di halaman detail karakter.

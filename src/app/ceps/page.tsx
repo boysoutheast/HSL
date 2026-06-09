@@ -138,7 +138,7 @@ function CepsPageInner() {
             onClick={() => setActiveTab(value)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === value
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-violet-600 text-violet-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -146,7 +146,7 @@ function CepsPageInner() {
             <span
               className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
                 activeTab === value
-                  ? 'bg-indigo-100 text-indigo-700'
+                  ? 'bg-violet-100 text-violet-700'
                   : 'bg-gray-100 text-gray-500'
               }`}
             >

@@ -72,7 +72,7 @@ export default function PhotoLightbox({ photo, onClose }: Props) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={handleDownload}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
             >
               ⬇ Download
             </button>

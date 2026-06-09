@@ -238,7 +238,7 @@ export default function TestLaunchDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-gray-500">Test Launch tidak ditemukan.</p>
-        <Link href="/test-launches" className="text-sm text-indigo-600 hover:underline">← Kembali ke Test Launches</Link>
+        <Link href="/test-launches" className="text-sm text-violet-600 hover:underline">← Kembali ke Test Launches</Link>
       </div>
     )
   }
@@ -402,7 +402,7 @@ export default function TestLaunchDetailPage() {
                 href={testLaunch.destinationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-600 text-xs hover:underline truncate block max-w-[200px]"
+                className="text-violet-600 text-xs hover:underline truncate block max-w-[200px]"
               >
                 {testLaunch.destinationUrl}
               </a>

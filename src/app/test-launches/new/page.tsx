@@ -122,7 +122,7 @@ const GENDER_OPTIONS = [
 const STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
 type Step = typeof STEPS[number]
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1'
 const sectionCls = 'bg-white rounded-xl border border-gray-200 p-5 space-y-4'
 
@@ -376,9 +376,9 @@ export default function NewTestLaunchPage() {
                 }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex-1 justify-center ${
                   i === stepIndex
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-violet-600 text-white'
                     : i < stepIndex
-                    ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                    ? 'bg-violet-100 text-violet-700 hover:bg-violet-200'
                     : 'bg-gray-100 text-gray-400 cursor-default'
                 }`}
               >
@@ -443,7 +443,7 @@ export default function NewTestLaunchPage() {
                 {metaConnections.length === 0 && (
                   <p className="text-xs text-gray-400 mt-1">
                     Belum ada Meta Connection.{' '}
-                    <Link href="/meta-connections/new" className="text-indigo-600 hover:underline">Buat baru →</Link>
+                    <Link href="/meta-connections/new" className="text-violet-600 hover:underline">Buat baru →</Link>
                   </p>
                 )}
               </div>
@@ -530,7 +530,7 @@ export default function NewTestLaunchPage() {
                       key={opt.value}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.launchMode === opt.value
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          ? 'border-violet-500 bg-violet-50 text-violet-700'
                           : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -632,8 +632,8 @@ export default function NewTestLaunchPage() {
                       onClick={() => handlePageSelect(page)}
                       className={`text-left p-4 rounded-xl border-2 transition-all ${
                         selectedPage?.id === page.id
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                          ? 'border-violet-500 bg-violet-50'
+                          : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
                       }`}
                     >
                       {/* Page icon + name */}
@@ -684,8 +684,8 @@ export default function NewTestLaunchPage() {
 
               {/* Selected page summary */}
               {selectedPage && (
-                <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                  <p className="text-xs font-semibold text-indigo-600 uppercase mb-2">Page Terpilih</p>
+                <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
+                  <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Page Terpilih</p>
                   <p className="font-medium text-gray-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
                   {selectedPage.igUsername && (
                     <p className="text-sm text-pink-600 mt-1">
@@ -738,7 +738,7 @@ export default function NewTestLaunchPage() {
                       key={mode}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.placementMode === mode
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          ? 'border-violet-500 bg-violet-50 text-violet-700'
                           : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -768,7 +768,7 @@ export default function NewTestLaunchPage() {
                           key={opt.value}
                           className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors text-sm ${
                             checked
-                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                              ? 'border-violet-500 bg-violet-50 text-violet-700'
                               : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                           }`}
                         >
@@ -779,7 +779,7 @@ export default function NewTestLaunchPage() {
                             className="sr-only"
                           />
                           <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            checked ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                            checked ? 'bg-violet-600 border-violet-600' : 'border-gray-300'
                           }`}>
                             {checked && (
                               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -882,7 +882,7 @@ export default function NewTestLaunchPage() {
                       key={opt.value}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
                         form.gender === opt.value
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          ? 'border-violet-500 bg-violet-50 text-violet-700'
                           : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -915,8 +915,8 @@ export default function NewTestLaunchPage() {
               </div>
 
               {/* Summary */}
-              <div className="bg-indigo-50 rounded-lg p-4 text-sm">
-                <p className="text-xs font-semibold text-indigo-600 uppercase mb-2">Audience Summary</p>
+              <div className="bg-violet-50 rounded-lg p-4 text-sm">
+                <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Audience Summary</p>
                 <p className="text-gray-800">
                   Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
                   Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
@@ -970,8 +970,8 @@ export default function NewTestLaunchPage() {
                     }}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                       selectedPixel?.id === px.id
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                        ? 'border-violet-500 bg-violet-50'
+                        : 'border-gray-200 hover:border-violet-300 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -985,7 +985,7 @@ export default function NewTestLaunchPage() {
                         <p className="text-xs text-gray-400 font-mono">{px.id}</p>
                       </div>
                       {selectedPixel?.id === px.id && (
-                        <span className="ml-auto text-indigo-500 text-sm font-medium">✓ Dipilih</span>
+                        <span className="ml-auto text-violet-500 text-sm font-medium">✓ Dipilih</span>
                       )}
                     </div>
                   </button>

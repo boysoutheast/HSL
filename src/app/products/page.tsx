@@ -27,7 +27,7 @@ const EMPTY_EDIT = {
   name: '', description: '', price: '', shopeeUrl: '', status: 'active',
 }
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -274,14 +274,14 @@ export default function ProductsPage() {
             <div
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-lg p-4 cursor-pointer transition-colors text-center ${
-                photoPreview ? 'border-indigo-300 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
+                photoPreview ? 'border-violet-300 bg-violet-50' : 'border-gray-300 hover:border-violet-400 hover:bg-gray-50'
               }`}
             >
               {photoPreview ? (
                 <div className="flex flex-col items-center gap-2">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photoPreview} alt="preview" className="h-24 w-auto rounded-lg object-cover mx-auto" />
-                  <p className="text-xs text-indigo-600 font-medium">{photoFile?.name}</p>
+                  <p className="text-xs text-violet-600 font-medium">{photoFile?.name}</p>
                   <p className="text-xs text-gray-400">Klik untuk ganti</p>
                 </div>
               ) : (

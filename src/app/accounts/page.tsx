@@ -206,7 +206,7 @@ export default function AccountsPage() {
               <td className="px-4 py-3">
                 <Link
                   href={`/accounts/${account.id}`}
-                  className="font-medium text-indigo-700 hover:underline"
+                  className="font-medium text-violet-700 hover:underline"
                 >
                   @{account.username}
                 </Link>
@@ -268,7 +268,7 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               placeholder="tanpa @ — contoh: mybrand_id"
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
@@ -278,7 +278,7 @@ export default function AccountsPage() {
               value={form.accountName}
               onChange={(e) => setForm({ ...form, accountName: e.target.value })}
               placeholder="Display name"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
@@ -286,7 +286,7 @@ export default function AccountsPage() {
             <select
               value={form.purpose}
               onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="organic">organic</option>
               <option value="cpas">cpas</option>
@@ -302,7 +302,7 @@ export default function AccountsPage() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Optional notes..."
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           {saveError && (

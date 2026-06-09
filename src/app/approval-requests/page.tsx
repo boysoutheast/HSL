@@ -208,7 +208,7 @@ function ApprovalRequestsInner() {
           >
             {label}
             {count > 0 && (
-              <span className={`ml-1.5 text-xs ${activeTab === key ? 'text-indigo-600' : 'text-gray-400'}`}>
+              <span className={`ml-1.5 text-xs ${activeTab === key ? 'text-violet-600' : 'text-gray-400'}`}>
                 {count}
               </span>
             )}
@@ -233,7 +233,7 @@ function ApprovalRequestsInner() {
                 </div>
               </td>
               <td className="px-4 py-3">
-                <Link href={`/test-launches/${req.testLaunch.id}`} className="font-medium text-indigo-700 hover:underline">
+                <Link href={`/test-launches/${req.testLaunch.id}`} className="font-medium text-violet-700 hover:underline">
                   {req.testLaunch.name}
                 </Link>
               </td>
@@ -317,7 +317,7 @@ function ApprovalRequestsInner() {
             <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
               <p>
                 <span className="text-gray-500">Test Launch:</span>{' '}
-                <Link href={`/test-launches/${reviewModal.request.testLaunch.id}`} className="font-medium text-indigo-700 hover:underline">
+                <Link href={`/test-launches/${reviewModal.request.testLaunch.id}`} className="font-medium text-violet-700 hover:underline">
                   {reviewModal.request.testLaunch.name}
                 </Link>
               </p>
@@ -353,7 +353,7 @@ function ApprovalRequestsInner() {
                     : 'Alasan penolakan...'
                 }
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
               />
             </div>
 

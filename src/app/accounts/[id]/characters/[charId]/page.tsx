@@ -53,7 +53,7 @@ interface Topic {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const textareaCls = `${inputCls} resize-none`
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export default function CharacterDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-gray-500">Character not found.</p>
-        <Link href={`/accounts/${accountId}`} className="text-sm text-indigo-600 hover:underline">Back to Account</Link>
+        <Link href={`/accounts/${accountId}`} className="text-sm text-violet-600 hover:underline">Back to Account</Link>
       </div>
     )
   }
@@ -122,7 +122,7 @@ export default function CharacterDetailPage() {
             onClick={() => setActiveTab(key)}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === key
-                ? 'border-indigo-600 text-indigo-600'
+                ? 'border-violet-600 text-violet-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -413,7 +413,7 @@ function PhotosTab({ charId }: { charId: string }) {
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                 required
-                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
+                className="w-full text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-violet-600 file:text-white hover:file:bg-violet-700"
               />
             </div>
             <div>
@@ -806,7 +806,7 @@ function TopicsTab({ charId }: { charId: string }) {
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               <span className={`mt-0.5 flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${
                                 cep.source === 'ai'
-                                  ? 'bg-indigo-100 text-indigo-600'
+                                  ? 'bg-violet-100 text-violet-600'
                                   : 'bg-gray-100 text-gray-500'
                               }`}>
                                 {cep.source === 'ai' ? 'AI' : 'Manual'}

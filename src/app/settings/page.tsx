@@ -215,7 +215,7 @@ export default function SettingsPage() {
                   min="0"
                   value={settings[field.key] as number}
                   onChange={(e) => handleChange(field.key, e.target.value)}
-                  className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-right focus:outline-none focus:ring-2 focus:ring-violet-500"
                 />
                 <span className="text-xs text-gray-400 whitespace-nowrap w-16">{field.unit}</span>
               </div>

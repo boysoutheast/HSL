@@ -153,7 +153,7 @@ export default function MetaConnectionDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-gray-500">Koneksi tidak ditemukan.</p>
-        <Link href="/meta-connections" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/meta-connections" className="text-sm text-violet-600 hover:underline">
           Kembali ke Meta Akun
         </Link>
       </div>
@@ -216,7 +216,7 @@ export default function MetaConnectionDetailPage() {
             <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-2">Scopes</p>
             <div className="flex flex-wrap gap-1.5">
               {conn.scopes.map((scope) => (
-                <span key={scope} className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                <span key={scope} className="bg-violet-100 text-violet-700 text-xs px-2 py-0.5 rounded-full font-medium">
                   {scope}
                 </span>
               ))}

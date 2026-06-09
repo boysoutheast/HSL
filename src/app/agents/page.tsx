@@ -320,7 +320,7 @@ export default function AgentsPage() {
           {agents.map((agent) => (
             <tr
               key={agent.id}
-              className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedAgentId === agent.id ? 'bg-indigo-50' : ''}`}
+              className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedAgentId === agent.id ? 'bg-violet-50' : ''}`}
               onClick={() => setSelectedAgentId(agent.id)}
             >
               <td className="px-4 py-3">
@@ -391,7 +391,7 @@ export default function AgentsPage() {
                   onClick={() => setActiveAssignTab(type)}
                   className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                     activeAssignTab === type
-                      ? 'border-indigo-600 text-indigo-600'
+                      ? 'border-violet-600 text-violet-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -413,17 +413,17 @@ export default function AgentsPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${isChecked ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${isChecked ? 'bg-violet-50' : 'hover:bg-gray-50'}`}
                       >
                         <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
                           <input
                             type="checkbox"
                             checked={isChecked}
                             onChange={() => handleToggleCheck(item.id)}
-                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 flex-shrink-0"
+                            className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500 flex-shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className={`text-sm font-medium truncate ${isChecked ? 'text-indigo-900' : 'text-gray-800'}`}>{item.label}</p>
+                            <p className={`text-sm font-medium truncate ${isChecked ? 'text-violet-900' : 'text-gray-800'}`}>{item.label}</p>
                             {item.sublabel && <p className="text-xs text-gray-400 truncate">{item.sublabel}</p>}
                           </div>
                         </label>
@@ -459,7 +459,7 @@ export default function AgentsPage() {
               onChange={(e) => setNewAgentName(e.target.value)}
               placeholder="e.g. hermes-agent-01"
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
           <div>
@@ -469,7 +469,7 @@ export default function AgentsPage() {
               onChange={(e) => setNewAgentNotes(e.target.value)}
               placeholder="Optional notes about this agent..."
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
