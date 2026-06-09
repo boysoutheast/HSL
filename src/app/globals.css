@@ -4,7 +4,13 @@
 
 /* ── Base (classic grey pastel + dark mode) ────────────────────────── */
 body { @apply bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50; }
-html { @apply transition-colors duration-300; }
+html {
+  @apply transition-colors duration-300;
+  background-color: #f5f5f4; /* stone-100 fallback */
+}
+html.dark {
+  background-color: #0c0a09; /* stone-950 fallback */
+}
 
 /* ── Badge system ──────────────────────────────────────────────────── */
 .badge-active     { @apply bg-violet-200 text-violet-800 dark:bg-violet-900 dark:text-violet-200 text-xs px-2.5 py-1 rounded font-medium; }

@@ -47,8 +47,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!mounted) return
-    document.documentElement.classList.remove('dark', 'light')
-    document.documentElement.classList.add(theme)
+    const hasDark = document.documentElement.classList.contains('dark')
+    if (theme === 'dark' && !hasDark) {
+      document.documentElement.classList.add('dark')
+    } else if (theme === 'light' && hasDark) {
+      document.documentElement.classList.remove('dark')
+    }
   }, [theme, mounted])
 
   const toggle = () => {

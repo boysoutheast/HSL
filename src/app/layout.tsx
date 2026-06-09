@@ -34,7 +34,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50 transition-colors">
+      <body className="bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50">
         <ThemeProvider>
           <LayoutShell>{children}</LayoutShell>
         </ThemeProvider>
