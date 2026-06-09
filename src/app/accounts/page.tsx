@@ -44,7 +44,9 @@ export default function AccountsPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -61,20 +63,23 @@ export default function AccountsPage() {
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
 
-  const handleDeleteAccount = async (id: string, username: string) => {
-    if (!confirm(`Hapus akun @${username} beserta semua karakter, topik, foto, dan CEP-nya?\n\nTidak bisa dibatalkan.`)) return
-    setDeleteLoading(id)
+  const handleDeleteAccount = async () => {
+    if (!deleteTarget) return
+    setDeleteLoading(true)
+    setDeleteError(null)
     try {
-      const res = await fetch(`/api/admin/accounts/${id}`, {
+      const res = await fetch(`/api/admin/accounts/${deleteTarget.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
-      if (!res.ok) throw new Error((await res.json()).error)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error ?? `Server error (${res.status})`)
+      setDeleteTarget(null)
       await fetchAccounts()
     } catch (err) {
-      alert('Gagal hapus: ' + String(err))
+      setDeleteError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
-      setDeleteLoading(null)
+      setDeleteLoading(false)
     }
   }
 
@@ -233,11 +238,11 @@ export default function AccountsPage() {
                     {toggleLoading === account.id ? '...' : account.status === 'active' ? 'Deactivate' : 'Activate'}
                   </button>
                   <button
-                    onClick={() => handleDeleteAccount(account.id, account.username)}
-                    disabled={deleteLoading === account.id}
+                    onClick={() => { setDeleteTarget(account); setDeleteError(null) }}
+                    disabled={deleteLoading}
                     className="btn-danger btn-sm"
                   >
-                    {deleteLoading === account.id ? '...' : 'Delete'}
+                    Delete
                   </button>
                 </div>
               </td>
@@ -314,6 +319,40 @@ export default function AccountsPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => { setDeleteTarget(null); setDeleteError(null) }}
+        title="Hapus Koneksi Akun"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Hapus akun <strong>@{deleteTarget?.username}</strong>? Tindakan ini tidak bisa dibatalkan dan akan menghapus semua karakter, topik, foto, dan CEP terkait.
+          </p>
+          {deleteError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
+              ⚠️ {deleteError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => { setDeleteTarget(null); setDeleteError(null) }}
+              className="btn-ghost"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading}
+              className="btn-danger"
+            >
+              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

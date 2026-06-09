@@ -106,7 +106,13 @@ function CepsPageInner() {
           <h1 className="text-2xl font-bold text-gray-900">CEP Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">{ceps.length} total CEPs</p>
         </div>
-        <button className="btn-primary">+ Add CEP</button>
+        <button
+          title="CEP baru dibuat oleh Hermes Agent — tidak dibuat manual via UI"
+          disabled
+          className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400"
+        >
+          + Add CEP
+        </button>
       </div>
 
       <PageInfo

@@ -38,7 +38,13 @@ export default async function TopicsPage() {
             {topics.length} total · {activeCount} active
           </p>
         </div>
-        <button className="btn-primary">+ Add Topic</button>
+        <button
+          title="Topik dibuat saat setup character atau product — belum tersedia di halaman ini"
+          disabled
+          className="cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-400"
+        >
+          + Add Topic
+        </button>
       </div>
 
       <PageInfo

@@ -26,7 +26,6 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Overview', href: '/' },
       { label: 'Ready Upload', href: '/monitor' },
-      { label: 'Performance', href: '/performance' },
       { label: 'Logs', href: '/logs' },
     ],
   },
