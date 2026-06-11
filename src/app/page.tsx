@@ -1,28 +1,27 @@
 import PageInfo from '@/components/ui/PageInfo'
+import { prisma } from '@/lib/prisma'
 
 async function getDashboardData() {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
-
   try {
-    const [monitorRes, cepsRes, agentsRes, accountsRes] = await Promise.all([
-      fetch(`${base}/api/admin/posting-monitor`, { cache: 'no-store' }),
-      fetch(`${base}/api/admin/ceps`, { cache: 'no-store' }),
-      fetch(`${base}/api/admin/hermes-agents`, { cache: 'no-store' }),
-      fetch(`${base}/api/admin/accounts`, { cache: 'no-store' }),
+    const [
+      activeAccounts,
+      monitors,
+      pendingCep,
+      activeAgents,
+    ] = await Promise.all([
+      prisma.instagramAccount.count({ where: { status: 'active' } }),
+      prisma.postingMonitor.findMany({ select: { status: true } }),
+      prisma.cep.count({ where: { status: 'pending_review' } }),
+      prisma.hermesAgent.count({ where: { status: 'active' } }),
     ])
 
-    const monitors: { status: string }[] = monitorRes.ok ? await monitorRes.json() : []
-    const ceps: { status: string }[] = cepsRes.ok ? await cepsRes.json() : []
-    const agents: { status: string }[] = agentsRes.ok ? await agentsRes.json() : []
-    const accounts: { status: string }[] = accountsRes.ok ? await accountsRes.json() : []
-
     return {
-      totalActiveAccounts: accounts.filter((a) => a.status === 'active').length,
+      totalActiveAccounts: activeAccounts,
       readyUpload: monitors.filter((m) => m.status === 'READY_UPLOAD').length,
       hotVideo: monitors.filter((m) => m.status === 'HOT_VIDEO').length,
       stillGrowing: monitors.filter((m) => m.status === 'STILL_GROWING').length,
-      pendingCep: ceps.filter((c) => c.status === 'pending_review').length,
-      activeAgents: agents.filter((a) => a.status === 'active').length,
+      pendingCep,
+      activeAgents,
     }
   } catch {
     return {

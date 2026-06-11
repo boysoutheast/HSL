@@ -50,7 +50,7 @@ export default function ProductDetailPage() {
   const params = useParams()
   const productId = params.id as string
 
-  const [activeTab, setActiveTab] = useState<'info' | 'photos' | 'ceps'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'photos' | 'ceps' | 'landing-pages'>('info')
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -86,6 +86,7 @@ export default function ProductDetailPage() {
     { key: 'info', label: 'Info' },
     { key: 'photos', label: 'Photos' },
     { key: 'ceps', label: 'CEPs' },
+    { key: 'landing-pages', label: 'Landing Pages' },
   ] as const
 
   return (
@@ -122,6 +123,9 @@ export default function ProductDetailPage() {
       )}
       {activeTab === 'ceps' && (
         <CepsTab productId={productId} />
+      )}
+      {activeTab === 'landing-pages' && (
+        <LandingPagesTab productId={productId} />
       )}
     </div>
   )
@@ -637,6 +641,287 @@ function CepsTab({ productId }: { productId: string }) {
             <button type="button" onClick={() => { setShowModal(false); setCepError(null) }} className="btn-ghost">Cancel</button>
             <button type="submit" disabled={savingCep || !cepText.trim()} className="btn-primary">
               {savingCep ? 'Saving...' : 'Add CEP'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  )
+}
+
+// ─── Tab 4: Landing Pages ─────────────────────────────────────────────────────
+
+interface LandingPage {
+  id: string
+  url: string
+  variant: string
+  type: string
+  label: string | null
+  isActive: boolean
+  isDefault: boolean
+  notes: string | null
+  createdAt: string
+}
+
+const LP_TYPE_LABELS: Record<string, string> = {
+  shopee: '🛒 Shopee',
+  custom: '🌐 Custom LP',
+  whatsapp: '💬 WhatsApp',
+  linktree: '🔗 Linktree',
+}
+
+function LandingPagesTab({ productId }: { productId: string }) {
+  const [lps, setLps] = useState<LandingPage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [editLP, setEditLP] = useState<LandingPage | null>(null)
+  const [form, setForm] = useState({ url: '', variant: 'A', type: 'shopee', label: '', isDefault: false, notes: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const fetchLPs = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/landing-pages`, { credentials: 'include' })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setLps(data.landingPages ?? [])
+    } catch { /* silent */ }
+    finally { setLoading(false) }
+  }, [productId])
+
+  useEffect(() => { fetchLPs() }, [fetchLPs])
+
+  const openAdd = () => {
+    setEditLP(null)
+    setForm({ url: '', variant: 'A', type: 'shopee', label: '', isDefault: lps.length === 0, notes: '' })
+    setError(null)
+    setShowModal(true)
+  }
+
+  const openEdit = (lp: LandingPage) => {
+    setEditLP(lp)
+    setForm({ url: lp.url, variant: lp.variant, type: lp.type, label: lp.label ?? '', isDefault: lp.isDefault, notes: lp.notes ?? '' })
+    setError(null)
+    setShowModal(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.url.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const url = editLP
+        ? `/api/admin/landing-pages/${editLP.id}`
+        : `/api/admin/products/${productId}/landing-pages`
+      const method = editLP ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed')
+      setShowModal(false)
+      await fetchLPs()
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (lp: LandingPage) => {
+    if (!confirm(`Hapus Landing Page "${lp.label ?? lp.url}"?\n\nTidak bisa dibatalkan.`)) return
+    setDeletingId(lp.id)
+    try {
+      await fetch(`/api/admin/landing-pages/${lp.id}`, { method: 'DELETE', credentials: 'include' })
+      await fetchLPs()
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleSetDefault = async (lp: LandingPage) => {
+    await fetch(`/api/admin/landing-pages/${lp.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ isDefault: true }),
+    })
+    await fetchLPs()
+  }
+
+  const handleToggleActive = async (lp: LandingPage) => {
+    await fetch(`/api/admin/landing-pages/${lp.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ isActive: !lp.isActive }),
+    })
+    await fetchLPs()
+  }
+
+  return (
+    <div>
+      <PageInfo
+        purpose="Landing Page variants untuk produk ini. Hermes menggunakan LP default saat generate konten. Tambah beberapa variant untuk A/B testing."
+        inputs={['URL LP', 'Variant label (A/B/Control)', 'Type (Shopee/Custom/WhatsApp)']}
+        wiring={[
+          { label: '→ Hermes /library', desc: 'LP list dikirim ke worker saat ambil library' },
+          { label: '→ Content brief', desc: 'LP default dipakai saat worker generate caption & CTA' },
+        ]}
+      />
+
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-stone-800">Landing Pages ({loading ? '...' : lps.length})</h3>
+        <button onClick={openAdd} className="btn-primary">+ Add Landing Page</button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading...</div>
+      ) : lps.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-32 gap-2 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
+          <span>Belum ada landing page.</span>
+          <button onClick={openAdd} className="text-violet-600 hover:underline text-xs">+ Tambah sekarang</button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {lps.map(lp => (
+            <div key={lp.id} className={`flex items-start gap-3 p-3 rounded-xl border bg-white ${!lp.isActive ? 'opacity-50' : ''}`}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-mono bg-stone-100 px-1.5 py-0.5 rounded text-stone-600">{lp.variant}</span>
+                  <span className="text-xs text-stone-400">{LP_TYPE_LABELS[lp.type] ?? lp.type}</span>
+                  {lp.isDefault && (
+                    <span className="text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Default</span>
+                  )}
+                  {!lp.isActive && (
+                    <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">Inactive</span>
+                  )}
+                  {lp.label && <span className="text-xs text-stone-700 font-medium">{lp.label}</span>}
+                </div>
+                <a
+                  href={lp.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-violet-600 hover:underline truncate block mt-1"
+                >
+                  {lp.url}
+                </a>
+                {lp.notes && <p className="text-xs text-stone-400 mt-0.5">{lp.notes}</p>}
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {!lp.isDefault && (
+                  <button
+                    onClick={() => handleSetDefault(lp)}
+                    className="text-xs text-stone-400 hover:text-violet-600 px-2 py-1 rounded hover:bg-violet-50 transition-colors"
+                    title="Set as default"
+                  >
+                    Set Default
+                  </button>
+                )}
+                <button
+                  onClick={() => handleToggleActive(lp)}
+                  className="text-xs text-stone-400 hover:text-stone-700 px-2 py-1 rounded hover:bg-stone-50 transition-colors"
+                >
+                  {lp.isActive ? 'Pause' : 'Activate'}
+                </button>
+                <button
+                  onClick={() => openEdit(lp)}
+                  className="text-xs text-stone-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(lp)}
+                  disabled={deletingId === lp.id}
+                  className="text-xs text-stone-300 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                >
+                  {deletingId === lp.id ? '...' : '🗑'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editLP ? 'Edit Landing Page' : 'Add Landing Page'}
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">URL <span className="text-red-500">*</span></label>
+            <input
+              type="url"
+              value={form.url}
+              onChange={e => setForm({ ...form, url: e.target.value })}
+              required
+              className={inputCls}
+              placeholder="https://shopee.co.id/produk-kamu atau https://wa.me/..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Type</label>
+              <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className={inputCls}>
+                <option value="shopee">Shopee</option>
+                <option value="custom">Custom LP</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="linktree">Linktree</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Variant Label</label>
+              <input
+                type="text"
+                value={form.variant}
+                onChange={e => setForm({ ...form, variant: e.target.value })}
+                className={inputCls}
+                placeholder="A / B / Control"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Nama LP (opsional)</label>
+            <input
+              type="text"
+              value={form.label}
+              onChange={e => setForm({ ...form, label: e.target.value })}
+              className={inputCls}
+              placeholder="mis. LP Shopee Basic / LP Custom Video Testimonial"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm({ ...form, notes: e.target.value })}
+              rows={2}
+              className={textareaCls}
+              placeholder="Catatan tentang LP ini..."
+            />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.isDefault}
+              onChange={e => setForm({ ...form, isDefault: e.target.checked })}
+              className="rounded"
+            />
+            <span className="text-sm text-stone-700">Set sebagai Landing Page default</span>
+          </label>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">⚠️ {error}</div>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
+            <button type="submit" disabled={saving || !form.url.trim()} className="btn-primary">
+              {saving ? 'Saving...' : editLP ? 'Save Changes' : 'Add Landing Page'}
             </button>
           </div>
         </form>

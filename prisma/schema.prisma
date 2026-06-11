@@ -40,6 +40,7 @@ model InstagramAccount {
   contentLogs         GeneratedContentLog[]
   postingMonitor      PostingMonitor?
   performanceTrackers PerformanceTracker[]
+  mediaAssets         MediaAsset[]
 
   @@map("instagram_accounts")
 }
@@ -62,6 +63,7 @@ model Character {
   photoReferences  PhotoReference[]
   topics           Topic[]
   contentLogs      GeneratedContentLog[]
+  mediaAssets      MediaAsset[]
 
   @@map("characters")
 }
@@ -106,6 +108,7 @@ model Topic {
   ceps            Cep[]
   photoReferences PhotoReference[]
   contentLogs     GeneratedContentLog[]
+  mediaAssets     MediaAsset[]
 
   @@map("topics")
 }
@@ -133,8 +136,28 @@ model Product {
   contentLogs     GeneratedContentLog[]
   mediaAssets     MediaAsset[]
   CreativeVariant CreativeVariant[]
+  landingPages    LandingPage[]
 
   @@map("products")
+}
+
+model LandingPage {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  url         String
+  variant     String   @default("A")
+  type        String   @default("shopee") // shopee | custom | whatsapp | linktree
+  label       String?
+  isActive    Boolean  @default(true) @map("is_active")
+  isDefault   Boolean  @default(false) @map("is_default")
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("landing_pages")
 }
 
 model Cep {
@@ -588,15 +611,27 @@ model MediaAsset {
   id               String    @id @default(cuid())
   userId           String    @map("user_id")
   productId        String?   @map("product_id")
+  // Hermes content library linkage
+  characterId        String?  @map("character_id")
+  instagramAccountId String?  @map("instagram_account_id")
+  topicId            String?  @map("topic_id")
+  // Metadata
+  label            String?
+  category         String?  // ugc | product_demo | testimonial | lifestyle | raw
+  tags             String[] @default([])
   type             String // IMAGE | VIDEO
   source           String // USER_UPLOAD | AI_GENERATED
   storageProvider  String    @map("storage_provider")
   storagePath      String    @map("storage_path")
   publicUrl        String?   @map("public_url")
+  fileUrl          String?   @map("file_url") // alias for publicUrl, used by Hermes API
+  thumbnailUrl     String?   @map("thumbnail_url")
   mimeType         String    @map("mime_type")
   fileSizeBytes    Int       @map("file_size_bytes")
   width            Int?
   height           Int?
+  duration         Float?   // seconds (video only)
+  aspectRatio      String?  @map("aspect_ratio") // 9:16 | 1:1 | 16:9
   checksum         String
   status           String    @default("PROCESSING") // PROCESSING | READY | FAILED | ARCHIVED
   moderationStatus String    @default("PENDING") // PENDING | APPROVED | REJECTED
@@ -610,11 +645,17 @@ model MediaAsset {
   updatedAt        DateTime  @updatedAt @map("updated_at")
   archivedAt       DateTime? @map("archived_at")
 
-  user              AdminUser          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product           Product?           @relation(fields: [productId], references: [id], onDelete: SetNull)
-  creativeVariants  CreativeVariant[]
-  metaMediaBindings MetaMediaBinding[]
+  user               AdminUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product            Product?            @relation(fields: [productId], references: [id], onDelete: SetNull)
+  character          Character?          @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  instagramAccount   InstagramAccount?   @relation(fields: [instagramAccountId], references: [id], onDelete: SetNull)
+  topic              Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  creativeVariants   CreativeVariant[]
+  metaMediaBindings  MetaMediaBinding[]
 
+  @@index([characterId])
+  @@index([instagramAccountId])
+  @@index([productId])
   @@map("media_assets")
 }
 

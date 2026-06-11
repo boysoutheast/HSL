@@ -97,9 +97,40 @@ export async function GET(req: NextRequest) {
       where: { id: { in: productIds }, status: 'active' },
       include: {
         photoReferences: { where: { status: 'active' } },
+        landingPages: { where: { isActive: true }, orderBy: { isDefault: 'desc' } },
       },
     }),
   ])
+
+  // Media assets scoped to assigned entities (photo + video)
+  const mediaAssetIds = assignments
+    .filter(a => a.assignableType === 'media_asset')
+    .map(a => a.assignableId)
+
+  const mediaAssetWhere = {
+    status: 'READY' as const,
+    OR: [
+      ...(mediaAssetIds.length > 0  ? [{ id: { in: mediaAssetIds } }]              : []),
+      ...(characterIds.length > 0   ? [{ characterId: { in: characterIds } }]       : []),
+      ...(productIds.length > 0     ? [{ productId: { in: productIds } }]            : []),
+      ...(accountIds.length > 0     ? [{ instagramAccountId: { in: accountIds } }]  : []),
+    ],
+  }
+
+  const mediaAssets = mediaAssetWhere.OR.length > 0
+    ? await prisma.mediaAsset.findMany({
+        where: mediaAssetWhere,
+        select: {
+          id: true, type: true, fileUrl: true, thumbnailUrl: true,
+          label: true, category: true, tags: true,
+          width: true, height: true, duration: true, aspectRatio: true,
+          characterId: true, productId: true, instagramAccountId: true, topicId: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      })
+    : []
 
   const absoluteify = <T extends { photoReferences?: Array<{ fileUrl: string; thumbnailUrl: string | null; [key: string]: unknown }> }>(items: T[]): T[] =>
     items.map(item => ({
@@ -110,6 +141,12 @@ export async function GET(req: NextRequest) {
         thumbnailUrl: toAbsoluteUrl(p.thumbnailUrl),
       })),
     }))
+
+  const absoluteMediaAssets = mediaAssets.map(a => ({
+    ...a,
+    fileUrl: toAbsoluteUrl(a.fileUrl ?? '') ?? '',
+    thumbnailUrl: toAbsoluteUrl(a.thumbnailUrl),
+  }))
 
   // Add photoCount to characters
   const charactersWithCount = absoluteify(characters).map(char => ({
@@ -124,7 +161,8 @@ export async function GET(req: NextRequest) {
       characters: charactersWithCount,
       topics: absoluteify(topics),
       ceps,
-      products: absoluteify(products),
+      products: absoluteify(products),  // includes landingPages[]
+      mediaAssets: absoluteMediaAssets, // photo + video assets
     },
   })
 }

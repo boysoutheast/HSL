@@ -33,10 +33,11 @@ const navGroups: NavGroup[] = [
     href: '/accounts',
     items: [
       { label: 'Connected Accounts', href: '/accounts' },
-      { label: 'Meta Connections', href: '/meta-connections' },
+      { label: 'Characters', href: '/characters' },
+      { label: 'Topics & CEPs', href: '/topics' },
       { label: 'Products', href: '/products' },
-      { label: 'Photos', href: '/photos' },
       { label: 'Media Library', href: '/media-library' },
+      { label: 'Meta Connections', href: '/meta-connections' },
     ],
   },
   {
