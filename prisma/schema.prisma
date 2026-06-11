@@ -505,6 +505,8 @@ model TestLaunch {
   notes           String?
   // ── Conversion (required for OUTCOME_SALES) ──
   pixelId         String?  @map("pixel_id") // Meta pixel ID for conversion tracking
+  // ── Bid Strategy ── {strategy: HIGHEST_VOLUME|COST_CAP|BID_CAP|MIN_ROAS, amount?}
+  bidStrategyJson String?  @map("bid_strategy_json")
   // status lifecycle: draft → pending_approval → approved/rejected → executing → completed/failed
   status          String   @default("draft")
   errorMessage    String?  @map("error_message")

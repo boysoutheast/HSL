@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     placementsJson?: string
     audienceJson?: string
     destinationUrl?: string
+    bidStrategy?: { strategy: string; amount?: number }
     targetingJson?: string
     launchMode: string
     sourceAdsetId?: string
@@ -97,6 +98,7 @@ export async function POST(req: NextRequest) {
       placementsJson: body.placementsJson,
       audienceJson: body.audienceJson,
       destinationUrl: body.destinationUrl,
+      bidStrategyJson: body.bidStrategy ? JSON.stringify(body.bidStrategy) : null,
       targetingJson: body.targetingJson,
       launchMode: body.launchMode,
       sourceAdsetId: body.sourceAdsetId,

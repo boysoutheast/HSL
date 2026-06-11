@@ -68,6 +68,8 @@ interface FormData {
   dailyBudget: string
   currency: string
   destinationUrl: string
+  bidStrategy: string
+  bidAmount: string
   launchMode: string
   sourceAdsetId: string
   notes: string
@@ -180,6 +182,19 @@ export default function NewTestLaunchPage() {
   const [resolveError, setResolveError] = useState<string | null>(null)
   const [unresolvedNames, setUnresolvedNames] = useState<string[]>([])
 
+  // Bid strategy options — refresh tiap ad account dipilih (permission beda-beda)
+  interface BidOption {
+    value: string
+    label: string
+    description: string
+    requiresAmount: boolean
+    amountLabel?: string
+    available: boolean
+  }
+  const [bidOptions, setBidOptions] = useState<BidOption[]>([])
+  const [capsLoading, setCapsLoading] = useState(false)
+  const [capsError, setCapsError] = useState<string | null>(null)
+
   const handleResolveLocations = async () => {
     if (!form.aiQuery.trim()) return
     setResolving(true)
@@ -229,6 +244,8 @@ export default function NewTestLaunchPage() {
     dailyBudget: '',
     currency: 'IDR',
     destinationUrl: '',
+    bidStrategy: 'HIGHEST_VOLUME',
+    bidAmount: '',
     launchMode: 'new_test',
     sourceAdsetId: '',
     notes: '',
@@ -245,6 +262,24 @@ export default function NewTestLaunchPage() {
     creatives: [emptyCreative()],
     pixelId: '',
   })
+
+  // Refresh opsi bid strategy tiap ad account dipilih (permission per akun beda)
+  useEffect(() => {
+    if (!form.metaAdAccountId) { setBidOptions([]); return }
+    setCapsLoading(true)
+    setCapsError(null)
+    fetch(`/api/admin/meta-tools/adaccount-capabilities?adAccountId=${form.metaAdAccountId}`, { credentials: 'include' })
+      .then(async (r) => {
+        const d = await r.json()
+        if (!r.ok) throw new Error(d.error ?? 'Gagal cek capabilities')
+        setBidOptions(d.bidStrategies ?? [])
+      })
+      .catch((err) => {
+        setCapsError(err instanceof Error ? err.message : 'Gagal cek capabilities')
+        setBidOptions([])
+      })
+      .finally(() => setCapsLoading(false))
+  }, [form.metaAdAccountId])
 
   // ── UI State ─────────────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false)
@@ -348,6 +383,10 @@ export default function NewTestLaunchPage() {
     if (form.geoMode === 'ai' && form.aiLocations.length === 0) {
       setSaveError('Mode AI dipilih tapi belum ada lokasi ter-resolve. Resolve dulu di step Audience.'); return
     }
+    const bidNeedsAmount = bidOptions.find((o) => o.value === form.bidStrategy)?.requiresAmount
+    if (bidNeedsAmount && (!form.bidAmount || Number(form.bidAmount) <= 0)) {
+      setSaveError(`Bid strategy ${form.bidStrategy} butuh nilai target. Isi di step Basic Config.`); return
+    }
     if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return }
     if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return }
     if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
@@ -394,7 +433,10 @@ export default function NewTestLaunchPage() {
           objective: form.objective,
           dailyBudget: Number(form.dailyBudget),
           currency: form.currency,
-          destinationUrl: form.destinationUrl.trim() || undefined,
+          bidStrategy: {
+            strategy: form.bidStrategy,
+            ...(form.bidAmount ? { amount: Number(form.bidAmount) } : {}),
+          },
           launchMode: form.launchMode,
           sourceAdsetId: form.launchMode === 'duplicate_winner' ? form.sourceAdsetId.trim() || undefined : undefined,
           notes: form.notes.trim() || undefined,
@@ -599,16 +641,59 @@ export default function NewTestLaunchPage() {
                 </div>
               </div>
 
-              {/* Destination URL */}
+              {/* Bid Strategy — opsi di-fetch dari permission ad account */}
               <div>
-                <label className={labelCls}>Destination URL</label>
-                <input
-                  type="url"
-                  value={form.destinationUrl}
-                  onChange={(e) => setForm((f) => ({ ...f, destinationUrl: e.target.value }))}
-                  className={inputCls}
-                  placeholder="https://..."
-                />
+                <label className={labelCls}>Bid Strategy</label>
+                {!form.metaAdAccountId ? (
+                  <p className="text-xs text-stone-400 px-1">Pilih Ad Account dulu — opsi bid menyesuaikan permission akun.</p>
+                ) : capsLoading ? (
+                  <p className="text-xs text-stone-400 px-1">Cek permission akun ke Meta...</p>
+                ) : capsError ? (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+                    ⚠️ {capsError} — pakai Highest Volume (default).
+                  </div>
+                ) : (
+                  <div className="space-y-2 mt-1">
+                    {bidOptions.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
+                          !opt.available
+                            ? 'border-stone-100 bg-stone-50 opacity-50 cursor-not-allowed'
+                            : form.bidStrategy === opt.value
+                            ? 'border-violet-500 bg-violet-50'
+                            : 'border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="bidStrategy"
+                          value={opt.value}
+                          checked={form.bidStrategy === opt.value}
+                          disabled={!opt.available}
+                          onChange={() => setForm((f) => ({ ...f, bidStrategy: opt.value, bidAmount: '' }))}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-stone-800">{opt.label}</p>
+                          <p className="text-xs text-stone-500">{opt.description}</p>
+                          {opt.requiresAmount && form.bidStrategy === opt.value && opt.available && (
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={form.bidAmount}
+                              onChange={(e) => setForm((f) => ({ ...f, bidAmount: e.target.value }))}
+                              onClick={(e) => e.preventDefault()}
+                              placeholder={opt.amountLabel}
+                              className={`${inputCls} mt-2 max-w-xs`}
+                            />
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Launch Mode */}

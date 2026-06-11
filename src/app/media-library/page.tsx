@@ -64,11 +64,6 @@ export default function MediaLibraryPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
   const [uploadName, setUploadName] = useState('')
-  const [uploadProduct, setUploadProduct] = useState('')
-  const [uploadPrimaryText, setUploadPrimaryText] = useState('')
-  const [uploadHeadline, setUploadHeadline] = useState('')
-  const [uploadLinkUrl, setUploadLinkUrl] = useState('')
-  const [uploadCtaButton, setUploadCtaButton] = useState('LEARN_MORE')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -115,8 +110,8 @@ export default function MediaLibraryPage() {
     setUploadFile(file)
     if (file) {
       setUploadName(file.name.replace(/\.[^.]+$/, ''))
-      const url = URL.createObjectURL(file)
-      setUploadPreview(url)
+      // Preview hanya untuk image — video cukup nama file
+      setUploadPreview(file.type.startsWith('image/') ? URL.createObjectURL(file) : null)
     } else {
       setUploadPreview(null)
     }
@@ -128,24 +123,14 @@ export default function MediaLibraryPage() {
     setSaving(true)
     setSaveError(null)
     try {
-      // 1. Create asset metadata via API
-      const res = await fetch('/api/admin/media-assets', {
+      // Upload file fisik ke server (Volume) — ad copy diisi nanti saat bikin campaign
+      const fd = new FormData()
+      fd.append('file', uploadFile)
+      fd.append('label', uploadName.trim() || uploadFile.name)
+      const res = await fetch('/api/admin/media-assets/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          type: 'IMAGE',
-          source: 'USER_UPLOAD',
-          productId: uploadProduct || null,
-          publicUrl: uploadPreview,
-          mimeType: uploadFile.type,
-          fileSizeBytes: uploadFile.size,
-          status: 'READY',
-          primaryText: uploadPrimaryText || undefined,
-          headline: uploadHeadline || undefined,
-          linkUrl: uploadLinkUrl || undefined,
-          ctaButton: uploadCtaButton || undefined,
-        }),
+        body: fd,
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error ?? `Error ${res.status}`)
@@ -153,11 +138,6 @@ export default function MediaLibraryPage() {
       setUploadFile(null)
       setUploadPreview(null)
       setUploadName('')
-      setUploadProduct('')
-      setUploadPrimaryText('')
-      setUploadHeadline('')
-      setUploadLinkUrl('')
-      setUploadCtaButton('LEARN_MORE')
       await fetchAssets()
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to save')
@@ -520,11 +500,15 @@ export default function MediaLibraryPage() {
               uploadPreview ? 'border-violet-300 bg-violet-50 dark:bg-violet-900/20' : 'border-stone-300 hover:border-violet-400'
             }`}
           >
-            {uploadPreview ? (
+            {uploadFile ? (
               <div className="flex flex-col items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={uploadPreview} alt="preview" className="h-24 w-auto object-contain" />
-                <p className="text-xs text-violet-600 font-medium">{uploadFile?.name}</p>
+                {uploadPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={uploadPreview} alt="preview" className="h-24 w-auto object-contain" />
+                ) : (
+                  <span className="text-3xl">🎬</span>
+                )}
+                <p className="text-xs text-violet-600 font-medium">{uploadFile.name}</p>
                 <p className="text-xs text-stone-400">Klik untuk ganti</p>
               </div>
             ) : (
@@ -533,49 +517,18 @@ export default function MediaLibraryPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p className="text-sm text-stone-500">Klik untuk upload file</p>
-                <p className="text-xs text-stone-400">JPG, PNG, WebP, GIF — maks 10MB</p>
+                <p className="text-xs text-stone-400">Image (JPG/PNG/WebP/GIF maks 10MB) · Video (MP4/MOV/WebM maks 200MB)</p>
               </div>
             )}
           </div>
-          <input id="upload-file-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+          <input id="upload-file-input" type="file" accept="image/*,video/mp4,video/quicktime,video/webm" onChange={handleFileChange} className="hidden" />
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Name</label>
-            <input type="text" value={uploadName} onChange={e => setUploadName(e.target.value)} className={inputCls} placeholder="Asset name" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Product (optional)</label>
-            <select value={uploadProduct} onChange={e => setUploadProduct(e.target.value)} className={inputCls}>
-              <option value="">— None —</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Primary Text <span className="text-red-500">*</span></label>
-            <input type="text" value={uploadPrimaryText} onChange={e => setUploadPrimaryText(e.target.value)} required maxLength={125} className={inputCls} placeholder="Main ad text (max 125 chars)" />
-            <p className="text-xs text-stone-400 mt-0.5 text-right">{uploadPrimaryText.length}/125</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Headline</label>
-            <input type="text" value={uploadHeadline} onChange={e => setUploadHeadline(e.target.value)} maxLength={255} className={inputCls} placeholder="Short headline (max 255 chars)" />
-            <p className="text-xs text-stone-400 mt-0.5 text-right">{uploadHeadline.length}/255</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Link URL</label>
-            <input type="url" value={uploadLinkUrl} onChange={e => setUploadLinkUrl(e.target.value)} className={inputCls} placeholder="https://..." />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">CTA Button</label>
-            <select value={uploadCtaButton} onChange={e => setUploadCtaButton(e.target.value)} className={inputCls}>
-              {['LEARN_MORE', 'SHOP_NOW', 'SIGN_UP', 'DOWNLOAD', 'GET_QUOTE', 'CONTACT_US', 'BOOK_NOW', 'WATCH_MORE'].map(c => (
-                <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-1">Nama Konten</label>
+            <input type="text" value={uploadName} onChange={e => setUploadName(e.target.value)} className={inputCls} placeholder="contoh: Video hook testimoni A" />
+            <p className="text-xs text-stone-400 mt-1">
+              Primary text, headline, link & CTA diisi nanti saat bikin campaign.
+            </p>
           </div>
 
           {saveError && (
