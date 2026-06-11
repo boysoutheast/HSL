@@ -1,8 +1,20 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
+
+interface CustomTemplate {
+  id: string
+  name: string
+  description: string | null
+  scope: string
+  ruleCategory: string
+  conditionTreeJson: string
+  actionSpecJson: string
+  isBuiltin: boolean
+}
 
 interface AutomationRule {
   id: string
@@ -158,6 +170,7 @@ export default function RulesEditorPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([])
   const [modalTemplate, setModalTemplate] = useState<RuleTemplate | null>(null)
   const [modalCampaign, setModalCampaign] = useState('')
   const [modalThreshold, setModalThreshold] = useState('')
@@ -191,14 +204,58 @@ export default function RulesEditorPage() {
     } catch {}
   }, [])
 
+  const fetchCustomTemplates = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/rule-templates', { cache: 'no-store', credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      setCustomTemplates((data.templates ?? []).filter((t: CustomTemplate) => !t.isBuiltin))
+    } catch {}
+  }, [])
+
+  const handleUseCustomTemplate = async (tpl: CustomTemplate) => {
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/automation-rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: tpl.name,
+          description: tpl.description ?? undefined,
+          scope: tpl.scope,
+          ruleCategory: tpl.ruleCategory,
+          conditionTreeJson: JSON.parse(tpl.conditionTreeJson),
+          actionSpecJson: JSON.parse(tpl.actionSpecJson),
+        }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      await fetchRules()
+      setTab('my')
+      showToast('Rule created from template.')
+    } catch {
+      showToast('Failed to create rule from template.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteCustomTemplate = async (id: string) => {
+    if (!confirm('Hapus template ini?')) return
+    await fetch(`/api/admin/rule-templates/${id}`, { method: 'DELETE', credentials: 'include' })
+    await fetchCustomTemplates()
+    showToast('Template deleted.')
+  }
+
   useEffect(() => {
     if (tab === 'my') {
       setLoading(true)
       fetchRules()
     } else {
       fetchCampaigns()
+      fetchCustomTemplates()
     }
-  }, [tab, fetchRules, fetchCampaigns])
+  }, [tab, fetchRules, fetchCampaigns, fetchCustomTemplates])
 
   const handleToggleStatus = async (rule: AutomationRule) => {
     setToggleLoading(rule.id)
@@ -289,15 +346,15 @@ export default function RulesEditorPage() {
           <h1 className="text-2xl font-bold text-stone-900">Rules Editor</h1>
           <p className="text-sm text-stone-500 mt-0.5">Create and manage automation rules for your campaigns.</p>
         </div>
-        <button
-          onClick={() => showToast('Advanced rule editor coming in v2')}
-          className="flex items-center gap-2 px-3 py-2 text-sm bg-violet-600 text-white border border-violet-700 hover:bg-violet-700 transition-colors"
+        <Link
+          href="/rules-editor/builder"
+          className="btn-primary"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          New Rule (Advanced)
-        </button>
+          New Rule
+        </Link>
       </div>
 
       <PageInfo
@@ -401,8 +458,13 @@ export default function RulesEditorPage() {
                         <td className="px-4 py-3 text-stone-500 whitespace-nowrap">
                           {formatDate(rule.lastFiredAt)}
                         </td>
-                        <td className="px-4 py-3 text-stone-400 text-xs">
-                          {rule.scope}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Link
+                            href={`/rules-editor/builder?ruleId=${rule.id}`}
+                            className="text-xs text-violet-600 hover:underline"
+                          >
+                            Edit
+                          </Link>
                         </td>
                       </tr>
                     ))
@@ -415,6 +477,42 @@ export default function RulesEditorPage() {
       )}
 
       {/* Templates Tab */}
+      {tab === 'templates' && customTemplates.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-stone-700 mb-3">My Templates</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {customTemplates.map((tpl) => (
+              <div key={tpl.id} className="card p-5 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-stone-900 text-sm">{tpl.name}</h3>
+                    {tpl.description && <p className="text-xs text-stone-500 mt-1">{tpl.description}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteCustomTemplate(tpl.id)}
+                    className="text-stone-300 hover:text-red-500 text-xs shrink-0"
+                    title="Delete template"
+                  >
+                    🗑
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-stone-400">
+                  <span className="bg-stone-100 px-1.5 py-0.5 rounded">{tpl.scope}</span>
+                  <span className="bg-stone-100 px-1.5 py-0.5 rounded">{tpl.ruleCategory}</span>
+                </div>
+                <button
+                  onClick={() => handleUseCustomTemplate(tpl)}
+                  disabled={submitting}
+                  className="btn-primary btn-sm mt-auto justify-center"
+                >
+                  Use Template
+                </button>
+              </div>
+            ))}
+          </div>
+          <h2 className="text-sm font-semibold text-stone-700 mt-6 mb-0">Built-in Templates</h2>
+        </div>
+      )}
       {tab === 'templates' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {TEMPLATES.map((tpl) => (

@@ -62,8 +62,9 @@ model Character {
   instagramAccount InstagramAccount      @relation(fields: [instagramAccountId], references: [id])
   photoReferences  PhotoReference[]
   topics           Topic[]
-  contentLogs      GeneratedContentLog[]
-  mediaAssets      MediaAsset[]
+  contentLogs       GeneratedContentLog[]
+  mediaAssets       MediaAsset[]
+  mediaLibraryRules MediaLibraryRule[]
 
   @@map("characters")
 }
@@ -135,8 +136,9 @@ model Product {
   ceps            Cep[]
   contentLogs     GeneratedContentLog[]
   mediaAssets     MediaAsset[]
-  CreativeVariant CreativeVariant[]
-  landingPages    LandingPage[]
+  CreativeVariant   CreativeVariant[]
+  landingPages      LandingPage[]
+  mediaLibraryRules MediaLibraryRule[]
 
   @@map("products")
 }
@@ -154,7 +156,8 @@ model LandingPage {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stats   LandingPageStat[]
 
   @@index([productId])
   @@map("landing_pages")
@@ -339,6 +342,11 @@ model AdminUser {
   automationRules   AutomationRule[]
   automationActions AutomationAction[]
   workerLeases      WorkerLease[]
+  mediaLibraryRules MediaLibraryRule[]
+  ruleTemplates     RuleTemplate[]
+  metaAudiences     MetaAudience[]
+  metaCatalogs      MetaCatalog[]
+  capiEventConfigs  CapiEventConfig[]
 
   @@map("admin_users")
 }
@@ -575,7 +583,8 @@ model WorkerTask {
   startedAt    DateTime? @map("started_at")
   completedAt  DateTime? @map("completed_at")
 
-  testLaunch TestLaunch? @relation(fields: [testLaunchId], references: [id])
+  testLaunch TestLaunch?        @relation(fields: [testLaunchId], references: [id])
+  results    WorkerTaskResult[]
 
   @@index([status, priority])
   @@index([testLaunchId])
@@ -652,6 +661,7 @@ model MediaAsset {
   topic              Topic?              @relation(fields: [topicId], references: [id], onDelete: SetNull)
   creativeVariants   CreativeVariant[]
   metaMediaBindings  MetaMediaBinding[]
+  workerTaskResults  WorkerTaskResult[]
 
   @@index([characterId])
   @@index([instagramAccountId])
@@ -1026,4 +1036,190 @@ model FeatureFlag {
 
   @@index([enabled, scope])
   @@index([scope, targetId])
+}
+
+// ── P1-P3 EXPANSION MODELS (June 2026) ───────────────────────────────────────
+
+model LandingPageStat {
+  id             String   @id @default(cuid())
+  landingPageId  String   @map("landing_page_id")
+  source         String?  // organic | meta_ad | hermes_post | capi
+  sourceRefId    String?  @map("source_ref_id") // contentLogId / campaignSessionId / event id
+  clicks         Int      @default(0)
+  conversions    Int      @default(0)
+  revenue        Float    @default(0)
+  conversionRate Float?   @map("conversion_rate")
+  date           DateTime @default(now()) // grouping per day
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  landingPage LandingPage @relation(fields: [landingPageId], references: [id], onDelete: Cascade)
+
+  @@index([landingPageId, date])
+  @@map("landing_page_stats")
+}
+
+model MediaLibraryRule {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  name            String
+  // Trigger: MIN_COUNT | MAX_AGE_DAYS | NO_WINNER
+  triggerType     String    @map("trigger_type")
+  threshold       Float // MIN_COUNT: jumlah minimum; MAX_AGE_DAYS: umur hari; NO_WINNER: skor minimum
+  // Scope — minimal salah satu diisi
+  productId       String?   @map("product_id")
+  characterId     String?   @map("character_id")
+  mediaType       String    @default("VIDEO") @map("media_type") // IMAGE | VIDEO
+  // Action saat trigger: CREATE_TASK | NOTIFY
+  actionType      String    @default("CREATE_TASK") @map("action_type")
+  taskType        String?   @map("task_type") // GENERATE_VIDEO | GENERATE_PHOTO | CAPTION_ONLY
+  taskPayloadJson String?   @map("task_payload_json") // extra params untuk worker
+  status          String    @default("ACTIVE") // ACTIVE | PAUSED
+  cooldownHours   Int       @default(24) @map("cooldown_hours")
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  triggerCount    Int       @default(0) @map("trigger_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user      AdminUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product?   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@map("media_library_rules")
+}
+
+model WorkerTaskResult {
+  id            String   @id @default(cuid())
+  workerTaskId  String   @map("worker_task_id")
+  resultType    String   @map("result_type") // media_asset | content_log | meta_entity | raw
+  mediaAssetId  String?  @map("media_asset_id")
+  contentLogId  String?  @map("content_log_id")
+  dataJson      String?  @map("data_json")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  workerTask WorkerTask  @relation(fields: [workerTaskId], references: [id], onDelete: Cascade)
+  mediaAsset MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@index([workerTaskId])
+  @@map("worker_task_results")
+}
+
+model RuleTemplate {
+  id                String   @id @default(cuid())
+  userId            String?  @map("user_id") // null = built-in template
+  name              String
+  description       String?
+  scope             String // CAMPAIGN | ADSET | AD
+  ruleCategory      String   @map("rule_category") // THRESHOLD | SCHEDULE | COMPOSITE
+  conditionTreeJson String   @map("condition_tree_json")
+  actionSpecJson    String   @map("action_spec_json")
+  isBuiltin         Boolean  @default(false) @map("is_builtin")
+  usageCount        Int      @default(0) @map("usage_count")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user AdminUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("rule_templates")
+}
+
+model MetaAudience {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  metaAdAccountId String    @map("meta_ad_account_id") // FK meta_ad_accounts.id
+  metaAudienceId  String?   @map("meta_audience_id") // ID dari Meta setelah dibuat
+  name            String
+  type            String // CUSTOM | LOOKALIKE
+  subtype         String? // WEBSITE | ENGAGEMENT | CUSTOMER_LIST | VIDEO | LOOKALIKE
+  description     String?
+  // Lookalike params
+  sourceAudienceId String?  @map("source_audience_id") // FK meta_audiences.id (self-ref via Meta ID)
+  lookalikeRatio   Float?   @map("lookalike_ratio") // 0.01 - 0.20
+  lookalikeCountry String?  @map("lookalike_country") // ID, US, dll
+  // Custom audience rule (website events etc)
+  ruleJson        String?   @map("rule_json")
+  retentionDays   Int?      @map("retention_days")
+  // Status & size
+  status          String    @default("DRAFT") // DRAFT | CREATING | READY | FAILED | DELETED
+  sizeLowerBound  Int?      @map("size_lower_bound")
+  sizeUpperBound  Int?      @map("size_upper_bound")
+  errorMessage    String?   @map("error_message")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([metaAdAccountId])
+  @@map("meta_audiences")
+}
+
+model MetaCatalog {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  metaBusinessId String?   @map("meta_business_id") // FK meta_businesses.id
+  metaCatalogId  String?   @map("meta_catalog_id") // ID dari Meta
+  name           String
+  vertical       String    @default("commerce") // commerce | hotels | flights
+  productCount   Int       @default(0) @map("product_count")
+  // CPAS
+  isCpas         Boolean   @default(false) @map("is_cpas")
+  partnerName    String?   @map("partner_name") // e.g. Shopee
+  status         String    @default("DRAFT") // DRAFT | CREATING | READY | FAILED
+  errorMessage   String?   @map("error_message")
+  lastSyncedAt   DateTime? @map("last_synced_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user        AdminUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productSets MetaProductSet[]
+
+  @@index([userId])
+  @@map("meta_catalogs")
+}
+
+model MetaProductSet {
+  id               String    @id @default(cuid())
+  catalogId        String    @map("catalog_id") // FK meta_catalogs.id
+  metaProductSetId String?   @map("meta_product_set_id")
+  name             String
+  filterJson       String?   @map("filter_json") // Meta product set filter
+  productCount     Int       @default(0) @map("product_count")
+  status           String    @default("DRAFT") // DRAFT | CREATING | READY | FAILED
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  catalog MetaCatalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+
+  @@index([catalogId])
+  @@map("meta_product_sets")
+}
+
+model CapiEventConfig {
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  name                String
+  pixelId             String    @map("pixel_id")
+  accessTokenEncrypted String   @map("access_token_encrypted") // CAPI system user token
+  testEventCode       String?   @map("test_event_code")
+  // Event yang diterima endpoint /api/capi/events
+  allowedEvents       String[]  @default(["PageView", "ViewContent", "AddToCart", "Purchase", "Lead"]) @map("allowed_events")
+  // Optional: link ke landing page untuk auto-stat
+  landingPageId       String?   @map("landing_page_id")
+  isActive            Boolean   @default(true) @map("is_active")
+  eventCount          Int       @default(0) @map("event_count")
+  lastEventAt         DateTime? @map("last_event_at")
+  lastError           String?   @map("last_error")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([pixelId])
+  @@map("capi_event_configs")
 }

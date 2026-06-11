@@ -679,6 +679,43 @@ function LandingPagesTab({ productId }: { productId: string }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [statsLP, setStatsLP] = useState<LandingPage | null>(null)
+  const [statsData, setStatsData] = useState<{ summary: { clicks: number; conversions: number; revenue: number; conversionRate: number | null } } | null>(null)
+  const [statForm, setStatForm] = useState({ clicks: '', conversions: '', revenue: '' })
+  const [statSaving, setStatSaving] = useState(false)
+
+  const openStats = async (lp: LandingPage) => {
+    setStatsLP(lp)
+    setStatsData(null)
+    setStatForm({ clicks: '', conversions: '', revenue: '' })
+    try {
+      const res = await fetch(`/api/admin/landing-pages/${lp.id}/stats`, { credentials: 'include' })
+      if (res.ok) setStatsData(await res.json())
+    } catch { /* silent */ }
+  }
+
+  const handleAddStat = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!statsLP) return
+    setStatSaving(true)
+    try {
+      await fetch(`/api/admin/landing-pages/${statsLP.id}/stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          clicks: Number(statForm.clicks || 0),
+          conversions: Number(statForm.conversions || 0),
+          revenue: Number(statForm.revenue || 0),
+          source: 'manual',
+        }),
+      })
+      await openStats(statsLP)
+      setStatForm({ clicks: '', conversions: '', revenue: '' })
+    } finally {
+      setStatSaving(false)
+    }
+  }
 
   const fetchLPs = useCallback(async () => {
     try {
@@ -830,6 +867,12 @@ function LandingPagesTab({ productId }: { productId: string }) {
                   {lp.isActive ? 'Pause' : 'Activate'}
                 </button>
                 <button
+                  onClick={() => openStats(lp)}
+                  className="text-xs text-stone-400 hover:text-emerald-600 px-2 py-1 rounded hover:bg-emerald-50 transition-colors"
+                >
+                  Stats
+                </button>
+                <button
                   onClick={() => openEdit(lp)}
                   className="text-xs text-stone-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                 >
@@ -847,6 +890,71 @@ function LandingPagesTab({ productId }: { productId: string }) {
           ))}
         </div>
       )}
+
+      {/* LP Stats modal */}
+      <Modal
+        open={statsLP !== null}
+        onClose={() => setStatsLP(null)}
+        title={statsLP ? `Stats — ${statsLP.label ?? statsLP.variant}` : ''}
+      >
+        {statsLP && (
+          <div className="space-y-4">
+            {statsData ? (
+              <div className="grid grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-center">
+                  <p className="text-[10px] font-semibold uppercase text-stone-400">Clicks</p>
+                  <p className="text-lg font-bold text-stone-900 dark:text-stone-100">{statsData.summary.clicks}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-center">
+                  <p className="text-[10px] font-semibold uppercase text-stone-400">Conv</p>
+                  <p className="text-lg font-bold text-stone-900 dark:text-stone-100">{statsData.summary.conversions}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-center">
+                  <p className="text-[10px] font-semibold uppercase text-stone-400">CR</p>
+                  <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
+                    {statsData.summary.conversionRate !== null ? `${statsData.summary.conversionRate.toFixed(1)}%` : '—'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/50 text-center">
+                  <p className="text-[10px] font-semibold uppercase text-stone-400">Revenue</p>
+                  <p className="text-lg font-bold text-stone-900 dark:text-stone-100">{statsData.summary.revenue.toLocaleString()}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-20 text-stone-400 text-sm">Loading stats...</div>
+            )}
+
+            <form onSubmit={handleAddStat} className="border-t border-stone-100 dark:border-stone-800 pt-4 space-y-3">
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-300">Tambah data manual</p>
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="number" min="0" placeholder="Clicks"
+                  value={statForm.clicks}
+                  onChange={e => setStatForm({ ...statForm, clicks: e.target.value })}
+                  className={inputCls}
+                />
+                <input
+                  type="number" min="0" placeholder="Conversions"
+                  value={statForm.conversions}
+                  onChange={e => setStatForm({ ...statForm, conversions: e.target.value })}
+                  className={inputCls}
+                />
+                <input
+                  type="number" min="0" placeholder="Revenue"
+                  value={statForm.revenue}
+                  onChange={e => setStatForm({ ...statForm, revenue: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button type="submit" disabled={statSaving} className="btn-primary btn-sm">
+                  {statSaving ? 'Saving...' : '+ Add Stat'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={showModal}

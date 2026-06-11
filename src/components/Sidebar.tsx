@@ -68,6 +68,7 @@ const navSections: NavSection[] = [
       { label: 'Topics & CEPs', href: '/topics', icon: Icon.chat },
       { label: 'Products', href: '/products', icon: Icon.box },
       { label: 'Media Library', href: '/media-library', icon: Icon.photo },
+      { label: 'Media Rules', href: '/media-rules', icon: Icon.cog },
       { label: 'Meta Connections', href: '/meta-connections', icon: Icon.plug },
     ],
   },
@@ -88,6 +89,7 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Users', href: '/admin-users', icon: Icon.users, adminOnly: true },
       { label: 'Agents', href: '/agents', icon: Icon.robot, adminOnly: true },
+      { label: 'Workers & Tasks', href: '/workers', icon: Icon.bolt, adminOnly: true },
       { label: 'Dead Letters', href: '/admin/dead-letters', icon: Icon.skull, adminOnly: true },
       { label: 'Observability', href: '/observability', icon: Icon.eye, adminOnly: true },
       { label: 'API Docs', href: '/docs', icon: Icon.book },
