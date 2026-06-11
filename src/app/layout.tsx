@@ -15,26 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* ── Apply theme before CSS loads — prevent white flash on dark ── */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              const saved = localStorage.getItem('hsl-theme-mode');
-              const theme = localStorage.getItem('hsl-theme');
-              if (saved === 'manual' && theme === 'dark') {
-                document.documentElement.classList.add('dark');
-              } else if (saved !== 'manual') {
-                const hour = new Date().getHours();
-                if (hour >= 18 || hour < 6) {
-                  document.documentElement.classList.add('dark');
-                }
-              }
-            `,
-          }}
-        />
-      </head>
-      <body className="bg-stone-100 text-stone-900 dark:bg-stone-950 dark:text-stone-50">
+      <body className="bg-stone-100 text-stone-900">
         <ThemeProvider>
           <LayoutShell>{children}</LayoutShell>
         </ThemeProvider>

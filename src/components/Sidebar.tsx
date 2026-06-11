@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import ThemeToggle from './ThemeToggle'
 
 interface User {
   id: string
@@ -160,7 +159,6 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="border-t border-stone-100 dark:border-stone-800 p-2 space-y-1 shrink-0">
-        <ThemeToggle compact />
         {user && (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
             <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center shrink-0">

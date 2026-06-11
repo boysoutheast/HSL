@@ -1,6 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect } from 'react'
+
+// Dark mode dimatikan — banyak halaman light-only, auto-dark bikin text/button tabrakan.
+// Kalau mau dark mode lagi: retrofit dark: variant ke semua page dulu.
 
 type Theme = 'light' | 'dark'
 
@@ -13,66 +16,19 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue>({
   theme: 'light',
   toggle: () => {},
-  isAuto: true,
+  isAuto: false,
 })
 
-function getAutoTheme(): Theme {
-  const hour = new Date().getHours()
-  // Dark: 18:00–05:59, Light: 06:00–17:59
-  return hour >= 6 && hour < 18 ? 'light' : 'dark'
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // On mount, read what inline script already applied to <html>
-    if (typeof document === 'undefined') return 'light'
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-  })
-  const [isAuto, setIsAuto] = useState(true)
-  const [mounted, setMounted] = useState(false)
-
   useEffect(() => {
-    const saved = localStorage.getItem('hsl-theme-mode') // 'auto' | 'manual'
-    const savedTheme = localStorage.getItem('hsl-theme') as Theme | null
-
-    if (saved === 'manual' && savedTheme) {
-      setTheme(savedTheme)
-      setIsAuto(false)
-    } else {
-      setTheme(getAutoTheme())
-      setIsAuto(true)
-    }
-    setMounted(true)
+    // Bersihkan sisa dark mode dari localStorage / html class
+    document.documentElement.classList.remove('dark')
+    localStorage.removeItem('hsl-theme-mode')
+    localStorage.removeItem('hsl-theme')
   }, [])
 
-  useEffect(() => {
-    if (!mounted) return
-    const hasDark = document.documentElement.classList.contains('dark')
-    if (theme === 'dark' && !hasDark) {
-      document.documentElement.classList.add('dark')
-    } else if (theme === 'light' && hasDark) {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [theme, mounted])
-
-  const toggle = () => {
-    if (isAuto) {
-      // First manual toggle — override auto
-      const next = theme === 'light' ? 'dark' : 'light'
-      setTheme(next)
-      setIsAuto(false)
-      localStorage.setItem('hsl-theme-mode', 'manual')
-      localStorage.setItem('hsl-theme', next)
-    } else {
-      // Already manual — just flip
-      const next = theme === 'light' ? 'dark' : 'light'
-      setTheme(next)
-      localStorage.setItem('hsl-theme', next)
-    }
-  }
-
   return (
-    <ThemeContext.Provider value={{ theme, toggle, isAuto }}>
+    <ThemeContext.Provider value={{ theme: 'light', toggle: () => {}, isAuto: false }}>
       {children}
     </ThemeContext.Provider>
   )
