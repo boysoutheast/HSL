@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (process.env.ALLOW_REGISTRATION !== 'true') {
+  // Self-serve SaaS: registrasi terbuka default. Set ALLOW_REGISTRATION=false untuk nutup.
+  if (process.env.ALLOW_REGISTRATION === 'false') {
     return NextResponse.json({ error: 'Registrasi tidak dibuka' }, { status: 403 })
   }
 

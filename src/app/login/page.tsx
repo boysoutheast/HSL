@@ -9,6 +9,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const pending = searchParams.get('pending') === '1'
+  const urlError = searchParams.get('error')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -43,7 +44,8 @@ function LoginForm() {
     }
   }
 
-  const allowReg = process.env.NEXT_PUBLIC_ALLOW_REGISTRATION === 'true'
+  // Registrasi open default (self-serve). Hidden cuma kalau explicit 'false'.
+  const allowReg = process.env.NEXT_PUBLIC_ALLOW_REGISTRATION !== 'false'
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -62,6 +64,11 @@ function LoginForm() {
           {pending && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 mb-4">
               ⏳ Akun berhasil dibuat. Menunggu approval admin sebelum bisa login.
+            </div>
+          )}
+          {urlError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
+              ⚠️ {urlError}
             </div>
           )}
 

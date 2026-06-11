@@ -5,12 +5,14 @@ export const dynamic = 'force-dynamic'
 
 // GET /api/admin/auth/google — redirect ke Google OAuth consent
 export async function GET(req: NextRequest) {
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  if (!clientId) {
-    return NextResponse.json({ error: 'Google login belum dikonfigurasi (GOOGLE_CLIENT_ID missing)' }, { status: 503 })
-  }
-
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? new URL(req.url).origin
+
+  const clientId = process.env.GOOGLE_CLIENT_ID
+  if (!clientId || !process.env.GOOGLE_CLIENT_SECRET) {
+    return NextResponse.redirect(
+      `${base.replace(/\/$/, '')}/login?error=${encodeURIComponent('Google login belum dikonfigurasi. Set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET di Railway.')}`
+    )
+  }
   const redirectUri = `${base.replace(/\/$/, '')}/api/admin/auth/google/callback`
 
   // CSRF state cookie

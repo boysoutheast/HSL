@@ -15,15 +15,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${base}/login?redirect=/meta-connections`)
   }
 
+  const base = (process.env.NEXT_PUBLIC_BASE_URL ?? new URL(req.url).origin).replace(/\/$/, '')
+
   const appId = process.env.META_APP_ID
-  if (!appId) {
-    return NextResponse.json(
-      { error: 'Facebook login belum dikonfigurasi (META_APP_ID missing)' },
-      { status: 503 }
+  if (!appId || !process.env.META_APP_SECRET) {
+    return NextResponse.redirect(
+      `${base}/meta-connections?error=${encodeURIComponent('Facebook login belum dikonfigurasi. Set META_APP_ID + META_APP_SECRET di Railway.')}`
     )
   }
-
-  const base = (process.env.NEXT_PUBLIC_BASE_URL ?? new URL(req.url).origin).replace(/\/$/, '')
   const redirectUri = `${base}/api/admin/meta-oauth/callback`
   const state = crypto.randomBytes(16).toString('hex')
   const configId = process.env.META_LOGIN_CONFIG_ID

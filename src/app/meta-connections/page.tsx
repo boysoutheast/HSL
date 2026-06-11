@@ -54,6 +54,20 @@ export default function MetaConnectionsPage() {
   const [deleteTarget, setDeleteTarget] = useState<MetaAccount | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [banner, setBanner] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  // Banner dari OAuth redirect (?connected=1 / ?error=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('connected') === '1') {
+      setBanner({ type: 'ok', text: 'Facebook berhasil terhubung. Business, ad accounts, dan pages sudah disinkronkan.' })
+    } else if (params.get('error')) {
+      setBanner({ type: 'err', text: params.get('error') ?? 'Connect gagal' })
+    }
+    if (params.get('connected') || params.get('error')) {
+      window.history.replaceState({}, '', '/meta-connections')
+    }
+  }, [])
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -94,6 +108,16 @@ export default function MetaConnectionsPage() {
 
   return (
     <div>
+      {banner && (
+        <div className={`mb-4 px-4 py-3 rounded-xl border text-sm flex items-center justify-between ${
+          banner.type === 'ok'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          <span>{banner.type === 'ok' ? '✅' : '⚠️'} {banner.text}</span>
+          <button onClick={() => setBanner(null)} className="text-xs opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-stone-900">Meta Akun</h1>
