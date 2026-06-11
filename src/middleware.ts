@@ -17,12 +17,19 @@ const PUBLIC_PATHS = [
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Canonical domain: akses via *.up.railway.app → redirect permanen ke domain utama
+  // Canonical domain: akses via *.up.railway.app → redirect permanen ke domain utama.
+  // Guard anti-loop: skip kalau canonical host sama dengan host sekarang
+  // (mis. NEXT_PUBLIC_BASE_URL masih berisi URL railway).
   const canonical = process.env.NEXT_PUBLIC_BASE_URL
   const host = req.headers.get('host') ?? ''
   if (canonical && host.endsWith('.up.railway.app')) {
-    const target = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical)
-    return NextResponse.redirect(target, 308)
+    try {
+      const canonicalHost = new URL(canonical).host
+      if (canonicalHost && canonicalHost !== host && !canonicalHost.endsWith('.up.railway.app')) {
+        const target = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical)
+        return NextResponse.redirect(target, 308)
+      }
+    } catch { /* canonical bukan URL valid — skip redirect */ }
   }
 
   // Public routes — no auth needed
