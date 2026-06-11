@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get('offset') || '0')
 
   const where: Record<string, unknown> = {}
+  if (auth.role !== 'admin') where.campaignSession = { userId: auth.id }
   if (campaignSessionId) where.campaignSessionId = campaignSessionId
   if (status) where.status = status
   if (strategy) where.strategy = strategy

@@ -80,6 +80,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'cepText is required' }, { status: 400 })
   }
 
+  // Non-admin: validasi topic/product yang di-link milik user ini
+  if (auth.role !== 'admin') {
+    if (body.topicId) {
+      const topic = await prisma.topic.findFirst({
+        where: {
+          id: body.topicId,
+          OR: [
+            { character: { instagramAccount: { createdByUserId: auth.id } } },
+            { product: { createdByUserId: auth.id } },
+          ],
+        },
+        select: { id: true },
+      })
+      if (!topic) return NextResponse.json({ error: 'Topic not found' }, { status: 404 })
+    }
+    if (body.productId) {
+      const product = await prisma.product.findFirst({
+        where: { id: body.productId, createdByUserId: auth.id },
+        select: { id: true },
+      })
+      if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+  }
+
   const cep = await prisma.cep.create({
     data: {
       topicId: body.topicId,

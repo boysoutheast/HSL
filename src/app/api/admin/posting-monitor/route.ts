@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
 
+  // Non-admin: hanya monitor dari akun IG miliknya
+  const ownerWhere =
+    auth.role !== 'admin' ? { instagramAccount: { createdByUserId: auth.id } } : {}
+
   const monitors = await prisma.postingMonitor.findMany({
-    where: status ? { status } : undefined,
+    where: {
+      ...ownerWhere,
+      ...(status ? { status } : {}),
+    },
     include: {
       instagramAccount: {
         select: {
@@ -30,6 +41,7 @@ export async function GET(req: NextRequest) {
     where: {
       id: { notIn: monitoredAccountIds },
       status: 'active',
+      ...(auth.role !== 'admin' ? { createdByUserId: auth.id } : {}),
     },
     select: {
       id: true,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +8,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await requireAuth(req)
+  const auth = await requireAdmin(req)
   if (auth instanceof NextResponse) return auth
 
   const flag = await prisma.featureFlag.findUnique({
@@ -26,7 +26,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await requireAuth(req)
+  const auth = await requireAdmin(req)
   if (auth instanceof NextResponse) return auth
 
   let body: {
@@ -68,7 +68,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const auth = await requireAuth(req)
+  const auth = await requireAdmin(req)
   if (auth instanceof NextResponse) return auth
 
   const existing = await prisma.featureFlag.findUnique({

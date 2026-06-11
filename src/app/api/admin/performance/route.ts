@@ -1,18 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAuth(req)
+  if (auth instanceof NextResponse) return auth
+
   const { searchParams } = new URL(req.url)
   const instagramAccountId = searchParams.get('instagramAccountId')
   const take = Math.min(parseInt(searchParams.get('take') ?? '50'), 200)
   const skip = parseInt(searchParams.get('skip') ?? '0')
 
+  // Non-admin: hanya tracker dari akun IG miliknya
+  const where = {
+    ...(auth.role !== 'admin'
+      ? { instagramAccount: { createdByUserId: auth.id } }
+      : {}),
+    ...(instagramAccountId ? { instagramAccountId } : {}),
+  }
+
   const trackers = await prisma.performanceTracker.findMany({
-    where: {
-      ...(instagramAccountId ? { instagramAccountId } : {}),
-    },
+    where,
     include: {
       contentLog: {
         select: {
@@ -35,9 +45,7 @@ export async function GET(req: NextRequest) {
     skip,
   })
 
-  const total = await prisma.performanceTracker.count({
-    where: instagramAccountId ? { instagramAccountId } : undefined,
-  })
+  const total = await prisma.performanceTracker.count({ where })
 
   return NextResponse.json({ trackers, total, take, skip })
 }

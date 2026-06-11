@@ -73,6 +73,8 @@ interface FormData {
   ageMin: number
   ageMax: number
   gender: 'all' | 'male' | 'female'
+  countries: string[]
+  customAudienceIds: string[]
   // Step 5
   creatives: Creative[]
   pixelId: string
@@ -105,12 +107,49 @@ const PIXEL_OPTIONS = [
 ]
 
 const PLACEMENT_OPTIONS = [
-  { value: 'facebook_feed', label: 'Facebook Feed' },
-  { value: 'facebook_stories', label: 'Facebook Stories' },
-  { value: 'instagram_feed', label: 'Instagram Feed' },
-  { value: 'instagram_stories', label: 'Instagram Stories' },
-  { value: 'instagram_reels', label: 'Instagram Reels' },
-  { value: 'instagram_explore', label: 'Instagram Explore' },
+  // Facebook
+  { value: 'facebook_feed', label: 'Facebook Feed', group: 'Facebook' },
+  { value: 'facebook_stories', label: 'Facebook Stories', group: 'Facebook' },
+  { value: 'facebook_reels', label: 'Facebook Reels', group: 'Facebook' },
+  { value: 'facebook_video_feeds', label: 'Facebook Video Feeds', group: 'Facebook' },
+  { value: 'facebook_marketplace', label: 'Facebook Marketplace', group: 'Facebook' },
+  { value: 'facebook_search', label: 'Facebook Search Results', group: 'Facebook' },
+  { value: 'facebook_right_hand_column', label: 'Facebook Right Column', group: 'Facebook' },
+  // Instagram
+  { value: 'instagram_feed', label: 'Instagram Feed', group: 'Instagram' },
+  { value: 'instagram_stories', label: 'Instagram Stories', group: 'Instagram' },
+  { value: 'instagram_reels', label: 'Instagram Reels', group: 'Instagram' },
+  { value: 'instagram_explore', label: 'Instagram Explore', group: 'Instagram' },
+  { value: 'instagram_explore_home', label: 'Instagram Explore Home', group: 'Instagram' },
+  { value: 'instagram_search', label: 'Instagram Search Results', group: 'Instagram' },
+  { value: 'instagram_profile_feed', label: 'Instagram Profile Feed', group: 'Instagram' },
+  // Messenger
+  { value: 'messenger_inbox', label: 'Messenger Inbox', group: 'Messenger' },
+  { value: 'messenger_stories', label: 'Messenger Stories', group: 'Messenger' },
+  // Audience Network
+  { value: 'audience_network_classic', label: 'Audience Network Native/Banner', group: 'Audience Network' },
+  { value: 'audience_network_rewarded_video', label: 'Audience Network Rewarded Video', group: 'Audience Network' },
+]
+
+const COUNTRY_OPTIONS = [
+  { key: 'ID', label: 'Indonesia' },
+  { key: 'MY', label: 'Malaysia' },
+  { key: 'SG', label: 'Singapore' },
+  { key: 'PH', label: 'Philippines' },
+  { key: 'TH', label: 'Thailand' },
+  { key: 'VN', label: 'Vietnam' },
+  { key: 'US', label: 'United States' },
+  { key: 'AU', label: 'Australia' },
+  { key: 'JP', label: 'Japan' },
+  { key: 'KR', label: 'South Korea' },
+  { key: 'TW', label: 'Taiwan' },
+  { key: 'HK', label: 'Hong Kong' },
+  { key: 'IN', label: 'India' },
+  { key: 'SA', label: 'Saudi Arabia' },
+  { key: 'AE', label: 'UAE' },
+  { key: 'GB', label: 'United Kingdom' },
+  { key: 'DE', label: 'Germany' },
+  { key: 'BR', label: 'Brazil' },
 ]
 
 const GENDER_OPTIONS = [
@@ -145,6 +184,20 @@ export default function NewTestLaunchPage() {
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
   const [pages, setPages] = useState<Page[]>([])
   const [loadingDeps, setLoadingDeps] = useState(true)
+  const [customAudiences, setCustomAudiences] = useState<Array<{ id: string; name: string; type: string; metaAudienceId: string | null; status: string }>>([])
+  const [mediaAssets, setMediaAssets] = useState<Array<{ id: string; label: string | null; type: string; publicUrl: string | null; fileUrl: string | null; thumbnailUrl: string | null }>>([])
+  const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null) // creative id yang lagi milih media
+
+  useEffect(() => {
+    fetch('/api/admin/meta-audiences', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { audiences: [] })
+      .then(d => setCustomAudiences((d.audiences ?? []).filter((a: { status: string }) => a.status === 'READY')))
+      .catch(() => {})
+    fetch('/api/admin/media-assets?status=READY', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { assets: [] })
+      .then(d => setMediaAssets(d.assets ?? d.mediaAssets ?? []))
+      .catch(() => {})
+  }, [])
 
   // ── Form ─────────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState<Step>('Basic Config')
@@ -165,6 +218,8 @@ export default function NewTestLaunchPage() {
     ageMin: 25,
     ageMax: 45,
     gender: 'all',
+    countries: ['ID'],
+    customAudienceIds: [],
     creatives: [emptyCreative()],
     pixelId: '',
   })
@@ -267,7 +322,8 @@ export default function NewTestLaunchPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { setSaveError('Nama launch harus diisi.'); return }
+    if (!form.name.trim()) { setSaveError('Nama campaign harus diisi.'); return }
+    if (form.countries.length === 0) { setSaveError('Pilih minimal 1 negara di step Audience.'); return }
     if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return }
     if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return }
     if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
@@ -285,7 +341,13 @@ export default function NewTestLaunchPage() {
       ageMin: form.ageMin,
       ageMax: form.ageMax,
       gender: form.gender,
-      locations: [{ type: 'country', key: 'ID' }],
+      locations: form.countries.map((key) => ({ type: 'country', key })),
+      customAudiences: form.customAudienceIds
+        .map((id) => {
+          const aud = customAudiences.find((a) => a.id === id)
+          return aud ? { id: aud.id, metaAudienceId: aud.metaAudienceId, name: aud.name } : null
+        })
+        .filter(Boolean),
     })
 
     const placementsJson = form.placementMode === 'manual' ? JSON.stringify(form.placements) : undefined
@@ -400,7 +462,7 @@ export default function NewTestLaunchPage() {
           <div className="space-y-5">
             <PageInfo
               purpose="Informasi dasar test launch. Meta Connection menentukan akun Meta Ads yang akan digunakan."
-              inputs={['Nama launch', 'Meta Connection', 'Ad Account', 'Objective', 'Daily Budget', 'Launch Mode', 'Catatan']}
+              inputs={['Nama campaign', 'Meta Connection', 'Ad Account', 'Objective', 'Daily Budget', 'Launch Mode', 'Catatan']}
               wiring={[
                 { label: '→ Ad Accounts', desc: 'diambil dari Meta Connection yang dipilih' },
                 { label: '→ Step 2', desc: 'pilih Facebook Page & Instagram' },
@@ -412,7 +474,7 @@ export default function NewTestLaunchPage() {
 
               {/* Name */}
               <div>
-                <label className={labelCls}>Nama Launch <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={form.name}
@@ -421,6 +483,7 @@ export default function NewTestLaunchPage() {
                   className={inputCls}
                   placeholder="Summer Sale Campaign Q3"
                 />
+                <p className="text-xs text-stone-400 mt-1">Nama ini dipakai langsung sebagai nama campaign di Meta Ads Manager.</p>
               </div>
 
               {/* Meta Connection */}
@@ -587,7 +650,7 @@ export default function NewTestLaunchPage() {
                 type="button"
                 onClick={() => {
                   if (!form.metaConnectionId) { alert('Pilih Meta Connection terlebih dahulu.'); return }
-                  if (!form.name.trim()) { alert('Nama launch harus diisi.'); return }
+                  if (!form.name.trim()) { alert('Nama campaign harus diisi.'); return }
                   if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { alert('Daily Budget harus lebih dari 0.'); return }
                   handleStep2Continue()
                 }}
@@ -900,18 +963,74 @@ export default function NewTestLaunchPage() {
                 </div>
               </div>
 
-              {/* Location */}
+              {/* Location — multi-country */}
               <div>
-                <label className={labelCls}>Location</label>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 rounded-lg border border-stone-200 text-sm">
-                  <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  </svg>
-                  <span className="text-stone-700">Indonesia</span>
-                  <span className="text-xs text-stone-400 ml-auto">Country · ID</span>
+                <label className={labelCls}>Location (Negara) <span className="text-red-500">*</span></label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {COUNTRY_OPTIONS.map((c) => {
+                    const selected = form.countries.includes(c.key)
+                    return (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          countries: selected
+                            ? f.countries.filter((k) => k !== c.key)
+                            : [...f.countries, c.key],
+                        }))}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                          selected
+                            ? 'border-violet-500 bg-violet-50 text-violet-700'
+                            : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                        }`}
+                      >
+                        {selected ? '✓ ' : ''}{c.label}
+                      </button>
+                    )
+                  })}
                 </div>
-                <p className="text-xs text-stone-400 mt-1">Location tingkat negara saja untuk saat ini.</p>
+                {form.countries.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Pilih minimal 1 negara.</p>
+                )}
+              </div>
+
+              {/* Custom Audiences */}
+              <div>
+                <label className={labelCls}>Custom Audiences (opsional)</label>
+                {customAudiences.length === 0 ? (
+                  <p className="text-xs text-stone-400 px-1">
+                    Belum ada custom audience yang READY. Buat dulu di menu Audiences — atau lanjut tanpa custom audience (broad targeting).
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {customAudiences.map((aud) => {
+                      const selected = form.customAudienceIds.includes(aud.id)
+                      return (
+                        <label
+                          key={aud.id}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
+                            selected ? 'border-violet-500 bg-violet-50' : 'border-stone-200 hover:bg-stone-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => setForm((f) => ({
+                              ...f,
+                              customAudienceIds: selected
+                                ? f.customAudienceIds.filter((id) => id !== aud.id)
+                                : [...f.customAudienceIds, aud.id],
+                            }))}
+                            className="rounded"
+                          />
+                          <span className="font-medium text-stone-700">{aud.name}</span>
+                          <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded ml-auto">{aud.type}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Summary */}
@@ -920,7 +1039,10 @@ export default function NewTestLaunchPage() {
                 <p className="text-stone-800">
                   Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
                   Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
-                  Lokasi <strong>Indonesia</strong>
+                  Lokasi <strong>{form.countries.map((k) => COUNTRY_OPTIONS.find((c) => c.key === k)?.label ?? k).join(', ') || '—'}</strong>
+                  {form.customAudienceIds.length > 0 && (
+                    <> · Custom Audience <strong>{form.customAudienceIds.length}</strong></>
+                  )}
                 </p>
               </div>
             </div>
@@ -1061,16 +1183,71 @@ export default function NewTestLaunchPage() {
                       )}
                     </div>
 
-                    {/* Image URL */}
+                    {/* Image/Video — dari Media Library atau URL */}
                     <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Image URL</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-medium text-stone-600">Media (Image/Video URL)</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowMediaPicker(showMediaPicker === creative.id ? null : creative.id)}
+                          className="text-xs text-violet-600 hover:underline font-medium"
+                        >
+                          {showMediaPicker === creative.id ? 'Tutup library' : '📁 Pilih dari Media Library'}
+                        </button>
+                      </div>
                       <input
                         type="url"
                         value={creative.imageUrl}
                         onChange={(e) => updateCreative(creative.id, 'imageUrl', e.target.value)}
                         className={inputCls}
-                        placeholder="https://..."
+                        placeholder="https://... atau pilih dari library"
                       />
+                      {showMediaPicker === creative.id && (
+                        <div className="mt-2 border border-stone-200 rounded-lg p-3 bg-white max-h-64 overflow-y-auto">
+                          {mediaAssets.length === 0 ? (
+                            <p className="text-xs text-stone-400 text-center py-4">
+                              Media library kosong. Upload dulu di menu Media Library.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                              {mediaAssets.map((asset) => {
+                                const url = asset.publicUrl ?? asset.fileUrl
+                                if (!url) return null
+                                const isSelected = creative.imageUrl === url
+                                return (
+                                  <button
+                                    key={asset.id}
+                                    type="button"
+                                    onClick={() => {
+                                      updateCreative(creative.id, 'imageUrl', url)
+                                      setShowMediaPicker(null)
+                                    }}
+                                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                      isSelected ? 'border-violet-500 ring-2 ring-violet-300' : 'border-stone-200 hover:border-violet-300'
+                                    }`}
+                                    title={asset.label ?? asset.type}
+                                  >
+                                    {asset.type === 'VIDEO' ? (
+                                      <div className="w-full h-full bg-stone-100 flex flex-col items-center justify-center">
+                                        {asset.thumbnailUrl ? (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img src={asset.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span className="text-lg">🎬</span>
+                                        )}
+                                        <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-black/60 text-white px-1 rounded">VID</span>
+                                      </div>
+                                    ) : (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={url} alt={asset.label ?? ''} className="w-full h-full object-cover" />
+                                    )}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Primary Text */}

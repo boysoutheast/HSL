@@ -65,6 +65,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'name and description are required' }, { status: 400 })
   }
 
+  // Non-admin: topic harus terikat ke salah satu resource milik user
+  // (tanpa ikatan = orphan yang nggak bisa di-trace ownership-nya)
+  if (auth.role !== 'admin') {
+    if (!body.instagramAccountId && !body.characterId && !body.productId) {
+      return NextResponse.json(
+        { error: 'Topic harus terikat ke instagramAccountId, characterId, atau productId' },
+        { status: 400 }
+      )
+    }
+    if (body.instagramAccountId) {
+      const acc = await prisma.instagramAccount.findFirst({
+        where: { id: body.instagramAccountId, createdByUserId: auth.id },
+        select: { id: true },
+      })
+      if (!acc) return NextResponse.json({ error: 'Instagram account not found' }, { status: 404 })
+    }
+    if (body.characterId) {
+      const char = await prisma.character.findFirst({
+        where: { id: body.characterId, instagramAccount: { createdByUserId: auth.id } },
+        select: { id: true },
+      })
+      if (!char) return NextResponse.json({ error: 'Character not found' }, { status: 404 })
+    }
+    if (body.productId) {
+      const product = await prisma.product.findFirst({
+        where: { id: body.productId, createdByUserId: auth.id },
+        select: { id: true },
+      })
+      if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    }
+  }
+
   const topic = await prisma.topic.create({
     data: {
       name: body.name,
