@@ -101,14 +101,21 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  // Batch fetch: snapshot terbaru per entity (hindari N+1)
+  const allSnapshots = await prisma.metricSnapshot.findMany({
+    where: { metaEntityId: { in: entities.map(e => e.id) } },
+    orderBy: { windowEnd: 'desc' },
+  })
+  const latestByEntity = new Map<string, typeof allSnapshots[number]>()
+  for (const s of allSnapshots) {
+    if (!latestByEntity.has(s.metaEntityId)) latestByEntity.set(s.metaEntityId, s)
+  }
+
   const now = Date.now()
   const results = []
 
   for (const entity of entities) {
-    const snapshot = await prisma.metricSnapshot.findFirst({
-      where: { metaEntityId: entity.id },
-      orderBy: { windowEnd: 'desc' },
-    })
+    const snapshot = latestByEntity.get(entity.id) ?? null
 
     const ctx: MetricContext = {
       spend: snapshot?.spend ?? null,

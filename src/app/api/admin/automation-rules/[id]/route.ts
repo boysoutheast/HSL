@@ -54,7 +54,12 @@ export async function PATCH(
     status?: string
     name?: string
     description?: string
+    scope?: string
+    ruleCategory?: string
     conditionTreeJson?: Record<string, unknown>
+    actionSpecJson?: Record<string, unknown>
+    cooldownMinutes?: number
+    campaignSessionId?: string | null
     fireCount?: number
     lastFiredAt?: string
   }
@@ -80,6 +85,13 @@ export async function PATCH(
   if (body.conditionTreeJson) {
     updateData.conditionTreeJson = JSON.stringify(body.conditionTreeJson)
   }
+  if (body.actionSpecJson) {
+    updateData.actionSpecJson = JSON.stringify(body.actionSpecJson)
+  }
+  if (body.scope) updateData.scope = body.scope
+  if (body.ruleCategory) updateData.ruleCategory = body.ruleCategory
+  if (body.cooldownMinutes !== undefined) updateData.cooldownMinutes = body.cooldownMinutes
+  if (body.campaignSessionId !== undefined) updateData.campaignSessionId = body.campaignSessionId || null
   // Allow worker to update fireCount and lastFiredAt
   if (body.fireCount !== undefined) updateData.fireCount = body.fireCount
   if (body.lastFiredAt !== undefined) updateData.lastFiredAt = new Date(body.lastFiredAt)

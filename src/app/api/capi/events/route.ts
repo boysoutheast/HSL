@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decode } from '@/lib/crypto'
 import { sendCapiEvents, type CapiEvent } from '@/lib/meta-graph'
+import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   if (!body?.configId || !Array.isArray(body.events) || body.events.length === 0) {
     return NextResponse.json({ error: 'configId and events[] are required' }, { status: 400 })
+  }
+
+  // Rate limit: 120 request/menit per configId+IP (public endpoint — abuse guard)
+  const rl = checkRateLimit(`capi:${body.configId}:${getRateLimitKey(req, 'capi')}`, 120, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Rate limited' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    )
   }
   if (body.events.length > 100) {
     return NextResponse.json({ error: 'Max 100 events per request' }, { status: 400 })
@@ -24,19 +34,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Config not found or inactive' }, { status: 404 })
   }
 
-  // Validasi & sanitasi event
+  // Validasi & sanitasi event — event invalid di-skip (partial batch), bukan reject semua
   const nowSec = Math.floor(Date.now() / 1000)
   const events: CapiEvent[] = []
+  const skipped: string[] = []
   for (const ev of body.events) {
     if (!ev.event_name || !config.allowedEvents.includes(ev.event_name)) {
-      return NextResponse.json(
-        { error: `Event "${ev.event_name}" not allowed. Allowed: ${config.allowedEvents.join(', ')}` },
-        { status: 400 }
-      )
+      skipped.push(String(ev.event_name ?? 'unknown'))
+      continue
+    }
+    // event_time wajar: max 7 hari ke belakang, 1 menit ke depan (Meta reject di luar itu)
+    const evTime = typeof ev.event_time === 'number' ? ev.event_time : nowSec
+    if (evTime < nowSec - 7 * 24 * 3600 || evTime > nowSec + 60) {
+      skipped.push(`${ev.event_name} (invalid event_time)`)
+      continue
     }
     events.push({
       event_name: ev.event_name,
-      event_time: typeof ev.event_time === 'number' ? ev.event_time : nowSec,
+      event_time: evTime,
       event_id: ev.event_id,
       event_source_url: ev.event_source_url,
       action_source: ev.action_source ?? 'website',
@@ -53,8 +68,22 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  if (events.length === 0) {
+    return NextResponse.json(
+      { error: 'No valid events', skipped, allowed: config.allowedEvents },
+      { status: 400 }
+    )
+  }
+
+  let token: string
   try {
-    const token = decode(config.accessTokenEncrypted)
+    token = decode(config.accessTokenEncrypted)
+  } catch (err) {
+    console.error(`[capi] decode failed for config ${config.id}:`, err)
+    return NextResponse.json({ error: 'Config token corrupt — re-save access token' }, { status: 500 })
+  }
+
+  try {
     const result = await sendCapiEvents(config.pixelId, token, events, config.testEventCode)
 
     await prisma.capiEventConfig.update({
@@ -93,6 +122,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       eventsReceived: result.events_received ?? events.length,
+      ...(skipped.length > 0 ? { skipped } : {}),
       fbtraceId: result.fbtrace_id,
     })
   } catch (err) {

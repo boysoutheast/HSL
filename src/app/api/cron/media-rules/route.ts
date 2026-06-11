@@ -91,13 +91,14 @@ export async function POST(req: NextRequest) {
     let taskId: string | undefined
 
     if (rule.actionType === 'CREATE_TASK') {
-      // Dedup: jangan buat task baru kalau masih ada task pending dari rule ini
+      // Dedup: jangan buat task baru kalau masih ada task pending dari rule ini.
+      // Match string lengkap dengan quote penutup supaya tidak kena substring rule lain.
       const dedupeKey = `media_rule:${rule.id}`
       const existing = await prisma.workerTask.findFirst({
         where: {
           type: rule.taskType ?? 'GENERATE_VIDEO',
           status: { in: ['pending', 'processing'] },
-          payloadJson: { contains: dedupeKey },
+          payloadJson: { contains: `"dedupeKey":"${dedupeKey}"` },
         },
         select: { id: true },
       })
@@ -107,7 +108,10 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      const extraPayload = rule.taskPayloadJson ? JSON.parse(rule.taskPayloadJson) : {}
+      let extraPayload: Record<string, unknown> = {}
+      if (rule.taskPayloadJson) {
+        try { extraPayload = JSON.parse(rule.taskPayloadJson) } catch { /* payload corrupt — lanjut tanpa extra */ }
+      }
       const task = await prisma.workerTask.create({
         data: {
           type: rule.taskType ?? 'GENERATE_VIDEO',

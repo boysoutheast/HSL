@@ -66,8 +66,20 @@ export async function POST(
   const clicks = Number(body.clicks ?? 0)
   const conversions = Number(body.conversions ?? 0)
   const revenue = Number(body.revenue ?? 0)
-  if (clicks < 0 || conversions < 0 || revenue < 0) {
-    return NextResponse.json({ error: 'Values must be >= 0' }, { status: 400 })
+  if (clicks < 0 || conversions < 0 || revenue < 0 || [clicks, conversions, revenue].some(isNaN)) {
+    return NextResponse.json({ error: 'Values must be numbers >= 0' }, { status: 400 })
+  }
+
+  const VALID_SOURCES = ['manual', 'capi', 'organic', 'meta_ad', 'hermes_post']
+  if (body.source && !VALID_SOURCES.includes(body.source)) {
+    return NextResponse.json({ error: `source must be one of: ${VALID_SOURCES.join(', ')}` }, { status: 400 })
+  }
+
+  if (body.date) {
+    const d = new Date(body.date)
+    if (isNaN(d.getTime()) || d.getFullYear() < 2020 || d.getTime() > Date.now() + 24 * 3600 * 1000) {
+      return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
+    }
   }
 
   const stat = await prisma.landingPageStat.create({

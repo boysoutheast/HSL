@@ -66,6 +66,12 @@ export async function POST(
 
   if (body.mediaAsset?.fileUrl && payload?.userId) {
     const ma = body.mediaAsset
+    if (!ma.type || !['IMAGE', 'VIDEO'].includes(ma.type)) {
+      return NextResponse.json({ error: 'mediaAsset.type must be IMAGE or VIDEO' }, { status: 400 })
+    }
+    if (typeof ma.fileUrl !== 'string' || !ma.fileUrl.startsWith('http')) {
+      return NextResponse.json({ error: 'mediaAsset.fileUrl must be a valid URL' }, { status: 400 })
+    }
     const asset = await prisma.mediaAsset.create({
       data: {
         userId: payload.userId,

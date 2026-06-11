@@ -61,7 +61,8 @@ export async function getMetaToken(userId: string, metaAccountId?: string): Prom
   if (!account?.longLivedTokenEncrypted) return null
   try {
     return { token: decode(account.longLivedTokenEncrypted), accountId: account.id }
-  } catch {
+  } catch (err) {
+    console.error(`[meta-graph] token decode failed for user ${userId} (key rotation?):`, err)
     return null
   }
 }

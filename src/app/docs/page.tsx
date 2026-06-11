@@ -2,41 +2,78 @@
 
 import { useState } from 'react'
 
-const BASE = 'https://hermes-support-web-production.up.railway.app'
+const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
+
+type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'capi' | 'admin'
+
+function Code({ children }: { children: string }) {
+  return (
+    <pre className="bg-stone-900 text-stone-100 text-xs rounded-xl p-4 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+      {children}
+    </pre>
+  )
+}
+
+function Endpoint({ method, path, desc }: { method: string; path: string; desc: string }) {
+  const colors: Record<string, string> = {
+    GET: 'bg-emerald-100 text-emerald-700',
+    POST: 'bg-blue-100 text-blue-700',
+    PATCH: 'bg-amber-100 text-amber-700',
+    DELETE: 'bg-red-100 text-red-700',
+  }
+  return (
+    <div className="flex items-start gap-2 py-1.5">
+      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${colors[method] ?? 'bg-stone-100'}`}>{method}</span>
+      <div className="min-w-0">
+        <code className="text-xs font-mono text-stone-800 break-all">{path}</code>
+        <p className="text-xs text-stone-500">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
+      <h2 className="text-sm font-bold text-stone-900 mb-3">{title}</h2>
+      {children}
+    </div>
+  )
+}
 
 export default function DocsPage() {
-  const [tab, setTab] = useState<'auth' | 'produk' | 'foto' | 'cep'>('produk')
+  const [tab, setTab] = useState<TabKey>('auth')
 
-  const tabs = [
+  const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'auth', label: '🔑 Auth' },
-    { key: 'produk', label: '🛍️ Baca Produk' },
-    { key: 'foto', label: '🖼️ Ambil Foto' },
-    { key: 'cep', label: '💡 CEP' },
-  ] as const
+    { key: 'library', label: '📚 Library' },
+    { key: 'tasks', label: '⚡ Task Queue' },
+    { key: 'content', label: '🛍️ Content' },
+    { key: 'capi', label: '📡 CAPI' },
+    { key: 'admin', label: '🛠 Admin API' },
+  ]
 
   return (
     <div className="min-h-screen bg-stone-50">
-      {/* Header */}
       <div className="bg-white border-b border-stone-200 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-bold">H</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-stone-900">Hermes API — Panduan Singkat</h1>
-            <p className="text-xs text-stone-500">{BASE}/api/hermes/</p>
+            <h1 className="text-lg font-bold text-stone-900">HSL API — Dokumentasi</h1>
+            <p className="text-xs text-stone-500">{BASE}</p>
           </div>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* Tab navigation */}
-        <div className="flex gap-1 bg-white border border-stone-200 rounded-xl p-1 mb-6">
+        <div className="flex flex-wrap gap-1 bg-white border border-stone-200 rounded-xl p-1 mb-6">
           {tabs.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`flex-1 min-w-[100px] py-2 text-sm font-medium rounded-lg transition-colors ${
                 tab === key ? 'bg-violet-600 text-white' : 'text-stone-600 hover:bg-stone-50'
               }`}
             >
@@ -45,333 +82,226 @@ export default function DocsPage() {
           ))}
         </div>
 
-        {tab === 'auth' && <AuthTab />}
-        {tab === 'produk' && <ProdukTab />}
-        {tab === 'foto' && <FotoTab />}
-        {tab === 'cep' && <CepTab />}
-      </div>
-    </div>
-  )
-}
+        {/* ── AUTH ── */}
+        {tab === 'auth' && (
+          <>
+            <Section title="Hermes Agent — Bearer Token">
+              <p className="text-sm text-stone-600 mb-3">
+                Semua endpoint <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> pakai
+                API key agent (dibuat admin di halaman Agents). Kirim sebagai Bearer token.
+              </p>
+              <Code>{`curl -H "Authorization: Bearer hsl_xxxxxxxx" \\
+  ${BASE}/api/hermes/library`}</Code>
+              <p className="text-xs text-stone-500 mt-2">
+                Response selalu difilter berdasarkan assignment agent (akun, character, topic, product, CEP).
+              </p>
+            </Section>
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+            <Section title="Admin Dashboard — Session Cookie">
+              <p className="text-sm text-stone-600 mb-2">
+                Login via email+password atau <strong>Sign in with Google</strong>. Session cookie 8 jam.
+              </p>
+              <Endpoint method="POST" path="/api/admin/auth/login" desc="Body: { email, password }" />
+              <Endpoint method="GET" path="/api/admin/auth/google" desc="Redirect ke Google OAuth (perlu GOOGLE_CLIENT_ID/SECRET)" />
+              <Endpoint method="POST" path="/api/admin/auth/logout" desc="Hapus session" />
+            </Section>
 
-function AuthTab() {
-  return (
-    <div className="space-y-4">
-      <Card title="API Key">
-        <p className="text-sm text-stone-700 mb-3">
-          Semua endpoint Hermes memerlukan API Key. Dapatkan dari halaman{' '}
-          <strong>Admin → Agents → buat agent → copy API key</strong>.
-        </p>
-        <Pre>{`Authorization: Bearer YOUR_API_KEY_HERE`}</Pre>
-      </Card>
-      <Card title="Base URL">
-        <Pre>{`${BASE}`}</Pre>
-        <p className="text-xs text-stone-500 mt-2">
-          Semua endpoint dimulai dengan:{' '}
-          <code className="bg-stone-100 px-1 rounded">/api/hermes/</code>
-        </p>
-      </Card>
-      <Card title="Response jika tidak ada / salah API key">
-        <Pre>{`HTTP 401
-{ "error": "Missing authorization" }
-{ "error": "Invalid or inactive API key" }`}</Pre>
-      </Card>
-    </div>
-  )
-}
+            <Section title="Meta — Facebook Login for Business">
+              <p className="text-sm text-stone-600 mb-2">
+                Connect akun Meta tanpa paste token manual. Klik <strong>Connect with Facebook</strong> di
+                halaman Meta Connections → OAuth → token long-lived (60 hari) disimpan terenkripsi +
+                auto-sync Business, Ad Accounts, Pages, IG.
+              </p>
+              <Endpoint method="GET" path="/api/admin/meta-oauth/start" desc="Mulai OAuth flow (perlu META_APP_ID/SECRET, opsional META_LOGIN_CONFIG_ID)" />
+              <Endpoint method="GET" path="/api/admin/meta-oauth/callback" desc="Callback — jangan dipanggil manual" />
+            </Section>
 
-// ─── Produk ───────────────────────────────────────────────────────────────────
+            <Section title="Cron — x-cron-secret">
+              <Code>{`curl -X POST -H "x-cron-secret: $CRON_SECRET" \\
+  ${BASE}/api/cron/media-rules`}</Code>
+              <div className="mt-2">
+                <Endpoint method="POST" path="/api/cron/posting-monitor" desc="Evaluasi posting monitor" />
+                <Endpoint method="POST" path="/api/cron/media-rules" desc="Evaluasi media auto top-up rules (jalankan tiap jam)" />
+                <Endpoint method="POST" path="/api/cron/fetch-metrics" desc="Tarik metrics" />
+                <Endpoint method="POST" path="/api/cron/cleanup-locks" desc="Bersihkan lock expired" />
+              </div>
+            </Section>
+          </>
+        )}
 
-function ProdukTab() {
-  return (
-    <div className="space-y-4">
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-        <strong>Cara kerja:</strong> Produk yang sudah di-assign ke agent kamu tersedia di endpoint{' '}
-        <code className="bg-blue-100 px-1 rounded">/api/hermes/library</code>. Field{' '}
-        <code className="bg-blue-100 px-1 rounded">description</code> berisi semua informasi produk
-        yang kamu butuhkan untuk generate konten.
-      </div>
-
-      <Card title="GET /api/hermes/library — Ambil semua produk">
-        <Pre>{`GET ${BASE}/api/hermes/library
-Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-stone-600 mt-3 mb-2">Response — bagian products:</p>
-        <Pre>{`{
+        {/* ── LIBRARY ── */}
+        {tab === 'library' && (
+          <>
+            <Section title="GET /api/hermes/library">
+              <p className="text-sm text-stone-600 mb-3">
+                Satu endpoint untuk semua data assigned: akun IG, characters, topics, CEPs, products
+                (termasuk <strong>landingPages</strong>), photo references, dan <strong>mediaAssets</strong> (foto+video).
+              </p>
+              <Code>{`{
+  "agent": { "id": "...", "name": "Worker A" },
   "library": {
-    "products": [
-      {
-        "id": "clprod123",
-        "name": "Taracare Diabe Lotion",
-        "description": "Body lotion untuk kulit kering. Mengandung urea 10% dan aloe vera. Cocok untuk penderita diabetes dengan kulit sensitif. Gunakan 2x sehari setelah mandi.",
-        "price": "75000",
-        "shopeeUrl": "https://s.shopee.co.id/6Ai6QHAe9x",
-        "mainBenefit": "Melembabkan kulit kering dalam 3 hari",
-        "status": "active",
-        "photoReferences": [
-          {
-            "id": "clphoto456",
-            "fileUrl": "https://hermes-support-web-production.up.railway.app/api/photos/serve/photos/uuid.jpg",
-            "label": "Product shot depan",
-            "category": "product"
-          }
-        ]
-      }
+    "instagramAccounts": [...],
+    "characters": [...],
+    "topics": [...],
+    "ceps": [...],
+    "products": [{
+      "id": "...", "name": "...",
+      "landingPages": [
+        { "url": "https://...", "variant": "A", "type": "shopee", "isDefault": true }
+      ]
+    }],
+    "mediaAssets": [
+      { "type": "VIDEO", "fileUrl": "https://...", "duration": 23.5, "aspectRatio": "9:16" }
     ]
   }
-}`}</Pre>
-        <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
-          💡 <strong>
-            Gunakan field <code className="bg-green-100 px-1 rounded">description</code> sebagai konteks utama.
-          </strong>{' '}
-          Isi selengkap mungkin di admin (nama, manfaat, kandungan, cara pakai, target audience).
-          Semakin lengkap deskripsi, semakin bagus konten yang bisa dihasilkan Hermes.
-        </div>
-      </Card>
-    </div>
-  )
-}
+}`}</Code>
+            </Section>
 
-// ─── Foto ─────────────────────────────────────────────────────────────────────
+            <Section title="Endpoint Library Lain">
+              <Endpoint method="GET" path="/api/hermes/ready-upload" desc="Akun berikutnya yang siap di-post (polling lama, masih jalan)" />
+              <Endpoint method="GET" path="/api/hermes/photos" desc="Foto referensi assigned" />
+              <Endpoint method="GET" path="/api/hermes/ceps" desc="CEP assigned" />
+            </Section>
+          </>
+        )}
 
-function FotoTab() {
-  return (
-    <div className="space-y-4">
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-        <strong>Cara kerja:</strong> Foto tersedia di dua tempat — sudah ikut serta di response{' '}
-        <code className="bg-blue-100 px-1 rounded">/library</code> (di field{' '}
-        <code className="bg-blue-100 px-1 rounded">photoReferences</code>), atau bisa fetch langsung
-        per produk/karakter.
-      </div>
+        {/* ── TASKS ── */}
+        {tab === 'tasks' && (
+          <>
+            <Section title="Task Queue — Generate Konten On-Demand">
+              <p className="text-sm text-stone-600 mb-3">
+                Media Rules / admin bikin task (GENERATE_VIDEO, GENERATE_PHOTO, CAPTION_ONLY, dll).
+                Worker claim → kerjakan → complete dengan hasil. Claim bersifat atomic — dua worker
+                tidak bisa dapat task yang sama.
+              </p>
+              <Endpoint method="GET" path="/api/hermes/tasks?types=GENERATE_VIDEO,GENERATE_PHOTO" desc="List task pending (max 10)" />
+              <Endpoint method="POST" path="/api/hermes/tasks" desc="Claim task. Body: { taskId?, types? } — kosongkan untuk auto-pick" />
+              <Endpoint method="POST" path="/api/hermes/tasks/[id]" desc="Update lifecycle. Body: { action: 'complete'|'fail', ... }" />
+            </Section>
 
-      <Card title="Opsi A — Foto sudah ada di /library">
-        <p className="text-sm text-stone-600 mb-2">
-          Setiap produk dan karakter di response /library sudah include array{' '}
-          <code className="bg-stone-100 px-1 rounded">photoReferences</code>. Gunakan langsung.
-        </p>
-        <Pre>{`// Dari response /library:
-product.photoReferences[0].fileUrl
-// → "https://hermes-support-web-production.up.railway.app/api/photos/serve/photos/uuid.jpg"
+            <Section title="Contoh: Claim → Complete">
+              <Code>{`# 1. Claim
+curl -X POST -H "Authorization: Bearer hsl_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{"types":["GENERATE_VIDEO"]}' \\
+  ${BASE}/api/hermes/tasks
 
-// Download fotonya:
-const res = await fetch(fileUrl)
-const buffer = await res.arrayBuffer()`}</Pre>
-      </Card>
+# → { "task": { "id": "task_123", "type": "GENERATE_VIDEO", "payload": {...} } }
 
-      <Card title="Opsi B — GET /api/hermes/photos (fetch per entitas)">
-        <p className="text-sm text-stone-600 mb-2">
-          Kalau butuh foto spesifik untuk satu produk atau karakter:
-        </p>
-        <Pre>{`// Foto produk:
-GET ${BASE}/api/hermes/photos?productId=clprod123
-Authorization: Bearer YOUR_API_KEY
-
-// Foto karakter:
-GET ${BASE}/api/hermes/photos?characterId=clchar456
-Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-stone-600 mt-3 mb-2">Response:</p>
-        <Pre>{`{
-  "photos": [
-    {
-      "id": "clphoto456",
-      "fileUrl": "https://hermes-support-web-production.up.railway.app/api/photos/serve/photos/uuid.jpg",
-      "label": "Product shot depan",
-      "category": "product",
-      "createdAt": "2026-05-28T10:00:00.000Z"
+# 2. Selesai — daftarkan hasil video sebagai MediaAsset
+curl -X POST -H "Authorization: Bearer hsl_xxx" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "action": "complete",
+    "result": { "note": "video 23s, hook variant B" },
+    "mediaAsset": {
+      "fileUrl": "https://cdn.example.com/video.mp4",
+      "type": "VIDEO",
+      "mimeType": "video/mp4",
+      "fileSizeBytes": 1048576,
+      "duration": 23.5,
+      "aspectRatio": "9:16",
+      "label": "Auto top-up video"
     }
-  ],
-  "count": 1
-}`}</Pre>
-        <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
-          💡 <code className="bg-green-100 px-1 rounded">fileUrl</code> adalah URL absolut — langsung
-          bisa di-fetch/download. Gunakan sebagai referensi visual saat generate gambar konten.
-        </div>
-      </Card>
-    </div>
-  )
-}
+  }' \\
+  ${BASE}/api/hermes/tasks/task_123
 
-// ─── CEP ──────────────────────────────────────────────────────────────────────
+# Gagal? action: "fail" + error → auto-retry sampai maxAttempts, lalu dead letter.`}</Code>
+            </Section>
+          </>
+        )}
 
-function CepTab() {
-  return (
-    <div className="space-y-4">
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-        <strong>CEP (Customer Entry Point)</strong> — kalimat pembuka konten yang menyentuh pain point.
-        Hermes membaca CEP yang aktif, dan bisa langsung menulis CEP baru yang otomatis aktif.
+        {/* ── CONTENT ── */}
+        {tab === 'content' && (
+          <>
+            <Section title="Submit Hasil Konten">
+              <Endpoint method="POST" path="/api/hermes/content-log" desc="Log hasil generate/post. Body: accountId, characterId?, topicId?, cepId?, contentType, caption, mediaUrl, postUrl..." />
+              <Endpoint method="POST" path="/api/hermes/cep-feedback" desc="Submit CEP baru untuk review admin. Body: { topicId, cepText, painPoint?, angle? }" />
+            </Section>
+            <Section title="Produk & Landing Pages">
+              <p className="text-sm text-stone-600 mb-2">
+                Produk di library response include <code className="text-xs bg-stone-100 px-1 rounded">landingPages[]</code> —
+                pakai LP dengan <code className="text-xs bg-stone-100 px-1 rounded">isDefault: true</code> untuk CTA,
+                atau variant lain kalau task payload menyebut variant tertentu (A/B testing).
+              </p>
+            </Section>
+          </>
+        )}
+
+        {/* ── CAPI ── */}
+        {tab === 'capi' && (
+          <>
+            <Section title="CAPI Proxy — Conversion Tracking Tanpa Expose Token">
+              <p className="text-sm text-stone-600 mb-3">
+                Endpoint publik. Admin buat config di dashboard (pixel ID + access token, disimpan
+                terenkripsi) → dapat <code className="text-xs bg-stone-100 px-1 rounded">configId</code>.
+                Landing page tinggal POST event ke sini, HSL forward ke Meta CAPI (v25.0).
+                Rate limit 120 req/menit. Event invalid di-skip, bukan reject semua.
+              </p>
+              <Endpoint method="POST" path="/api/capi/events" desc="Body: { configId, events: [...] } — max 100 event/request" />
+              <Code>{`curl -X POST -H "Content-Type: application/json" \\
+  -d '{
+    "configId": "clxxx...",
+    "events": [{
+      "event_name": "Purchase",
+      "action_source": "website",
+      "event_source_url": "https://lp.example.com/produk",
+      "user_data": { "em": ["<sha256 email>"] },
+      "custom_data": { "value": 150000, "currency": "IDR" }
+    }]
+  }' \\
+  ${BASE}/api/capi/events`}</Code>
+              <p className="text-xs text-stone-500 mt-2">
+                Kalau config terhubung ke Landing Page, conversion otomatis tercatat di LP stats.
+              </p>
+            </Section>
+          </>
+        )}
+
+        {/* ── ADMIN ── */}
+        {tab === 'admin' && (
+          <>
+            <Section title="Catatan">
+              <p className="text-sm text-stone-600">
+                Semua endpoint admin pakai session cookie (login dulu). Data difilter per ownership —
+                admin lihat semua, user lihat miliknya sendiri.
+              </p>
+            </Section>
+            <Section title="Landing Pages & Stats">
+              <Endpoint method="GET" path="/api/admin/products/[id]/landing-pages" desc="List LP per produk" />
+              <Endpoint method="POST" path="/api/admin/products/[id]/landing-pages" desc="Tambah LP variant" />
+              <Endpoint method="PATCH" path="/api/admin/landing-pages/[lpId]" desc="Update / set default / pause" />
+              <Endpoint method="GET" path="/api/admin/landing-pages/[lpId]/stats" desc="Stats + summary (clicks, conversions, CR, revenue)" />
+              <Endpoint method="POST" path="/api/admin/landing-pages/[lpId]/stats" desc="Record stat manual" />
+            </Section>
+            <Section title="Automation Rules">
+              <Endpoint method="GET" path="/api/admin/automation-rules" desc="List rules" />
+              <Endpoint method="POST" path="/api/admin/automation-rules" desc="Buat rule (custom condition tree + multi-action)" />
+              <Endpoint method="POST" path="/api/admin/automation-rules/dry-run" desc="Preview: entity mana yang match kondisi" />
+              <Endpoint method="GET" path="/api/admin/rule-templates" desc="Template builtin + custom" />
+              <Endpoint method="POST" path="/api/admin/rule-templates" desc="Save rule sebagai template" />
+            </Section>
+            <Section title="Media Rules (Auto Top-up)">
+              <Endpoint method="GET" path="/api/admin/media-rules" desc="List rules" />
+              <Endpoint method="POST" path="/api/admin/media-rules" desc="Buat rule (MIN_COUNT / MAX_AGE_DAYS / NO_WINNER)" />
+              <Endpoint method="PATCH" path="/api/admin/media-rules/[id]" desc="Update / pause" />
+            </Section>
+            <Section title="Meta — Audiences, Catalogs, Tools">
+              <Endpoint method="GET" path="/api/admin/meta-audiences" desc="List custom + lookalike audiences" />
+              <Endpoint method="POST" path="/api/admin/meta-audiences" desc="Buat audience (dispatch ke worker)" />
+              <Endpoint method="GET" path="/api/admin/meta-catalogs" desc="List catalogs (CPAS foundation)" />
+              <Endpoint method="POST" path="/api/admin/meta-catalogs/[id]" desc="Buat product set di catalog" />
+              <Endpoint method="GET" path="/api/admin/meta-tools/ad-preview?adId=..&format=INSTAGRAM_REELS" desc="Preview ad per placement" />
+              <Endpoint method="GET" path="/api/admin/meta-tools/ad-library?q=skincare&country=ID" desc="Cari ads kompetitor di Meta Ad Library" />
+              <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
+              <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
+            </Section>
+            <Section title="Worker Tasks">
+              <Endpoint method="GET" path="/api/admin/worker-tasks?status=pending" desc="Monitor antrian task + counts per status" />
+            </Section>
+          </>
+        )}
       </div>
-
-      <Card title="READ — GET /api/hermes/ceps">
-        <p className="text-sm text-stone-600 mb-2">Ambil semua CEP aktif untuk topik atau produk tertentu:</p>
-        <Pre>{`// Semua CEP dari produk/topik yang di-assign ke kamu:
-GET ${BASE}/api/hermes/ceps
-Authorization: Bearer YOUR_API_KEY
-
-// Filter by produk:
-GET ${BASE}/api/hermes/ceps?productId=clprod123
-Authorization: Bearer YOUR_API_KEY
-
-// Filter by topik:
-GET ${BASE}/api/hermes/ceps?topicId=cltopic123
-Authorization: Bearer YOUR_API_KEY
-
-// Dengan pagination:
-GET ${BASE}/api/hermes/ceps?limit=50&offset=0
-Authorization: Bearer YOUR_API_KEY`}</Pre>
-        <p className="text-sm text-stone-600 mt-3 mb-2">Query parameters (opsional):</p>
-        <table className="w-full text-xs border-collapse mb-3">
-          <thead>
-            <tr className="bg-stone-50">
-              <th className="text-left p-2 border border-stone-200">Parameter</th>
-              <th className="text-left p-2 border border-stone-200">Type</th>
-              <th className="text-left p-2 border border-stone-200">Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {([
-              ['productId', 'string', 'Filter CEP by produk tertentu'],
-              ['topicId',   'string', 'Filter CEP by topik tertentu'],
-              ['limit',     'number', 'Max hasil (default: 100, max: 200)'],
-              ['offset',    'number', 'Skip N hasil — untuk pagination'],
-            ] as [string, string, string][]).map(([p, t, d]) => (
-              <tr key={p}>
-                <td className="p-2 border border-stone-200 font-mono">{p}</td>
-                <td className="p-2 border border-stone-200 text-stone-500">{t}</td>
-                <td className="p-2 border border-stone-200">{d}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="text-sm text-stone-600 mb-2">Response:</p>
-        <Pre>{`{
-  "ceps": [
-    {
-      "id": "clcep789",
-      "cepText": "Tumit pecah — malu pakai sandal jepit",
-      "painPoint": "Social embarrassment",
-      "angle": "fear",
-      "source": "human",
-      "status": "active",
-      "createdByHermesId": null,
-      "topicId": null,
-      "productId": "clprod123",
-      "topic": null,
-      "product": { "name": "Lotion Diabetes" }
-    }
-  ],
-  "total": 19,
-  "limit": 100,
-  "offset": 0
-}`}</Pre>
-        <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
-          ✅ Return <strong>semua</strong> CEP active dari produk/topik yang di-assign — baik yang
-          dibuat manual (human) maupun oleh Hermes (ai). Field{' '}
-          <code className="bg-green-100 px-1 rounded">total</code> adalah jumlah keseluruhan
-          (sebelum pagination).
-        </div>
-      </Card>
-
-      <Card title="WRITE — POST /api/hermes/ceps">
-        <p className="text-sm text-stone-600 mb-2">
-          Ketika kamu menemukan hook yang bagus, simpan ke sistem — langsung aktif, tidak perlu review:
-        </p>
-        <Pre>{`POST ${BASE}/api/hermes/ceps
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-
-{
-  "topicId": "cltopic123",
-  "cepText": "Udah 3 bulan nyoba semua produk tapi kulit tetap kusam? Ini yang mungkin kamu skip.",
-  "angle": "curiosity"
-}`}</Pre>
-        <p className="text-sm text-stone-600 mt-3 mb-2">Field yang tersedia:</p>
-        <table className="w-full text-xs border-collapse mb-3">
-          <thead>
-            <tr className="bg-stone-50">
-              <th className="text-left p-2 border border-stone-200">Field</th>
-              <th className="text-left p-2 border border-stone-200">Wajib</th>
-              <th className="text-left p-2 border border-stone-200">Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            {([
-              ['cepText', '✅', 'Kalimat hook-nya — tulis selengkap mungkin'],
-              ['topicId', '⚠️ atau productId', 'ID topik yang relevan'],
-              ['productId', '⚠️ atau topicId', 'ID produk jika CEP langsung untuk promosi produk'],
-              ['angle', '❌', 'fear | curiosity | aspiration | social_proof'],
-              ['notes', '❌', 'Catatan tambahan'],
-            ] as [string, string, string][]).map(([f, r, d]) => (
-              <tr key={f}>
-                <td className="p-2 border border-stone-200 font-mono">{f}</td>
-                <td className="p-2 border border-stone-200">{r}</td>
-                <td className="p-2 border border-stone-200">{d}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <Pre>{`// Response 201 — berhasil:
-{
-  "cep": {
-    "id": "cep_abc123",
-    "cepText": "Udah 3 bulan nyoba semua...",
-    "status": "active",
-    "source": "ai",
-    "createdByHermesId": "agent_xyz"
-  },
-  "message": "CEP created and active"
-}`}</Pre>
-        <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
-          💡 CEP yang kamu submit langsung <strong>active</strong> — bisa langsung digunakan di konten
-          berikutnya. Field{' '}
-          <code className="bg-green-100 px-1 rounded">source: &quot;ai&quot;</code> dan{' '}
-          <code className="bg-green-100 px-1 rounded">createdByHermesId</code> otomatis dicatat
-          sebagai log bahwa CEP ini dibuat Hermes.
-        </div>
-      </Card>
-
-      <Card title="DELETE /api/hermes/ceps/:id — Nonaktifkan CEP">
-        <p className="text-sm text-stone-600 mb-3">
-          Soft-delete sebuah CEP — status diubah ke{' '}
-          <code className="bg-stone-100 px-1 rounded text-xs">inactive</code>. Data tidak dihapus
-          permanen, tetap tercatat di log.
-        </p>
-        <Pre>{`curl -X DELETE ${BASE}/api/hermes/ceps/CEP_ID \\
-  -H "Authorization: Bearer YOUR_API_KEY"`}</Pre>
-        <p className="text-sm text-stone-600 mt-3 mb-2">Response 200:</p>
-        <Pre>{`{
-  "cep": {
-    "id": "cep_abc123",
-    "status": "inactive",
-    "cepText": "Tumit pecah — malu pakai sandal jepit"
-  },
-  "message": "CEP deactivated"
-}`}</Pre>
-        <div className="mt-3 p-3 bg-yellow-50 rounded-lg text-sm text-yellow-800">
-          ⚠️ CEP yang di-deactivate tidak akan muncul di{' '}
-          <code className="bg-yellow-100 px-1 rounded">GET /ceps</code> berikutnya. Gunakan ini untuk
-          CEP yang sudah tidak relevan atau sudah terlalu banyak dipakai.
-        </div>
-      </Card>
     </div>
-  )
-}
-
-// ─── UI helpers ───────────────────────────────────────────────────────────────
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white border border-stone-200 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-stone-800 mb-3">{title}</h3>
-      {children}
-    </div>
-  )
-}
-
-function Pre({ children }: { children: string }) {
-  return (
-    <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto font-mono whitespace-pre-wrap leading-relaxed">
-      {children}
-    </pre>
   )
 }

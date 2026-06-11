@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/api/admin/auth/login',
   '/api/admin/auth/logout',
   '/api/admin/auth/register',
+  '/api/admin/auth/google',
   '/api/health',
 ]
 
