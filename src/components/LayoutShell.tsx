@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import TopNav from './TopNav'
+import Sidebar from './Sidebar'
 
 interface CurrentUser {
   id: string
@@ -37,9 +37,13 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   if (noShell) return <>{children}</>
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-stone-950">
-      <TopNav onLogout={handleLogout} user={currentUser} />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
+    <div className="flex min-h-screen bg-[#f8f7f6] dark:bg-stone-950">
+      <Sidebar user={currentUser} onLogout={handleLogout} />
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }

@@ -5,33 +5,34 @@ interface StatusBadgeProps {
 }
 
 const statusMap: Record<string, string> = {
-  // Generic
   active: 'badge-active',
   inactive: 'badge-inactive',
   pending: 'badge-pending',
   error: 'badge-error',
-
-  // PostingMonitor statuses
   READY_UPLOAD: 'badge-ready',
   STILL_GROWING: 'badge-growing',
   HOT_VIDEO: 'badge-hot',
   NEED_NEW_VIDEO: 'badge-inactive',
   WAITING: 'badge-inactive',
   ERROR: 'badge-error',
-
-  // CEP statuses
   pending_review: 'badge-pending',
   rejected: 'badge-error',
-
-  // Hermes Agent statuses
   monitoring: 'badge-monitoring',
+  connected: 'badge-connected',
+  expired: 'badge-expired',
+  reconnect_needed: 'badge-reconnect',
+  revoked: 'badge-revoked',
+  READY: 'badge-ready',
+  PROCESSING: 'badge-monitoring',
+  FAILED: 'badge-error',
+  DRAFT: 'badge-inactive',
 }
 
 const statusLabel: Record<string, string> = {
   READY_UPLOAD: 'Ready Upload',
-  STILL_GROWING: 'Still Growing',
-  HOT_VIDEO: 'Hot Video',
-  NEED_NEW_VIDEO: 'Need New Video',
+  STILL_GROWING: 'Growing',
+  HOT_VIDEO: 'Hot 🔥',
+  NEED_NEW_VIDEO: 'Need Video',
   WAITING: 'Waiting',
   ERROR: 'Error',
   pending_review: 'Pending Review',
@@ -41,6 +42,14 @@ const statusLabel: Record<string, string> = {
   error: 'Error',
   monitoring: 'Monitoring',
   rejected: 'Rejected',
+  connected: 'Connected',
+  expired: 'Expired',
+  reconnect_needed: 'Reconnect',
+  revoked: 'Revoked',
+  READY: 'Ready',
+  PROCESSING: 'Processing',
+  FAILED: 'Failed',
+  DRAFT: 'Draft',
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
