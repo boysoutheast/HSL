@@ -53,6 +53,13 @@ interface Creative {
   callToAction: string
 }
 
+interface ResolvedLocation {
+  key: string
+  name: string
+  type: string
+  region?: string
+}
+
 interface FormData {
   name: string
   metaConnectionId: string
@@ -73,7 +80,9 @@ interface FormData {
   ageMin: number
   ageMax: number
   gender: 'all' | 'male' | 'female'
-  countries: string[]
+  geoMode: 'indonesia' | 'ai'
+  aiQuery: string
+  aiLocations: ResolvedLocation[]
   customAudienceIds: string[]
   // Step 5
   creatives: Creative[]
@@ -131,26 +140,6 @@ const PLACEMENT_OPTIONS = [
   { value: 'audience_network_rewarded_video', label: 'Audience Network Rewarded Video', group: 'Audience Network' },
 ]
 
-const COUNTRY_OPTIONS = [
-  { key: 'ID', label: 'Indonesia' },
-  { key: 'MY', label: 'Malaysia' },
-  { key: 'SG', label: 'Singapore' },
-  { key: 'PH', label: 'Philippines' },
-  { key: 'TH', label: 'Thailand' },
-  { key: 'VN', label: 'Vietnam' },
-  { key: 'US', label: 'United States' },
-  { key: 'AU', label: 'Australia' },
-  { key: 'JP', label: 'Japan' },
-  { key: 'KR', label: 'South Korea' },
-  { key: 'TW', label: 'Taiwan' },
-  { key: 'HK', label: 'Hong Kong' },
-  { key: 'IN', label: 'India' },
-  { key: 'SA', label: 'Saudi Arabia' },
-  { key: 'AE', label: 'UAE' },
-  { key: 'GB', label: 'United Kingdom' },
-  { key: 'DE', label: 'Germany' },
-  { key: 'BR', label: 'Brazil' },
-]
 
 const GENDER_OPTIONS = [
   { value: 'all', label: 'Semua' },
@@ -187,6 +176,37 @@ export default function NewTestLaunchPage() {
   const [customAudiences, setCustomAudiences] = useState<Array<{ id: string; name: string; type: string; metaAudienceId: string | null; status: string }>>([])
   const [mediaAssets, setMediaAssets] = useState<Array<{ id: string; label: string | null; type: string; publicUrl: string | null; fileUrl: string | null; thumbnailUrl: string | null }>>([])
   const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null) // creative id yang lagi milih media
+  const [resolving, setResolving] = useState(false)
+  const [resolveError, setResolveError] = useState<string | null>(null)
+  const [unresolvedNames, setUnresolvedNames] = useState<string[]>([])
+
+  const handleResolveLocations = async () => {
+    if (!form.aiQuery.trim()) return
+    setResolving(true)
+    setResolveError(null)
+    setUnresolvedNames([])
+    try {
+      const res = await fetch('/api/admin/meta-tools/resolve-locations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ query: form.aiQuery.trim(), metaAccountId: form.metaConnectionId || undefined }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Resolve gagal')
+      // Merge dengan yang sudah ada, dedup by type:key
+      setForm((f) => {
+        const seen = new Set(f.aiLocations.map((l) => `${l.type}:${l.key}`))
+        const fresh = (data.resolved as ResolvedLocation[]).filter((l) => !seen.has(`${l.type}:${l.key}`))
+        return { ...f, aiLocations: [...f.aiLocations, ...fresh] }
+      })
+      setUnresolvedNames(data.unresolved ?? [])
+    } catch (err) {
+      setResolveError(err instanceof Error ? err.message : 'Resolve gagal')
+    } finally {
+      setResolving(false)
+    }
+  }
 
   useEffect(() => {
     fetch('/api/admin/meta-audiences', { credentials: 'include' })
@@ -218,7 +238,9 @@ export default function NewTestLaunchPage() {
     ageMin: 25,
     ageMax: 45,
     gender: 'all',
-    countries: ['ID'],
+    geoMode: 'indonesia',
+    aiQuery: '',
+    aiLocations: [],
     customAudienceIds: [],
     creatives: [emptyCreative()],
     pixelId: '',
@@ -323,7 +345,9 @@ export default function NewTestLaunchPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.name.trim()) { setSaveError('Nama campaign harus diisi.'); return }
-    if (form.countries.length === 0) { setSaveError('Pilih minimal 1 negara di step Audience.'); return }
+    if (form.geoMode === 'ai' && form.aiLocations.length === 0) {
+      setSaveError('Mode AI dipilih tapi belum ada lokasi ter-resolve. Resolve dulu di step Audience.'); return
+    }
     if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return }
     if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return }
     if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
@@ -341,7 +365,10 @@ export default function NewTestLaunchPage() {
       ageMin: form.ageMin,
       ageMax: form.ageMax,
       gender: form.gender,
-      locations: form.countries.map((key) => ({ type: 'country', key })),
+      // geoMode 'indonesia' → country ID; 'ai' → keys canonical dari Meta adgeolocation
+      locations: form.geoMode === 'indonesia'
+        ? [{ type: 'country', key: 'ID' }]
+        : form.aiLocations.map((l) => ({ type: l.type, key: l.key, name: l.name })),
       customAudiences: form.customAudienceIds
         .map((id) => {
           const aud = customAudiences.find((a) => a.id === id)
@@ -963,35 +990,116 @@ export default function NewTestLaunchPage() {
                 </div>
               </div>
 
-              {/* Location — multi-country */}
+              {/* Location — Indonesia atau AI resolver */}
               <div>
-                <label className={labelCls}>Location (Negara) <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {COUNTRY_OPTIONS.map((c) => {
-                    const selected = form.countries.includes(c.key)
-                    return (
-                      <button
-                        key={c.key}
-                        type="button"
-                        onClick={() => setForm((f) => ({
-                          ...f,
-                          countries: selected
-                            ? f.countries.filter((k) => k !== c.key)
-                            : [...f.countries, c.key],
-                        }))}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                          selected
-                            ? 'border-violet-500 bg-violet-50 text-violet-700'
-                            : 'border-stone-200 text-stone-500 hover:bg-stone-50'
-                        }`}
-                      >
-                        {selected ? '✓ ' : ''}{c.label}
-                      </button>
-                    )
-                  })}
+                <label className={labelCls}>Location <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, geoMode: 'indonesia' }))}
+                    className={`p-4 rounded-xl border-2 text-left transition-colors ${
+                      form.geoMode === 'indonesia'
+                        ? 'border-violet-500 bg-violet-50'
+                        : 'border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    <p className="font-semibold text-stone-800 text-sm">🇮🇩 Indonesia</p>
+                    <p className="text-xs text-stone-500 mt-0.5">Seluruh Indonesia (country-level)</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, geoMode: 'ai' }))}
+                    className={`p-4 rounded-xl border-2 text-left transition-colors ${
+                      form.geoMode === 'ai'
+                        ? 'border-violet-500 bg-violet-50'
+                        : 'border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    <p className="font-semibold text-stone-800 text-sm">✨ Use AI</p>
+                    <p className="text-xs text-stone-500 mt-0.5">Sebut kota/provinsi/daerah bebas — AI yang setup</p>
+                  </button>
                 </div>
-                {form.countries.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">Pilih minimal 1 negara.</p>
+
+                {form.geoMode === 'ai' && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={form.aiQuery}
+                        onChange={(e) => setForm((f) => ({ ...f, aiQuery: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleResolveLocations() } }}
+                        placeholder="contoh: seluruh jawa, medan, padang, palembang"
+                        className={inputCls}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleResolveLocations}
+                        disabled={resolving || !form.aiQuery.trim()}
+                        className="btn-primary shrink-0"
+                      >
+                        {resolving ? 'AI bekerja...' : '✨ Resolve'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-stone-400">
+                      AI mengubah teks jadi daftar lokasi, lalu tiap lokasi divalidasi ke database resmi Meta —
+                      yang masuk targeting dijamin match dengan Ads Manager.
+                    </p>
+
+                    {resolveError && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">
+                        ⚠️ {resolveError}
+                      </div>
+                    )}
+                    {unresolvedNames.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+                        Tidak ketemu di Meta: {unresolvedNames.join(', ')}
+                      </div>
+                    )}
+
+                    {form.aiLocations.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-xs font-semibold text-stone-500">
+                            {form.aiLocations.length} lokasi terverifikasi Meta ✅
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, aiLocations: [] }))}
+                            className="text-xs text-stone-400 hover:text-red-500"
+                          >
+                            Hapus semua
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 bg-stone-50 rounded-lg border border-stone-200">
+                          {form.aiLocations.map((loc) => (
+                            <span
+                              key={`${loc.type}:${loc.key}`}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-stone-200 rounded-lg text-xs"
+                            >
+                              <span className="text-[9px] font-bold uppercase text-violet-500">{loc.type === 'region' ? 'PROV' : 'KOTA'}</span>
+                              <span className="text-stone-700">{loc.name}</span>
+                              {loc.region && loc.type === 'city' && (
+                                <span className="text-stone-400">· {loc.region}</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setForm((f) => ({
+                                  ...f,
+                                  aiLocations: f.aiLocations.filter((l) => !(l.key === loc.key && l.type === loc.type)),
+                                }))}
+                                className="text-stone-300 hover:text-red-500 ml-0.5"
+                              >
+                                ✕
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {form.aiLocations.length === 0 && (
+                      <p className="text-xs text-red-500">Belum ada lokasi — ketik daerah lalu klik Resolve.</p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1039,7 +1147,7 @@ export default function NewTestLaunchPage() {
                 <p className="text-stone-800">
                   Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
                   Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
-                  Lokasi <strong>{form.countries.map((k) => COUNTRY_OPTIONS.find((c) => c.key === k)?.label ?? k).join(', ') || '—'}</strong>
+                  Lokasi <strong>{form.geoMode === 'indonesia' ? 'Indonesia' : `${form.aiLocations.length} lokasi (AI)`}</strong>
                   {form.customAudienceIds.length > 0 && (
                     <> · Custom Audience <strong>{form.customAudienceIds.length}</strong></>
                   )}
