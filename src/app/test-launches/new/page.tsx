@@ -1449,11 +1449,21 @@ export default function NewTestLaunchPage() {
         )}
 
         {/* ── STEP 4: Review ──────────────────────────────────────────────── */}
-        {currentStep === 'Review' && (
+        {currentStep === 'Review' && (() => {
+          const mc = metaConnections.find((m) => m.id === form.metaConnectionId)
+          const adAct = adAccounts.find((a) => a.id === form.metaAdAccountId)
+          const hasCharErrors = form.adsets.some((a) =>
+            a.creatives.some((c) =>
+              c.primaryText.length > 125 || c.headline.length > 255 || c.description.length > 255
+            )
+          )
+          const pixelErrors = form.adsets.filter((a) => form.objective === 'OUTCOME_SALES' && !a.pixelId)
+
+          return (
           <div className="space-y-5">
             <PageInfo
-              purpose="Review semua data sebelum submit. Pastikan tidak ada error."
-              inputs={['Semua data yang sudah diisi']}
+              purpose="Review semua data sebelum submit. Pastikan badge merah tidak ada."
+              inputs={['Campaign', 'Ad Sets', 'Creatives']}
               wiring={[
                 { label: '→ Submit', desc: 'POST /api/admin/test-launches' },
                 { label: '→ Detail page', desc: 'redirect setelah berhasil' },
@@ -1463,44 +1473,91 @@ export default function NewTestLaunchPage() {
             <div className={sectionCls}>
               <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Review</h2>
 
-              {/* Campaign */}
-              <div className="space-y-1 text-sm">
-                <p><strong>Campaign:</strong> {form.name || '(no name)'}</p>
-                <p><strong>Budget Mode:</strong> {form.budgetMode}</p>
-                {form.budgetMode === 'CBO' && <p><strong>Daily Budget:</strong> Rp{Number(form.dailyBudget).toLocaleString('id-ID')}</p>}
-                <p><strong>Objective:</strong> {OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
-                <p><strong>Total Ad Sets:</strong> {form.adsets.length}</p>
-                <p><strong>Total Creatives:</strong> {creativeCount}</p>
-                <p><strong>Total Budget:</strong> Rp{totalBudget.toLocaleString('id-ID')}/hari</p>
+              {/* ── Campaign Section ─── */}
+              <div className="border border-stone-200 rounded-xl p-5 space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-lg font-bold text-violet-700">{form.name || '(no name)'}</p>
+                  {hasCharErrors && <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">⚠ Karakter overflow</span>}
+                  {pixelErrors.length > 0 && <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">⚠ {pixelErrors.length} ad set tanpa pixel (SALES)</span>}
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-stone-600">
+                  <div><span className="text-stone-400">Connection:</span> {mc?.name ?? mc?.appId ?? form.metaConnectionId}</div>
+                  <div><span className="text-stone-400">Ad Account:</span> {adAct?.adAccountName ?? form.metaAdAccountId} ({adAct?.adAccountId ?? '—'})</div>
+                  <div><span className="text-stone-400">Objective:</span> {OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</div>
+                  <div><span className="text-stone-400">Budget Mode:</span> {form.budgetMode}</div>
+                  {form.budgetMode === 'CBO' && (
+                    <>
+                      <div className="text-base font-bold text-violet-600">Rp{Number(form.dailyBudget).toLocaleString('id-ID')}/hari</div>
+                      <div><span className="text-stone-400">Bid:</span> {(() => { try { const p = JSON.parse(form.bidStrategy || '{}'); return p.strategy || 'Lowest Cost' } catch { return 'Lowest Cost' } })()}</div>
+                    </>
+                  )}
+                  <div><span className="text-stone-400">Ad Sets:</span> <span className="text-base font-bold text-stone-800">{form.adsets.length}</span></div>
+                  <div><span className="text-stone-400">Creatives:</span> <span className="text-base font-bold text-stone-800">{creativeCount}</span></div>
+                  <div><span className="text-stone-400">Budget:</span> <span className="text-base font-bold text-violet-600">Rp{totalBudget.toLocaleString('id-ID')}/hari</span></div>
+                </div>
               </div>
 
-              <hr className="border-stone-200" />
-
-              {/* Ad Sets */}
               {form.adsets.map((adset, idx) => {
                 const ps = pages.find((p) => p.pageId === adset.identityPageId)
                 const ac = adset.creatives.filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+                const parsedBid = adset.bidStrategy ? (() => { try { return JSON.parse(adset.bidStrategy) as Record<string, string> } catch { return null } })() : null
+                const incCa = parseCommaIds(adset.includedCustomAudienceIds)
+                const excCa = parseCommaIds(adset.excludedCustomAudienceIds)
+                const missingPixel = form.objective === 'OUTCOME_SALES' && !adset.pixelId
                 return (
-                  <div key={adset.id} className="space-y-1 text-sm">
-                    <p className="font-semibold text-violet-700">Ad Set #{idx + 1}: {adset.name}</p>
-                    <p className="text-xs text-stone-500 ml-2">
-                      Page: {(ps?.pageName ?? adset.identityPageId) || '❌ Not set'}
-                      {ps?.igBusinessAccountId ? ` · IG: @${ps.igUsername}` : ''}
-                    </p>
-                    {form.budgetMode === 'ABO' && <p className="text-xs text-stone-500 ml-2">Budget: Rp{Number(adset.dailyBudget || 0).toLocaleString('id-ID')}/hari</p>}
-                    {adset.pixelId && <p className="text-xs text-stone-500 ml-2">Pixel: {adset.pixelId} · Event: {adset.customEventType}</p>}
-                    <p className="text-xs text-stone-500 ml-2">Age: {adset.ageMin}–{adset.ageMax} · Gender: {GENDER_OPTIONS.find((g) => g.value === adset.gender)?.label}</p>
-                    <p className="text-xs text-stone-500 ml-2">Placement: {adset.placementMode}{adset.placementMode === 'manual' ? ` (${adset.placements.length} token)` : ''}</p>
-                    {adset.interests.length > 0 && <p className="text-xs text-stone-500 ml-2">Interests: {adset.interests.map((i) => i.name).join(', ')}</p>}
-                    <p className="text-xs text-stone-500 ml-2">Device: {DEVICE_OPTIONS.find((d) => d.value === adset.devicePlatform)?.label}</p>
-                    <p className="text-xs text-stone-500 ml-2">Creatives: {ac.length}</p>
+                  <div key={adset.id} className="border border-stone-200 rounded-xl p-5 space-y-3">
+                    {/* Ad Set header */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-stone-800">Ad Set #{idx + 1}: {adset.name}</p>
+                      {missingPixel && <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-semibold">⚠ Pixel kosong (SALES)</span>}
+                    </div>
+
+                    {/* Identity & Account details */}
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 text-xs text-stone-600">
+                      <div><span className="text-stone-400">Page:</span> {(ps?.pageName ?? adset.identityPageId) || '—'}</div>
+                      {ps?.igUsername && <div><span className="text-stone-400">IG:</span> @{ps.igUsername}</div>}
+                      {form.budgetMode === 'ABO' && <div><span className="text-stone-400">Budget:</span> <span className="font-semibold">Rp{Number(adset.dailyBudget || 0).toLocaleString('id-ID')}/hari</span></div>}
+                      <div><span className="text-stone-400">Pixel:</span> {adset.pixelId ? `${adset.pixelId} · ${adset.customEventType || '—'}` : '—'}</div>
+                      {parsedBid && <div><span className="text-stone-400">Bid:</span> {parsedBid.strategy}</div>}
+                      <div><span className="text-stone-400">Schedule:</span> {adset.scheduleMode === 'scheduled' ? `${adset.startTime || '—'} → ${adset.endTime || '—'}` : 'Terus-menerus'}</div>
+                    </div>
+
+                    {/* Audience targeting summary */}
+                    <div className="bg-stone-50 rounded-lg p-3 space-y-1 text-xs text-stone-600">
+                      <p><span className="text-stone-400">Target:</span> {adset.ageMin}–{adset.ageMax} th · {GENDER_OPTIONS.find((g) => g.value === adset.gender)?.label} · {DEVICE_OPTIONS.find((d) => d.value === adset.devicePlatform)?.label}</p>
+                      <p><span className="text-stone-400">Placement:</span> {adset.placementMode === 'manual' ? `Manual (${adset.placements.length} selected)` : '⚡ Automatic'}</p>
+                      {adset.interests.length > 0 && <p><span className="text-stone-400">Interests:</span> {adset.interests.length} selected</p>}
+                      {incCa.length > 0 && <p><span className="text-stone-400">CA include:</span> {incCa.length}</p>}
+                      {excCa.length > 0 && <p><span className="text-stone-400">CA exclude:</span> {excCa.length}</p>}
+                      <p><span className="text-stone-400">Creatives:</span> <span className="font-semibold text-violet-700">{ac.length}</span></p>
+                    </div>
+
+                    {/* Creative previews */}
                     {ac.map((c, ci) => (
-                      <div key={c.id} className="ml-4 text-xs text-stone-400 bg-stone-50 rounded p-2 mt-1">
-                        <span className="font-medium">#{ci + 1}</span>
-                        {' · '}{c.linkUrl ? (c.linkUrl.length > 40 ? c.linkUrl.slice(0, 40) + '...' : c.linkUrl) : '❌ No link'}
-                        {c.primaryText && ` · "${c.primaryText.slice(0, 50)}${c.primaryText.length > 50 ? '...' : ''}"`}
-                        {c.headline && ` · [${c.headline.slice(0, 30)}${c.headline.length > 30 ? '...' : ''}]`}
-                        {' · '}{c.format}
+                      <div key={c.id} className="flex items-start gap-3 border border-stone-100 rounded-lg p-3 bg-white">
+                        <div className="w-12 h-12 rounded-lg bg-stone-100 overflow-hidden flex-shrink-0">
+                          {c.imageUrl ? (
+                            <img src={c.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.classList.add('flex', 'items-center', 'justify-center', 'text-stone-400', 'text-xs') }} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-stone-400 text-xs">—</div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-stone-500">#{ci + 1}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              c.format === 'carousel' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                            }`}>{c.format === 'carousel' ? 'Carousel' : 'Single'}</span>
+                            {c.primaryText.length > 125 && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">text overflow</span>}
+                          </div>
+                          <p className="text-xs text-stone-600 truncate mt-0.5">
+                            {c.primaryText ? `"${c.primaryText.slice(0, 60)}${c.primaryText.length > 60 ? '...' : ''}"` : '—'}
+                          </p>
+                          {c.headline && (
+                            <p className="text-[11px] text-stone-400 truncate">[{c.headline.slice(0, 50)}{c.headline.length > 50 ? '...' : ''}]</p>
+                          )}
+                          <p className="text-[11px] text-stone-400 truncate">{c.linkUrl ? (c.linkUrl.length > 50 ? c.linkUrl.slice(0, 50) + '...' : c.linkUrl) : '❌ No link'}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1522,7 +1579,8 @@ export default function NewTestLaunchPage() {
               </div>
             </div>
           </div>
-        )}
+          )
+        })()}
       </form>
     </div>
   )
