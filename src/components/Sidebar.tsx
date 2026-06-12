@@ -12,8 +12,7 @@ const I = {
   infl: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>,
   media: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>,
   sys: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>,
-  plus: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>,
-  gear: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.7} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+  plus: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>,
   logout: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>,
 }
 
@@ -44,10 +43,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
     }
     load()
     const t = setInterval(load, 60_000)
-    return () => {
-      live = false
-      clearInterval(t)
-    }
+    return () => { live = false; clearInterval(t) }
   }, [])
 
   function isActive(href: string) {
@@ -55,78 +51,73 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
     return pathname === href || pathname.startsWith(href + '/') || pathname.startsWith(href + '?')
   }
 
+  const visiblePillars = pillars.filter((p) => !p.adminOnly || isAdmin)
+
   return (
-    <aside className="flex flex-col w-56 shrink-0 h-screen sticky top-0 bg-white border-r border-stone-200">
-      {/* Brand + Create */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-stone-100 shrink-0">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center shadow-sm shrink-0">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-          </div>
-          <div className="leading-tight min-w-0">
-            <p className="text-sm font-bold text-stone-900 tracking-tight">Hermes</p>
-            <p className="text-[10px] text-stone-400 font-medium">Support Library</p>
-          </div>
-        </Link>
-        <div className="relative">
-          <button onClick={() => setShowCreate(v => !v)} className="w-7 h-7 rounded-lg bg-violet-100 hover:bg-violet-200 flex items-center justify-center transition-colors" title="Buat">
-            {I.plus}
-          </button>
+    <>
+      <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 bg-white border-r border-stone-200">
+        <div className="flex items-center justify-between px-4 h-14 border-b border-stone-100 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center shadow-sm shrink-0">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </div>
+            <div className="leading-tight min-w-0">
+              <p className="text-sm font-bold text-stone-900 tracking-tight">Hermes</p>
+              <p className="text-[10px] text-stone-400 font-medium">Support Library</p>
+            </div>
+          </Link>
+          <button onClick={() => setShowCreate(v => !v)} className="w-7 h-7 rounded-lg bg-violet-100 hover:bg-violet-200 flex items-center justify-center transition-colors" title="Buat">{I.plus}</button>
           {showCreate && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowCreate(false)} />
-              <div className="absolute right-0 top-9 z-20 w-48 bg-white border border-stone-200 rounded-xl shadow-xl py-1.5">
-                <Link href="/ads?tab=launch&new=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">New Launch</Link>
-                <Link href="/media?tab=library&upload=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">Upload Media</Link>
-                <span className="block px-4 py-2 text-sm text-stone-400 cursor-not-allowed">Generate Konten <span className="text-[10px] ml-1">(coming soon)</span></span>
-              </div>
-            </>
+            <div className="absolute left-48 top-3 z-20 w-48 bg-white border border-stone-200 rounded-xl shadow-xl py-1.5">
+              <Link href="/ads?tab=launch&new=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">New Launch</Link>
+              <Link href="/media?tab=library&upload=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">Upload Media</Link>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Pillars */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {pillars.map(p => {
-          if (p.adminOnly && !isAdmin) return null
-          const active = isActive(p.href)
-          const badge = p.label === 'Ads' ? badges.ads : p.label === 'Influencer' ? badges.influencer : 0
-          return (
-            <Link key={p.href} href={p.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'
-              }`}>
-              {p.icon}
-              <span className="flex-1">{p.label}</span>
-              {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
-            </Link>
-          )
-        })}
-      </nav>
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {visiblePillars.map(p => {
+            const active = isActive(p.href)
+            const badge = p.label === 'Ads' ? badges.ads : p.label === 'Influencer' ? badges.influencer : 0
+            return (
+              <Link key={p.href} href={p.href} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`}>
+                {p.icon}
+                <span className="flex-1">{p.label}</span>
+                {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
+              </Link>
+            )
+          })}
+        </nav>
 
-      {/* Footer */}
-      <div className="border-t border-stone-100 p-2 space-y-1 shrink-0">
-        {user && (
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
-            <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-              <span className="text-[10px] font-bold text-violet-700">{initials}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-stone-700 truncate">{user.name ?? user.email}</p>
-              <p className="text-[10px] text-stone-400 capitalize">{user.role}</p>
-            </div>
+        <div className="border-t border-stone-100 p-2 space-y-1 shrink-0">
+          {user && <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"><div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0"><span className="text-[10px] font-bold text-violet-700">{initials}</span></div><div className="flex-1 min-w-0"><p className="text-xs font-medium text-stone-700 truncate">{user.name ?? user.email}</p><p className="text-[10px] text-stone-400 capitalize">{user.role}</p></div></div>}
+          {onLogout && <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">{I.logout} Sign out</button>}
+        </div>
+      </aside>
+
+      <button onClick={() => setShowCreate(v => !v)} className="md:hidden fixed right-4 bottom-24 z-50 w-14 h-14 rounded-full bg-violet-600 text-white shadow-xl flex items-center justify-center">{I.plus}</button>
+      {showCreate && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20 md:hidden" onClick={() => setShowCreate(false)} />
+          <div className="fixed right-4 bottom-40 z-50 w-52 bg-white border border-stone-200 rounded-2xl shadow-2xl py-2 md:hidden">
+            <Link href="/ads?tab=launch&new=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">New Launch</Link>
+            <Link href="/media?tab=library&upload=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">Upload Media</Link>
           </div>
-        )}
-        <Link href="/settings" className="flex items-center gap-2 px-2 py-1.5 text-xs text-stone-400 hover:text-stone-700 hover:bg-stone-50 rounded-lg transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          Ganti password
-        </Link>
-        {onLogout && (
-          <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-            {I.logout} Sign out
-          </button>
-        )}
-      </div>
-    </aside>
+        </>
+      )}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-stone-200 safe-pb">
+        <div className="grid grid-cols-5">
+          {visiblePillars.map((p) => {
+            const active = isActive(p.href)
+            return (
+              <Link key={p.href} href={p.href} className={`flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? 'text-violet-700 font-semibold' : 'text-stone-500'}`}>
+                {p.icon}
+                <span>{p.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+    </>
   )
 }

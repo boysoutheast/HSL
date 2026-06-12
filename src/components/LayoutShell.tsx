@@ -41,8 +41,8 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-[#f8f7f6] dark:bg-stone-950">
       <Sidebar user={currentUser} onLogout={handleLogout} />
       <CommandPalette />
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 pb-28 md:pb-6">
           {children}
         </div>
       </main>
