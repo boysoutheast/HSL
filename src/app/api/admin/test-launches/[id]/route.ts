@@ -15,6 +15,14 @@ export async function GET(
     where: { id: params.id },
     include: {
       creatives: true,
+      adsets: {
+        include: {
+          creatives: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        orderBy: { sortOrder: 'asc' },
+      },
       approvalRequest: {
         include: {
           requestedBy: { select: { id: true, name: true, email: true } },
@@ -91,6 +99,7 @@ export async function PATCH(
     name?: string
     objective?: string
     dailyBudget?: number
+    budgetMode?: string
     currency?: string
     pageId?: string
     igAccountId?: string
@@ -139,6 +148,14 @@ export async function PATCH(
     data: body,
     include: {
       creatives: true,
+      adsets: {
+        include: {
+          creatives: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        orderBy: { sortOrder: 'asc' },
+      },
       metaAccount: {
         select: {
           accountName: true,
