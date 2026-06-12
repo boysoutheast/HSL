@@ -1028,7 +1028,7 @@ model WorkerRegistry {
   id              String   @id @default(cuid())
   workerId        String   @unique @map("worker_id")
   mode            String
-  instanceId      String?
+  instanceId      String?  @map("instance_id")
   version         String?
   status          String   @default("ACTIVE") // ACTIVE | IDLE | STOPPED | ERROR
   startedAt       DateTime @map("started_at")
