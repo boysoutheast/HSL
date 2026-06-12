@@ -20,8 +20,8 @@ export default function AssignmentsPage() {
           <li>Ini mencegah dead end redirect yang membingungkan.</li>
         </ul>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/agents" className="btn-primary">Buka Agents</Link>
-          <Link href="/docs" className="btn-ghost">Lihat Docs</Link>
+          <Link href="/system?tab=agents" className="btn-primary">Buka Agents</Link>
+          <Link href="/system?tab=docs" className="btn-ghost">Lihat Docs</Link>
         </div>
       </div>
     </div>

@@ -93,7 +93,7 @@ export default function InfluencerRoster() {
             {label}
           </button>
         ))}
-        <Link href="/accounts" className="ml-auto text-xs font-semibold text-stone-400 hover:text-stone-600">
+        <Link href="/influencer?tab=roster" className="ml-auto text-xs font-semibold text-stone-400 hover:text-stone-600">
           tampilan tabel →
         </Link>
       </div>

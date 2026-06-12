@@ -114,7 +114,7 @@ export default function TestLaunchesPage() {
             {loading ? '...' : `${launches.length} launch`}
           </p>
         </div>
-        <Link href="/test-launches/new" className="btn-primary">
+        <Link href="/ads?tab=launch&new=1" className="btn-primary">
           + New Launch
         </Link>
       </div>
