@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
@@ -47,6 +47,13 @@ interface Page {
 interface Pixel {
   id: string
   name: string
+}
+
+interface CustomAudienceOption {
+  id: string
+  name: string
+  approximateCount: number | null
+  deliveryStatus: unknown
 }
 
 interface CreativeDraft {
@@ -247,8 +254,11 @@ export default function NewTestLaunchPage() {
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
   const [pages, setPages] = useState<Page[]>([])
   const [pixels, setPixels] = useState<Pixel[]>([])
+  const [customAudiences, setCustomAudiences] = useState<CustomAudienceOption[]>([])
+  const [customAudienceError, setCustomAudienceError] = useState<string | null>(null)
   const [bidStrategies, setBidStrategies] = useState<BidStrategyOption[]>([])
   const [loadingDeps, setLoadingDeps] = useState(true)
+  const customAudienceFallbackShownRef = useRef(false)
 
   // Form
   const [currentStep, setCurrentStep] = useState<Step>('Campaign')
@@ -323,6 +333,25 @@ export default function NewTestLaunchPage() {
     } catch { setPixels([]) }
   }, [])
 
+  const fetchCustomAudiences = useCallback(async (adAccountId: string) => {
+    if (!adAccountId) { setCustomAudiences([]); return }
+    setCustomAudienceError(null)
+    try {
+      const res = await fetch(`/api/admin/meta-tools/customaudiences?adAccountId=${adAccountId}`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setCustomAudiences(data.audiences ?? [])
+      } else {
+        const body = await res.json().catch(()=>({}))
+        setCustomAudiences([])
+        setCustomAudienceError(body.error || 'Gagal memuat custom audience')
+      }
+    } catch {
+      setCustomAudiences([])
+      setCustomAudienceError('Custom audience tidak bisa dimuat')
+    }
+  }, [])
+
   const fetchBidStrategies = useCallback(async (adAccountId: string) => {
     if (!adAccountId) { setBidStrategies([]); return }
     try {
@@ -351,9 +380,13 @@ export default function NewTestLaunchPage() {
   const handleAdAccountChange = (id: string) => {
     setForm((f) => ({ ...f, metaAdAccountId: id, pixelId: '' }))
     setPixels([])
+    setCustomAudiences([])
+    setCustomAudienceError(null)
+    customAudienceFallbackShownRef.current = false
     if (id) {
       fetchPixels(id)
       fetchBidStrategies(id)
+      fetchCustomAudiences(id)
     }
   }
 
@@ -999,15 +1032,81 @@ export default function NewTestLaunchPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className={labelCls}>Included Custom Audience IDs (koma, pisah)</label>
-                          <input type="text" value={adset.includedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'includedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <label className={labelCls}>Custom Audiences</label>
+                            <p className="text-xs text-stone-500">Pilih audience dari ad account aktif. Payload tetap kirim array ID.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { customAudienceFallbackShownRef.current = !customAudienceFallbackShownRef.current; setCustomAudienceError((prev) => prev) }}
+                            className="text-xs text-violet-700 hover:underline"
+                          >
+                            {customAudienceFallbackShownRef.current ? 'Sembunyikan URL manual' : 'URL manual'}
+                          </button>
                         </div>
-                        <div>
-                          <label className={labelCls}>Excluded Custom Audience IDs (koma, pisah)</label>
-                          <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
-                        </div>
+
+                        {customAudienceError && (
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            custom audience tidak bisa dimuat
+                            <div className="text-xs mt-1 break-words">{customAudienceError}</div>
+                          </div>
+                        )}
+
+                        {customAudiences.length > 0 && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className={labelCls}>Included Custom Audiences</label>
+                              <select
+                                multiple
+                                value={adset.includedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)}
+                                onChange={(e) => {
+                                  const ids = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value)
+                                  updateAdsetField(adset.id, 'includedCustomAudienceIds', ids.join(','))
+                                }}
+                                className={`${inputCls} min-h-36`}
+                              >
+                                {customAudiences.map((audience) => (
+                                  <option key={audience.id} value={audience.id}>
+                                    {audience.name}{audience.approximateCount ? ` (~${audience.approximateCount.toLocaleString('id-ID')})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className={labelCls}>Excluded Custom Audiences</label>
+                              <select
+                                multiple
+                                value={adset.excludedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)}
+                                onChange={(e) => {
+                                  const ids = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value)
+                                  updateAdsetField(adset.id, 'excludedCustomAudienceIds', ids.join(','))
+                                }}
+                                className={`${inputCls} min-h-36`}
+                              >
+                                {customAudiences.map((audience) => (
+                                  <option key={audience.id} value={audience.id}>
+                                    {audience.name}{audience.approximateCount ? ` (~${audience.approximateCount.toLocaleString('id-ID')})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {(customAudienceFallbackShownRef.current || customAudienceError || customAudiences.length === 0) && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className={labelCls}>Included Custom Audience IDs (manual, koma pisah)</label>
+                              <input type="text" value={adset.includedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'includedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                            </div>
+                            <div>
+                              <label className={labelCls}>Excluded Custom Audience IDs (manual, koma pisah)</label>
+                              <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Interests */}
