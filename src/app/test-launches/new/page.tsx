@@ -111,7 +111,9 @@ interface FormData {
   currency: string
   budgetMode: 'CBO' | 'ABO'
   bidStrategy: string          // JSON for CBO campaign-level
-  
+  bidAmount: string            // CBO: COST_CAP / BID_CAP
+  roasAverageFloor: string     // CBO: MIN_ROAS
+
   // Step 2 & 3: Ad Sets & Ads
   adsets: AdsetDraft[]
   
@@ -271,6 +273,8 @@ export default function NewTestLaunchPage() {
     currency: 'IDR',
     budgetMode: 'CBO',
     bidStrategy: '',
+    bidAmount: '',
+    roasAverageFloor: '',
     adsets: [emptyAdset('', 0)],
     notes: '',
   })
@@ -543,7 +547,17 @@ export default function NewTestLaunchPage() {
         audienceJson,
         placementMode: 'automatic',
         placementsJson: undefined,
-        bidStrategy: form.bidStrategy ? JSON.parse(form.bidStrategy) : undefined,
+        bidStrategy: (() => {
+          if (!form.bidStrategy) return undefined
+          const parsed = safeParseJson<Record<string, unknown>>(form.bidStrategy, {})
+          if ((parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') && form.bidAmount) {
+            parsed.bidAmount = Number(form.bidAmount)
+          }
+          if (parsed.strategy === 'MIN_ROAS' && form.roasAverageFloor) {
+            parsed.roasAverageFloor = Number(form.roasAverageFloor)
+          }
+          return parsed
+        })(),
       }
 
       if (form.budgetMode === 'CBO') {
@@ -643,6 +657,15 @@ export default function NewTestLaunchPage() {
 
     if (form.budgetMode === 'CBO') {
       if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return false }
+      if (form.bidStrategy) {
+        const parsed = safeParseJson<Record<string, unknown>>(form.bidStrategy, {})
+        if ((parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') && (!form.bidAmount || Number(form.bidAmount) <= 0)) {
+          setSaveError(`Bid amount wajib untuk ${String(parsed.strategy)}.`); return false
+        }
+        if (parsed.strategy === 'MIN_ROAS' && (!form.roasAverageFloor || Number(form.roasAverageFloor) <= 0)) {
+          setSaveError('ROAS floor wajib untuk MIN_ROAS.'); return false
+        }
+      }
     }
 
     for (let i = 0; i < form.adsets.length; i++) {
@@ -823,6 +846,55 @@ export default function NewTestLaunchPage() {
                   </>
                 )}
               </div>
+
+              {/* Bid Strategy (CBO campaign-level) */}
+              {form.budgetMode === 'CBO' && (
+                <div>
+                  <label className={labelCls}>Bid Strategy</label>
+                  {form.metaAdAccountId ? (
+                    bidStrategies.length > 0 ? (
+                      <>
+                        <select
+                          value={form.bidStrategy}
+                          onChange={(e) => setForm((f) => ({ ...f, bidStrategy: e.target.value, bidAmount: '', roasAverageFloor: '' }))}
+                          className={inputCls}
+                        >
+                          <option value="">Lowest Cost (default)</option>
+                          {bidStrategies.filter((b) => b.available).map((bs) => (
+                            <option key={bs.value} value={JSON.stringify({ strategy: bs.value })}>{bs.label}</option>
+                          ))}
+                        </select>
+                        {form.bidStrategy && (() => {
+                          const parsed = safeParseJson<Record<string, unknown>>(form.bidStrategy, {})
+                          if (parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') {
+                            return (
+                              <div className="mt-2">
+                                <label className={labelCls}>Bid Amount</label>
+                                <input type="number" value={form.bidAmount} onChange={(e) => setForm((f) => ({ ...f, bidAmount: e.target.value }))} min="1" step="1" className={inputCls} placeholder="20000" />
+                                <p className="text-xs text-stone-500 mt-1">Isi angka target bid sesuai currency account.</p>
+                              </div>
+                            )
+                          }
+                          if (parsed.strategy === 'MIN_ROAS') {
+                            return (
+                              <div className="mt-2">
+                                <label className={labelCls}>ROAS Average Floor</label>
+                                <input type="number" value={form.roasAverageFloor} onChange={(e) => setForm((f) => ({ ...f, roasAverageFloor: e.target.value }))} min="1" step="1" className={inputCls} placeholder="10000" />
+                                <p className="text-xs text-stone-500 mt-1">Meta pakai integer. Contoh: 10000 = ROAS 1.0.</p>
+                              </div>
+                            )
+                          }
+                          return null
+                        })()}
+                      </>
+                    ) : (
+                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Memuat strategi dari ad account...</div>
+                    )
+                  ) : (
+                    <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Pilih Ad Account terlebih dahulu</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {saveError && (
