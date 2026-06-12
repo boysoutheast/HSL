@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
+import { validateWorkerApiKey, extractBearerToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +8,7 @@ async function getWorkerAgent(req: NextRequest) {
   // Accept x-api-key header for worker auth
   const apiKey = req.headers.get('x-api-key')
   if (apiKey) {
-    return validateHermesApiKey(apiKey)
+    return validateWorkerApiKey(apiKey)
   }
   // Fallback: session auth
   const { getSessionUser } = await import('@/lib/session')

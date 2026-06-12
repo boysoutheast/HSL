@@ -12,6 +12,7 @@ model HermesAgent {
   name       String
   apiKeyHash String   @unique @map("api_key_hash")
   status     String   @default("active")
+  isWorker   Boolean  @default(false) @map("is_worker")
   notes      String?
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")

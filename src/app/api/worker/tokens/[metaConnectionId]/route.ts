@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey } from '@/lib/auth'
+import { validateWorkerApiKey } from '@/lib/auth'
 import { decode } from '@/lib/crypto'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const agent = await validateHermesApiKey(apiKey)
+  const agent = await validateWorkerApiKey(apiKey)
   if (!agent) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

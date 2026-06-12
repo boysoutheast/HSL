@@ -18,6 +18,14 @@ export async function validateHermesApiKey(apiKey: string) {
   return agent
 }
 
+// Worker auth: only agents flagged is_worker may use /api/worker/* endpoints.
+// Content agents (Hermes utama, Digipro, dll) are rejected here.
+export async function validateWorkerApiKey(apiKey: string) {
+  const agent = await validateHermesApiKey(apiKey)
+  if (!agent || !agent.isWorker) return null
+  return agent
+}
+
 export function extractBearerToken(authHeader: string | null): string | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null
   return authHeader.slice(7).trim()

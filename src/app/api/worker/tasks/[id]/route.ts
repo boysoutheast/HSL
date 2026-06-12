@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey } from '@/lib/auth'
+import { validateWorkerApiKey } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 async function getWorkerAgent(req: NextRequest) {
   const apiKey = req.headers.get('x-api-key')
   if (apiKey) {
-    return validateHermesApiKey(apiKey)
+    return validateWorkerApiKey(apiKey)
   }
   const { getSessionUser } = await import('@/lib/session')
   return getSessionUser(req)
