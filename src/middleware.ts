@@ -53,6 +53,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/api/photos/') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/worker/') ||
+    pathname.startsWith('/api/internal/') ||
     pathname.startsWith('/api/capi/')
   ) {
     return NextResponse.next()
