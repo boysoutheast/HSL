@@ -574,7 +574,139 @@ export default function NewTestLaunchPage() {
     }))
   }
 
-  const applyProductPrefill = async (productId: string) => {
+  // ── Clone handler ──────────────────────────────────────────────────────────
+  const [cloneLoading, setCloneLoading] = useState(false)
+  const handleClone = useCallback(async (cloneId: string) => {
+    setCloneLoading(true)
+    try {
+      const res = await fetch('/api/admin/test-launches/' + cloneId, { credentials: 'include' })
+      if (!res.ok) throw new Error('Gagal fetch clone source')
+      const data = await res.json()
+      const src = data.testLaunch || data
+      const firstAdset = src.adsets?.[0] || {}
+      const firstCreative = firstAdset.creatives?.[0] || src.creatives?.[0] || {}
+      
+      setShowStepZero(false)
+
+      setForm((f) => ({
+        ...f,
+        name: (src.name || '') + ' (copy)',
+        metaConnectionId: src.metaAccountId || f.metaConnectionId,
+        metaAdAccountId: src.metaAdAccountId || f.metaAdAccountId,
+        objective: src.objective || f.objective,
+        dailyBudget: src.dailyBudget ? String(Number(src.dailyBudget)) : f.dailyBudget,
+        currency: src.currency || f.currency,
+        budgetMode: src.budgetMode || f.budgetMode,
+        bidStrategy: src.bidStrategyJson || f.bidStrategy,
+        notes: src.notes || '',
+        adsets: (src.adsets && src.adsets.length > 0
+          ? src.adsets.map((adset: any, idx: number) => ({
+              id: 'clone-adset-' + idx,
+              name: adset.name || ('Ad Set ' + (idx + 1)),
+              dailyBudget: adset.dailyBudget ? String(Number(adset.dailyBudget)) : '',
+              bidStrategy: adset.bidStrategyJson || f.bidStrategy,
+              bidAmount: '',
+              roasAverageFloor: '',
+              pixelId: adset.pixelId || '',
+              customEventType: adset.customEventType || '',
+              scheduleMode: (adset.startTime || adset.endTime) ? 'scheduled' : 'immediate',
+              startTime: adset.startTime || '',
+              endTime: adset.endTime || '',
+              ageMin: adset.ageMin ?? 25,
+              ageMax: adset.ageMax ?? 45,
+              gender: adset.gender ?? 'all',
+              locations: [
+                { type: 'country', key: 'ID', name: 'Indonesia' },
+              ],
+              interests: adset.interests || [],
+              devicePlatform: adset.devicePlatform || 'all',
+              placementMode: adset.placementMode || 'automatic',
+              placements: adset.placements || ['facebook_feeds', 'instagram_feeds'],
+              includedCustomAudienceIds: adset.includedCustomAudienceIds || '',
+              excludedCustomAudienceIds: adset.excludedCustomAudienceIds || '',
+              identityPageId: adset.identityPageId || '',
+              identityIgUserId: adset.identityIgUserId || '',
+              creatives: (adset.creatives || []).map((c: any, ci: number) => ({
+                id: 'clone-creative-' + idx + '-' + ci,
+                format: c.format || 'single',
+                imageUrl: c.creativeUrl || c.imageUrl || '',
+                linkUrl: c.linkUrl || '',
+                primaryText: c.primaryText || '',
+                headline: c.headline || '',
+                description: c.description || '',
+                callToAction: c.callToAction || 'LEARN_MORE',
+                urlTags: c.urlTags || '',
+                childAttachmentsJson: c.childAttachmentsJson || '[]',
+              })),
+            }))
+          : [
+              {
+                id: 'clone-adset-0',
+                name: 'Ad Set 1',
+                dailyBudget: '',
+                bidStrategy: '',
+                bidAmount: '',
+                roasAverageFloor: '',
+                pixelId: '',
+                customEventType: '',
+                scheduleMode: 'immediate' as const,
+                startTime: '',
+                endTime: '',
+                ageMin: 25,
+                ageMax: 45,
+                gender: 'all',
+                locations: [{ type: 'country', key: 'ID', name: 'Indonesia' }],
+                interests: [],
+                devicePlatform: 'all',
+                placementMode: 'automatic',
+                placements: ['facebook_feeds', 'instagram_feeds'],
+                includedCustomAudienceIds: '',
+                excludedCustomAudienceIds: '',
+                identityPageId: '',
+                identityIgUserId: '',
+                creatives: [
+                  {
+                    id: 'clone-creative-0-0',
+                    format: 'single' as const,
+                    imageUrl: firstCreative?.creativeUrl || firstCreative?.imageUrl || '',
+                    linkUrl: firstCreative?.linkUrl || '',
+                    primaryText: firstCreative?.primaryText || '',
+                    headline: firstCreative?.headline || '',
+                    description: firstCreative?.description || '',
+                    callToAction: firstCreative?.callToAction || 'LEARN_MORE',
+                    urlTags: '',
+                    childAttachmentsJson: '[]',
+                  },
+                ],
+              },
+            ]
+        ),
+      }))
+      if (src.metaAccountId) {
+        fetchMetaConnections()
+        fetchAdAccounts(src.metaAccountId)
+      }
+      if (src.metaAdAccountId) {
+        fetchPixels(src.metaAdAccountId)
+        fetchBidStrategies(src.metaAdAccountId)
+        fetchCustomAudiences(src.metaAdAccountId)
+      }
+    } catch (err: any) {
+      setSaveError(err.message || 'Gagal clone')
+    } finally {
+      setCloneLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const cloneId = params.get('clone')
+    if (cloneId) {
+      handleClone(cloneId)
+    }
+  }, [])
+
+    const applyProductPrefill = async (productId: string) => {
     setPrefillLoading(true)
     setSaveError(null)
     try {

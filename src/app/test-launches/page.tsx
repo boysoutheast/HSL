@@ -174,6 +174,13 @@ export default function TestLaunchesPage() {
                   <Link href={`/test-launches/${launch.id}`} className="btn-info btn-sm">
                     Detail
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/ads?tab=launch&new=1&clone=${launch.id}`)}
+                    className="btn-ghost btn-sm"
+                  >
+                    Clone
+                  </button>
                   {launch.status === 'draft' && (
                     <button
                       onClick={() => handleSubmitForApproval(launch.id)}
