@@ -27,6 +27,7 @@ model InstagramAccount {
   id              String    @id @default(cuid())
   username        String    @unique
   accountName     String?   @map("account_name")
+  gender          String?   @map("gender")
   status          String    @default("active")
   purpose         String?
   notes           String?

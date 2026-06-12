@@ -1,0 +1,1 @@
+ALTER TABLE instagram_accounts ADD COLUMN IF NOT EXISTS gender VARCHAR(1);

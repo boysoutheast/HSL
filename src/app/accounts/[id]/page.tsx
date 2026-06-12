@@ -29,6 +29,7 @@ interface AccountDetail {
   id: string
   username: string
   accountName: string | null
+  gender: string | null
   status: string
   purpose: string | null
   notes: string | null
@@ -42,6 +43,7 @@ interface AccountDetail {
 const EMPTY_ACCOUNT_FORM = {
   username: '',
   accountName: '',
+  gender: '',
   purpose: 'organic',
   notes: '',
 }
@@ -108,6 +110,7 @@ export default function AccountDetailPage() {
     setAccountForm({
       username: account.username,
       accountName: account.accountName ?? '',
+      gender: account.gender ?? '',
       purpose: account.purpose ?? 'organic',
       notes: account.notes ?? '',
     })
@@ -125,6 +128,7 @@ export default function AccountDetailPage() {
         body: JSON.stringify({
           username: accountForm.username.trim(),
           accountName: accountForm.accountName.trim() || undefined,
+          gender: accountForm.gender || null,
           purpose: accountForm.purpose || undefined,
           notes: accountForm.notes.trim() || undefined,
         }),
@@ -242,7 +246,13 @@ export default function AccountDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+          <div>
+            <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Gender</p>
+            <p className="text-stone-800">
+              {account.gender === 'M' ? '♂ Male' : account.gender === 'F' ? '♀ Female' : '—'}
+            </p>
+          </div>
           <div>
             <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-1">Purpose</p>
             <p className="text-stone-800">{account.purpose ?? '—'}</p>
@@ -370,6 +380,18 @@ export default function AccountDetailPage() {
               onChange={(e) => setAccountForm({ ...accountForm, accountName: e.target.value })}
               className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Gender</label>
+            <select
+              value={accountForm.gender}
+              onChange={(e) => setAccountForm({ ...accountForm, gender: e.target.value })}
+              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            >
+              <option value="">— tidak ditentukan —</option>
+              <option value="M">♂ Male (M)</option>
+              <option value="F">♀ Female (F)</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Purpose</label>

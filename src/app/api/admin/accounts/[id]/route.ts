@@ -61,6 +61,7 @@ export async function PATCH(
   let body: {
     username?: string
     accountName?: string
+    gender?: string
     status?: string
     purpose?: string
     notes?: string

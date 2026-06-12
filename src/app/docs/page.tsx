@@ -141,7 +141,13 @@ export default function DocsPage() {
               <Code>{`{
   "agent": { "id": "...", "name": "Worker A" },
   "library": {
-    "instagramAccounts": [...],
+    "instagramAccounts": [
+      {
+        "id": "acc_xxx", "username": "budi_official",
+        "accountName": "Budi Official", "gender": "M",
+        "status": "active", "purpose": "cpas"
+      }
+    ],
     "characters": [
       {
         "id": "char_xxx",
@@ -424,6 +430,13 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
               <Endpoint method="GET" path="/api/admin/meta-tools/ad-library?q=skincare&country=ID" desc="Cari ads kompetitor di Meta Ad Library" />
               <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
               <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
+            </Section>
+            <Section title="Instagram Accounts">
+              <Endpoint method="GET" path="/api/admin/accounts" desc="List akun IG. Query: ?status=active" />
+              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun. Body: { username*, accountName?, gender? ('M'|'F'), purpose?, notes? }" />
+              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + characters + postingMonitor" />
+              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update field: username/accountName/gender/purpose/notes/status" />
+              <Endpoint method="DELETE" path="/api/admin/accounts/[id]" desc="Hapus akun + cascade characters/topics/CEPs/contentLogs" />
             </Section>
             <Section title="Worker Tasks">
               <Endpoint method="GET" path="/api/admin/worker-tasks?status=pending" desc="Monitor antrian task + counts per status" />

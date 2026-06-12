@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   let body: {
     username: string
     accountName?: string
+    gender?: string
     status?: string
     purpose?: string
     notes?: string
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     data: {
       username: body.username,
       accountName: body.accountName,
+      gender: body.gender ?? null,
       status: body.status ?? 'active',
       purpose: body.purpose,
       notes: body.notes,
