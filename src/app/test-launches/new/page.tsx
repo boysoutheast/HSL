@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
+import StepZeroOverlay from '@/components/StepZeroOverlay'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,30 @@ interface FormData {
   
   // Derived
   notes: string
+}
+
+interface LaunchPrefillResponse {
+  prefill: {
+    campaignName: string
+    objective: string
+    metaAccountId: string | null
+    metaAdAccountId: string | null
+    pageId: string | null
+    igAccountId: string | null
+    pixelId: string | null
+    landingPageUrl: string | null
+    audience: { ageMin: number; ageMax: number; gender: 'all' | 'male' | 'female' }
+    media: Array<{ url: string; type: string; source: string }>
+  }
+  product: { id: string; name: string }
+  sources: Record<string, string>
+}
+
+interface CopyVariant {
+  primaryText: string
+  headline: string
+  description: string
+  truncated?: boolean
 }
 
 interface BidStrategyOption {
@@ -297,6 +322,12 @@ export default function NewTestLaunchPage() {
   const [availablePages, setAvailablePages] = useState<Page[]>([])
   const [mediaAssets, setMediaAssets] = useState<Array<{id: string; publicUrl: string | null; fileUrl: string | null; thumbnailUrl: string | null; type: string; label: string | null}>>([])
   const [showPicker, setShowPicker] = useState<Map<string,boolean>>(new Map())
+  const [showStepZero, setShowStepZero] = useState(true)
+  const [autoSources, setAutoSources] = useState<Record<string, string>>({})
+  const [prefillProductId, setPrefillProductId] = useState<string | null>(null)
+  const [prefillLoading, setPrefillLoading] = useState(false)
+  const [copyVariants, setCopyVariants] = useState<Record<string, CopyVariant[]>>({})
+  const [copyLoadingKey, setCopyLoadingKey] = useState<string | null>(null)
 
   const stepIndex = (STEPS as readonly string[]).indexOf(currentStep)
 
@@ -409,7 +440,7 @@ export default function NewTestLaunchPage() {
   }
 
   const handleAdAccountChange = (id: string) => {
-    setForm((f) => ({ ...f, metaAdAccountId: id, pixelId: '' }))
+    setAutoSources((s) => ({ ...s, metaAdAccountId: '', pixelId: '' })); setForm((f) => ({ ...f, metaAdAccountId: id, pixelId: '' }))
     setPixels([])
     setCustomAudiences([])
     setCustomAudienceError(null)
@@ -530,6 +561,92 @@ export default function NewTestLaunchPage() {
       ...f,
       budgetMode: mode,
       dailyBudget: mode === 'CBO' ? f.dailyBudget : '',
+    }))
+  }
+
+  const applyProductPrefill = async (productId: string) => {
+    setPrefillLoading(true)
+    setSaveError(null)
+    try {
+      const res = await fetch('/api/admin/launch-prefill?productId=' + productId, { credentials: 'include' })
+      const data = await res.json() as any
+      if (!res.ok || !data.prefill) throw new Error(data.error || 'Gagal prefill')
+      const p = data.prefill
+      setPrefillProductId(productId)
+      if (data.sources) setAutoSources(data.sources)
+      setForm((f) => ({
+        ...f,
+        name: p.campaignName || f.name,
+        objective: p.objective || f.objective,
+        metaConnectionId: p.metaAccountId || f.metaConnectionId,
+        metaAdAccountId: p.metaAdAccountId || f.metaAdAccountId,
+        adsets: f.adsets.map((adset, idx) => ({
+          ...adset,
+          pixelId: p.pixelId || adset.pixelId,
+          identityPageId: p.pageId || adset.identityPageId,
+          identityIgUserId: p.igAccountId || adset.identityIgUserId,
+          ageMin: p.audience?.ageMin || adset.ageMin,
+          ageMax: p.audience?.ageMax || adset.ageMax,
+          gender: p.audience?.gender || adset.gender,
+          creatives: adset.creatives.map((c, ci) => ({
+            ...c,
+            imageUrl: p.media?.[ci]?.url || c.imageUrl,
+            linkUrl: p.landingPageUrl || c.linkUrl,
+          })),
+        })),
+      }))
+      if (p.metaAccountId) {
+        fetchAdAccounts(p.metaAccountId)
+        fetchPages(p.metaAccountId)
+      }
+      if (p.metaAdAccountId) {
+        fetchPixels(p.metaAdAccountId)
+        fetchBidStrategies(p.metaAdAccountId)
+        fetchCustomAudiences(p.metaAdAccountId)
+      }
+    } catch (err: any) {
+      setSaveError(err.message || 'Gagal prefill dari produk')
+    } finally {
+      setPrefillLoading(false)
+    }
+  }
+
+  const generateCopyForCreative = async (adsetId: string, creativeId: string) => {
+    if (!prefillProductId) return
+    const key = adsetId + '__' + creativeId
+    setCopyLoadingKey(key)
+    try {
+      const res = await fetch('/api/admin/meta-tools/generate-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ productId: prefillProductId, objective: form.objective }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Error ' + res.status)
+      setCopyVariants((s) => ({ ...s, [key]: data.variants || [] }))
+    } catch (err: any) {
+      setSaveError(err.message || 'Gagal generate copy')
+    } finally {
+      setCopyLoadingKey(null)
+    }
+  }
+
+  const applyCopyVariant = (adsetId: string, creativeId: string, variant: CopyVariant) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId
+          ? {
+              ...a,
+              creatives: a.creatives.map((c) =>
+                c.id === creativeId
+                  ? { ...c, primaryText: variant.primaryText || c.primaryText, headline: variant.headline || c.headline, description: variant.description || c.description }
+                  : c
+              ),
+            }
+          : a
+      ),
     }))
   }
 
@@ -732,12 +849,19 @@ export default function NewTestLaunchPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  if (loadingDeps) {
+  if (loadingDeps || prefillLoading) {
     return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
   }
 
   return (
     <div className="max-w-4xl">
+      {showStepZero && (
+        <StepZeroOverlay
+          onChooseProduct={async (pid) => { await applyProductPrefill(pid); setShowStepZero(false) }}
+          onChooseEmpty={() => setShowStepZero(false)}
+          onClose={() => setShowStepZero(false)}
+        />
+      )}
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
@@ -791,8 +915,8 @@ export default function NewTestLaunchPage() {
 
               {/* Name */}
               <div>
-                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span></label>
-                <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required className={inputCls} placeholder="Summer Sale Campaign Q3" />
+                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span> {autoSources.campaignName && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.campaignName.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <input type="text" value={form.name} onChange={(e) => { setAutoSources((s) => ({ ...s, campaignName: '' })); setForm((f) => ({ ...f, name: e.target.value })) }} required className={inputCls} placeholder="Summer Sale Campaign Q3" />
               </div>
 
               {/* Budget Mode */}
@@ -812,7 +936,7 @@ export default function NewTestLaunchPage() {
 
               {/* Meta Connection */}
               <div>
-                <label className={labelCls}>Meta Connection <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Meta Connection <span className="text-red-500">*</span> {autoSources.metaAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.metaAccountId.replace(/_/g," ").toLowerCase()}</span>}</label>
                 <select value={form.metaConnectionId} onChange={(e) => handleMetaConnectionChange(e.target.value)} className={inputCls}>
                   <option value="">-- Pilih Meta Connection --</option>
                   {metaConnections.map((mc) => (
@@ -823,7 +947,7 @@ export default function NewTestLaunchPage() {
 
               {/* Ad Account */}
               <div>
-                <label className={labelCls}>Ad Account <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Ad Account <span className="text-red-500">*</span> {autoSources.metaAdAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.metaAdAccountId.replace(/_/g," ").toLowerCase()}</span>}</label>
                 {form.metaConnectionId ? (
                   adAccounts.length > 0 ? (
                     <select value={form.metaAdAccountId} onChange={(e) => handleAdAccountChange(e.target.value)} className={inputCls}>
@@ -842,8 +966,8 @@ export default function NewTestLaunchPage() {
 
               {/* Objective */}
               <div>
-                <label className={labelCls}>Objective</label>
-                <select value={form.objective} onChange={(e) => setForm((f) => ({ ...f, objective: e.target.value }))} className={inputCls}>
+                <label className={labelCls}>Objective {autoSources.objective && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.objective.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <select value={form.objective} onChange={(e) => { setAutoSources((s) => ({ ...s, objective: '' })); setForm((f) => ({ ...f, objective: e.target.value })) }} className={inputCls}>
                   {OBJECTIVE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                 </select>
               </div>
@@ -1018,9 +1142,9 @@ export default function NewTestLaunchPage() {
                       {/* Pixel + Event */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className={labelCls}>Meta Pixel</label>
+                          <label className={labelCls}>Meta Pixel {autoSources.pixelId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.pixelId.replace(/_/g," ").toLowerCase()}</span>}</label>
                           {pixels.length > 0 ? (
-                            <select value={adset.pixelId} onChange={(e) => updateAdsetField(adset.id, 'pixelId', e.target.value)} className={inputCls}>
+                            <select value={adset.pixelId} onChange={(e) => { setAutoSources((s) => ({ ...s, pixelId: '' })); updateAdsetField(adset.id, 'pixelId', e.target.value) }} className={inputCls}>
                               <option value="">-- Pilih Pixel --</option>
                               {pixels.map((px) => (<option key={px.id} value={px.id}>{px.name}</option>))}
                             </select>
@@ -1208,7 +1332,7 @@ export default function NewTestLaunchPage() {
 
               {/* Identity selector */}
               <div>
-                <label className={labelCls}>Facebook Page Identity</label>
+                <label className={labelCls}>Facebook Page Identity {autoSources.pageId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.pageId.replace(/_/g," ").toLowerCase()}</span>}</label>
                 {availablePages.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {availablePages.map((page) => (
@@ -1375,6 +1499,34 @@ export default function NewTestLaunchPage() {
                           <input type="text" value={creative.urlTags} onChange={(e) => updateCreativeField(adset.id, creative.id, 'urlTags', e.target.value)} className={inputCls} placeholder="utm_source=fb&utm_campaign=..." />
                         </div>
                       </div>
+
+                                            {!creative.format?.startsWith('carousel') && (
+                        <div className="flex items-center justify-between gap-3">
+                          <button
+                            type="button"
+                            disabled={!prefillProductId || copyLoadingKey === (adset.id + '__' + creative.id)}
+                            title={!prefillProductId ? 'Pilih Dari Produk dulu untuk generate copy' : ''}
+                            onClick={() => generateCopyForCreative(adset.id, creative.id)}
+                            className={"text-xs font-semibold px-3 py-2 rounded-lg border " + (!prefillProductId ? 'border-stone-200 text-stone-400 cursor-not-allowed' : 'border-violet-300 text-violet-700 hover:bg-violet-50')}
+                          >
+                            {copyLoadingKey === (adset.id + '__' + creative.id) ? 'Generating...' : '✨ Generate copy'}
+                          </button>
+                          {copyVariants[adset.id + '__' + creative.id]?.length ? (
+                            <div className="flex flex-wrap gap-2 justify-end">
+                              {copyVariants[adset.id + '__' + creative.id].map((variant, vi) => (
+                                <button
+                                  key={vi}
+                                  type="button"
+                                  onClick={() => applyCopyVariant(adset.id, creative.id, variant)}
+                                  className="px-3 py-1.5 rounded-full bg-violet-100 text-violet-700 text-xs font-medium hover:bg-violet-200"
+                                >
+                                  Variant {vi + 1}
+                                </button>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
 
                       {creative.format === 'carousel' && (() => {
                         const cards: Array<{mediaUrl: string; headline: string; linkUrl: string}> = (() => {
