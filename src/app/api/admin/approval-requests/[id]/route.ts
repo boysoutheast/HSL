@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
-
-export const dynamic = 'force-dynamic'
+import { getObjectiveConfig } from '@/lib/meta-objective-matrix'
+import { buildPlacementTargeting } from '@/lib/meta-placement-map'
 
 type AudienceShape = {
   ageMin?: number
   ageMax?: number
   gender?: string
-  locations?: Array<{ type: string; key: string }>
-  interests?: unknown[]
+  locations?: Array<{ type: string; key: string; name?: string; country_code?: string; region_id?: string; city_id?: string }>
+  customAudienceIds?: string[]
+  excludedCustomAudienceIds?: string[]
+}
+
+type TargetingExtraShape = {
+  interests?: Array<{ id?: string; name?: string }>
+  excludedCustomAudienceIds?: string[]
+  devicePlatforms?: string[]
 }
 
 type BidStrategyShape = {
@@ -27,57 +34,112 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
-function parseAudienceFromTargeting(targetingJson: string | null | undefined): AudienceShape {
+function parseAudience(audienceJson: string | null | undefined, targetingJson: string | null | undefined): AudienceShape {
   const fallback: AudienceShape = {
     ageMin: 25,
     ageMax: 45,
     gender: 'all',
-    locations: [{ type: 'country', key: 'ID' }],
+    locations: [{ type: 'country', key: 'ID', country_code: 'ID', name: 'Indonesia' }],
   }
 
-  if (!targetingJson) return fallback
+  const audience = parseJson<AudienceShape | null>(audienceJson, null)
+  if (audience) return { ...fallback, ...audience }
 
-  try {
-    const targeting = JSON.parse(targetingJson)
-    if (targeting.audience) return targeting.audience as AudienceShape
-    return {
-      ageMin: targeting.age_min ?? fallback.ageMin,
-      ageMax: targeting.age_max ?? fallback.ageMax,
-      gender: targeting.gender ?? fallback.gender,
-      locations: targeting.geo_locations?.locations ?? fallback.locations,
-      interests: targeting.interests ?? undefined,
-    }
-  } catch {
-    return fallback
+  const targeting = parseJson<Record<string, unknown> | null>(targetingJson, null)
+  if (!targeting) return fallback
+
+  const geoLocations = (targeting.geo_locations as { locations?: AudienceShape['locations'] } | undefined)?.locations
+
+  return {
+    ageMin: Number(targeting.age_min ?? fallback.ageMin),
+    ageMax: Number(targeting.age_max ?? fallback.ageMax),
+    gender: String(targeting.gender ?? fallback.gender),
+    locations: geoLocations ?? fallback.locations,
+    customAudienceIds: Array.isArray(targeting.customAudienceIds) ? (targeting.customAudienceIds as string[]) : undefined,
+    excludedCustomAudienceIds: Array.isArray(targeting.excludedCustomAudienceIds) ? (targeting.excludedCustomAudienceIds as string[]) : undefined,
   }
 }
 
-function parsePlacements(placementsJson: string | null | undefined): string[] {
-  return parseJson<string[]>(placementsJson, [])
+function parseTargetingExtras(targetingJson: string | null | undefined): TargetingExtraShape {
+  return parseJson<TargetingExtraShape>(targetingJson, {})
 }
 
-function parseCampaignBidStrategy(notes: string | null | undefined): BidStrategyShape | null {
-  if (!notes) return null
-  try {
-    const parsed = JSON.parse(notes)
-    if (parsed && typeof parsed === 'object' && parsed.bidStrategy) {
-      return parsed.bidStrategy as BidStrategyShape
-    }
-  } catch {
-    // notes can be plain text, ignore
+function parseBidStrategy(value: string | null | undefined): BidStrategyShape | null {
+  return parseJson<BidStrategyShape | null>(value, null)
+}
+
+function mapGender(gender?: string): number[] | undefined {
+  if (!gender || gender === 'all') return undefined
+  if (gender === 'male') return [1]
+  if (gender === 'female') return [2]
+  return undefined
+}
+
+function buildGeoLocations(locations: AudienceShape['locations']): Record<string, unknown> {
+  const items = Array.isArray(locations) ? locations : []
+  const countries = new Set<string>()
+  const regions: Array<{ key: string }> = []
+  const cities: Array<{ key: string }> = []
+
+  for (const loc of items) {
+    if (!loc) continue
+    if (loc.type === 'country') countries.add(loc.country_code || loc.key || 'ID')
+    if (loc.type === 'region') regions.push({ key: loc.region_id || loc.key })
+    if (loc.type === 'city') cities.push({ key: loc.city_id || loc.key })
   }
-  return null
+
+  return {
+    ...(countries.size ? { countries: Array.from(countries) } : { countries: ['ID'] }),
+    ...(regions.length ? { regions } : {}),
+    ...(cities.length ? { cities } : {}),
+  }
+}
+
+function buildTargeting(adset: {
+  audienceJson: string | null
+  targetingJson: string | null
+  placementMode: string
+  placementsJson: string | null
+}) {
+  const audience = parseAudience(adset.audienceJson, adset.targetingJson)
+  const extra = parseTargetingExtras(adset.targetingJson)
+  const placements = parseJson<string[]>(adset.placementsJson, [])
+  const mappedPlacements = adset.placementMode === 'manual' ? buildPlacementTargeting(placements) : null
+
+  return {
+    geoLocations: buildGeoLocations(audience.locations),
+    ageMin: audience.ageMin ?? 25,
+    ageMax: audience.ageMax ?? 45,
+    ...(mapGender(audience.gender) ? { genders: mapGender(audience.gender) } : {}),
+    ...(Array.isArray(audience.customAudienceIds) && audience.customAudienceIds.length
+      ? { customAudiences: audience.customAudienceIds.map((id) => ({ id })) }
+      : {}),
+    ...(Array.isArray(extra.excludedCustomAudienceIds) && extra.excludedCustomAudienceIds.length
+      ? { excludedCustomAudiences: extra.excludedCustomAudienceIds.map((id) => ({ id })) }
+      : Array.isArray(audience.excludedCustomAudienceIds) && audience.excludedCustomAudienceIds.length
+        ? { excludedCustomAudiences: audience.excludedCustomAudienceIds.map((id) => ({ id })) }
+        : {}),
+    ...(Array.isArray(extra.interests) && extra.interests.length
+      ? { flexibleSpec: [{ interests: extra.interests.map((it) => ({ id: String(it.id ?? ''), name: String(it.name ?? '') })) }] }
+      : {}),
+    ...(Array.isArray(extra.devicePlatforms) && extra.devicePlatforms.length ? { devicePlatforms: extra.devicePlatforms } : {}),
+    ...(mappedPlacements
+      ? {
+          placements: {
+            mode: 'manual',
+            publisherPlatforms: mappedPlacements.publisher_platforms,
+            ...Object.fromEntries(Object.entries(mappedPlacements).filter(([key]) => key !== 'publisher_platforms')),
+          },
+        }
+      : { placements: { mode: 'automatic' } }),
+  }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAdmin(req)
   if (auth instanceof NextResponse) return auth
 
-  let body: {
-    status?: 'approved' | 'rejected'
-    reviewNote?: string
-  }
-
+  let body: { status?: 'approved' | 'rejected'; reviewNote?: string }
   try {
     body = await req.json()
   } catch {
@@ -93,13 +155,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: {
       testLaunch: {
         include: {
-          creatives: true,
+          creatives: { orderBy: { sortOrder: 'asc' } },
           adsets: {
-            include: {
-              creatives: {
-                orderBy: { sortOrder: 'asc' },
-              },
-            },
+            include: { creatives: { orderBy: { sortOrder: 'asc' } } },
             orderBy: { sortOrder: 'asc' },
           },
           metaAccount: true,
@@ -111,7 +169,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!approvalRequest) {
     return NextResponse.json({ error: 'ApprovalRequest not found' }, { status: 404 })
   }
-
   if (approvalRequest.status !== 'pending') {
     return NextResponse.json({ error: 'ApprovalRequest is not pending' }, { status: 409 })
   }
@@ -119,33 +176,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const now = new Date()
 
   if (body.status === 'approved') {
-    const testLaunch = await prisma.testLaunch.findUnique({
-      where: { id: approvalRequest.testLaunchId },
-      include: {
-        creatives: true,
-        adsets: {
-          include: {
-            creatives: {
-              orderBy: { sortOrder: 'asc' },
-            },
-          },
-          orderBy: { sortOrder: 'asc' },
-        },
-        metaAccount: {
-          select: {
-            id: true,
-            defaultAdAccountId: true,
-            accountName: true,
-            currency: true,
-            timezone: true,
-            userId: true,
-          },
-        },
-      },
-    })
+    const testLaunch = approvalRequest.testLaunch
+    if (!testLaunch) return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
 
-    if (!testLaunch) {
-      return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
+    const objectiveConfig = getObjectiveConfig(testLaunch.objective || 'OUTCOME_LEADS')
+    if (!objectiveConfig) {
+      return NextResponse.json({ error: 'Unsupported objective on test launch' }, { status: 400 })
     }
 
     await prisma.testLaunch.update({
@@ -153,105 +189,129 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: { status: 'approved' },
     })
 
-    const audience = parseAudienceFromTargeting(testLaunch.targetingJson)
-    const placements = parsePlacements(testLaunch.placementsJson)
     const selectedAdAccount = testLaunch.metaAdAccountId
       ? await prisma.metaAdAccount.findUnique({
           where: { id: testLaunch.metaAdAccountId },
-          select: { adAccountId: true, adAccountName: true },
+          select: { adAccountId: true },
         })
       : null
 
     const adAccountId = selectedAdAccount?.adAccountId || testLaunch.metaAccount?.defaultAdAccountId || ''
     const budgetMode = testLaunch.budgetMode || 'CBO'
-    const campaignBidStrategy = parseCampaignBidStrategy(testLaunch.notes)
+    const campaignBidStrategy = parseBidStrategy(testLaunch.bidStrategyJson)
+    const rootPlacements = parseJson<string[]>(testLaunch.placementsJson, [])
 
-    const adsetsV2 = budgetMode === 'ABO'
-      ? testLaunch.adsets.map((adset, index) => {
-          const adsetAudience = parseJson<AudienceShape | null>(adset.audienceJson, null)
-          const adsetBidStrategy = parseJson<BidStrategyShape | null>(adset.bidStrategyJson, null)
+    const adsets = testLaunch.adsets.length > 0
+      ? testLaunch.adsets.map((adset) => {
+          const adsetBidStrategy = parseBidStrategy(adset.bidStrategyJson)
+          const bidStrategy = budgetMode === 'ABO'
+            ? adsetBidStrategy ?? campaignBidStrategy ?? undefined
+            : undefined
+          const customEventType = adset.customEventType || objectiveConfig.defaultEvent || undefined
+          const targeting = buildTargeting({
+            audienceJson: adset.audienceJson,
+            targetingJson: adset.targetingJson,
+            placementMode: adset.placementMode,
+            placementsJson: adset.placementsJson,
+          })
+
           return {
             name: adset.name,
-            dailyBudget: Number(adset.dailyBudget ?? 0),
-            bidStrategy: adsetBidStrategy ?? campaignBidStrategy ?? undefined,
-            audience: adsetAudience ?? audience,
-            placements,
-            placementMode: testLaunch.placementMode || 'automatic',
-            creatives: adset.creatives.map((c) => ({
-              imageUrl: c.creativeUrl || '',
-              primaryText: c.primaryText || c.hookText || c.captionText || '',
-              headline: c.adHeadline || c.headline || '',
-              callToAction: c.callToAction || 'LEARN_MORE',
+            ...(budgetMode === 'ABO' ? { dailyBudget: Number(adset.dailyBudget ?? 0) } : {}),
+            ...(bidStrategy ? { bidStrategy } : {}),
+            destinationType: adset.destinationType || 'WEBSITE',
+            optimizationGoal: adset.optimizationGoal || objectiveConfig.optimizationGoal,
+            billingEvent: adset.billingEvent || objectiveConfig.billingEvent,
+            promotedObject: adset.pixelId
+              ? {
+                  pixelId: adset.pixelId,
+                  ...(customEventType ? { customEventType } : {}),
+                }
+              : undefined,
+            startTime: adset.startTime?.toISOString() ?? null,
+            endTime: adset.endTime?.toISOString() ?? null,
+            targeting,
+            ads: adset.creatives.map((creative) => ({
+              identity: {
+                pageId: adset.identityPageId || testLaunch.pageId || '',
+                instagramUserId: adset.identityIgUserId || testLaunch.igAccountId || '',
+              },
+              creative: {
+                format: creative.format || 'single',
+                linkUrl: creative.linkUrl || testLaunch.destinationUrl || '',
+                message: creative.primaryText || creative.hookText || creative.captionText || '',
+                headline: creative.adHeadline || creative.headline || '',
+                description: creative.description || '',
+                cta: creative.callToAction || 'LEARN_MORE',
+                mediaUrl: creative.creativeUrl || '',
+                children: creative.childAttachmentsJson ? parseJson(creative.childAttachmentsJson, null) : null,
+              },
+              urlTags: creative.urlTags || '',
             })),
-            sortOrder: adset.sortOrder ?? index,
           }
         })
       : [
           {
-            name: `${testLaunch.name || `HSL Launch ${now.toISOString()}`} - Adset`,
-            bidStrategy: campaignBidStrategy ?? undefined,
-            audience,
-            placements,
-            placementMode: testLaunch.placementMode || 'automatic',
-            creatives: testLaunch.creatives.map((c) => ({
-              imageUrl: c.creativeUrl || '',
-              primaryText: c.primaryText || c.hookText || c.captionText || '',
-              headline: c.adHeadline || c.headline || '',
-              callToAction: c.callToAction || 'LEARN_MORE',
+            name: `${testLaunch.name} - Adset`,
+            destinationType: 'WEBSITE',
+            optimizationGoal: objectiveConfig.optimizationGoal,
+            billingEvent: objectiveConfig.billingEvent,
+            promotedObject: testLaunch.pixelId
+              ? {
+                  pixelId: testLaunch.pixelId,
+                  ...(objectiveConfig.defaultEvent ? { customEventType: objectiveConfig.defaultEvent } : {}),
+                }
+              : undefined,
+            startTime: null,
+            endTime: null,
+            targeting: {
+              ...buildTargeting({
+                audienceJson: testLaunch.audienceJson,
+                targetingJson: testLaunch.targetingJson,
+                placementMode: testLaunch.placementMode,
+                placementsJson: JSON.stringify(rootPlacements),
+              }),
+            },
+            ads: testLaunch.creatives.map((creative) => ({
+              identity: {
+                pageId: testLaunch.pageId || '',
+                instagramUserId: testLaunch.igAccountId || '',
+              },
+              creative: {
+                format: creative.format || 'single',
+                linkUrl: creative.linkUrl || testLaunch.destinationUrl || '',
+                message: creative.primaryText || creative.hookText || creative.captionText || '',
+                headline: creative.adHeadline || creative.headline || '',
+                description: creative.description || '',
+                cta: creative.callToAction || 'LEARN_MORE',
+                mediaUrl: creative.creativeUrl || '',
+                children: creative.childAttachmentsJson ? parseJson(creative.childAttachmentsJson, null) : null,
+              },
+              urlTags: creative.urlTags || '',
             })),
-            sortOrder: 0,
           },
         ]
 
-    const payloadV2: Record<string, unknown> = {
-      payloadVersion: 2,
+    const payload = {
+      payloadVersion: 3,
       budgetMode,
       campaign: {
-        name: testLaunch.name || `HSL Launch ${now.toISOString()}`,
-        objective: testLaunch.objective || 'OUTCOME_LEADS',
+        name: testLaunch.name,
+        objective: testLaunch.objective,
+        specialAdCategories: [],
         ...(budgetMode === 'CBO' ? { dailyBudget: Number(testLaunch.dailyBudget) } : {}),
         ...(budgetMode === 'CBO' && campaignBidStrategy ? { bidStrategy: campaignBidStrategy } : {}),
+        ...(budgetMode === 'ABO' ? { isAdsetBudgetSharingEnabled: false } : {}),
       },
-      adsets: adsetsV2,
+      adsets,
       adAccountId,
-      pageId: testLaunch.pageId || '',
-      igAccountId: testLaunch.igAccountId || '',
-      pixelId: testLaunch.pixelId || '',
       metaConnectionId: testLaunch.metaAccountId,
       snapshotAt: now.toISOString(),
     }
-
-    const legacyPayload = {
-      metaConnectionId: testLaunch.metaAccountId,
-      adAccountId,
-      pageId: testLaunch.pageId || '',
-      igAccountId: testLaunch.igAccountId || '',
-      objective: testLaunch.objective || 'OUTCOME_LEADS',
-      dailyBudget: Number(testLaunch.dailyBudget),
-      destinationUrl: testLaunch.destinationUrl || '',
-      placementMode: testLaunch.placementMode || 'automatic',
-      placements,
-      audience,
-      creatives: testLaunch.creatives.map((c) => ({
-        imageUrl: c.creativeUrl || '',
-        primaryText: c.primaryText || c.hookText || c.captionText || '',
-        headline: c.adHeadline || c.headline || '',
-        callToAction: c.callToAction || 'LEARN_MORE',
-      })),
-      name: testLaunch.name || `HSL Launch ${now.toISOString()}`,
-      pixelId: testLaunch.pixelId || '',
-      snapshotAt: now.toISOString(),
-    }
-
-    const payload = budgetMode === 'CBO'
-      ? { ...legacyPayload, ...payloadV2 }
-      : payloadV2
-
-    const taskType = budgetMode === 'ABO' ? 'create_full_launch_abo' : 'create_full_launch'
 
     await prisma.workerTask.create({
       data: {
-        type: taskType,
+        type: 'create_full_launch_v3',
         payloadJson: JSON.stringify(payload),
         status: 'pending',
         priority: 1,
