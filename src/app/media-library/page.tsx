@@ -42,6 +42,21 @@ interface CreativeVariant {
   usageCount: number
 }
 
+interface AssetUsageLaunch {
+  id: string
+  name: string
+  objective: string
+  status: string
+  creativeCount: number
+  creativeStatuses: string[]
+}
+
+interface AssetUsageResponse {
+  launches: AssetUsageLaunch[]
+  totalLaunchUsage: number
+  variantCount: number
+}
+
 const STATUS_OPTIONS = ['READY', 'DRAFT', 'PROCESSING', 'FAILED', 'ARCHIVED']
 const SOURCE_OPTIONS = ['USER_UPLOAD', 'AI_GENERATED']
 
@@ -79,6 +94,7 @@ export default function MediaLibraryPage() {
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null)
   const [selectedVariants, setSelectedVariants] = useState<CreativeVariant[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
+  const [assetUsage, setAssetUsage] = useState<AssetUsageResponse | null>(null)
 
   const fetchAssets = useCallback(async () => {
     try {
@@ -190,13 +206,22 @@ export default function MediaLibraryPage() {
   const openDetail = async (asset: MediaAsset) => {
     setSelectedAsset(asset)
     setSelectedVariants([])
+    setAssetUsage(null)
     setDetailLoading(true)
     try {
-      const res = await fetch(`/api/admin/media-assets/${asset.id}`, { credentials: 'include' })
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setSelectedAsset(data.asset)
-      setSelectedVariants(data.asset.creativeVariants ?? [])
+      const [detailRes, usageRes] = await Promise.all([
+        fetch(`/api/admin/media-assets/${asset.id}`, { credentials: 'include' }),
+        fetch(`/api/admin/media-assets/${asset.id}/usage`, { credentials: 'include' }),
+      ])
+      if (detailRes.ok) {
+        const data = await detailRes.json()
+        setSelectedAsset(data.asset)
+        setSelectedVariants(data.asset.creativeVariants ?? [])
+      }
+      if (usageRes.ok) {
+        const data = await usageRes.json()
+        setAssetUsage(data.usage)
+      }
     } catch { /* silent */ }
     finally { setDetailLoading(false) }
   }
@@ -539,6 +564,43 @@ export default function MediaLibraryPage() {
                       <div>
                         <p className="text-xs font-medium text-stone-500 uppercase">Generation Prompt</p>
                         <p className="text-sm text-stone-600 dark:text-stone-300">{selectedAsset.generationPrompt}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dipakai di */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-stone-700 dark:text-stone-100">
+                        Dipakai di ({assetUsage?.launches.length ?? 0})
+                      </h3>
+                      <span className="text-xs text-stone-400">
+                        Variant: {assetUsage?.variantCount ?? selectedVariants.length}
+                      </span>
+                    </div>
+                    {!assetUsage ? (
+                      <p className="text-sm text-stone-400">Loading usage...</p>
+                    ) : assetUsage.launches.length === 0 ? (
+                      <p className="text-sm text-stone-400">Belum dipakai di launch mana pun.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {assetUsage.launches.map(launch => (
+                          <a
+                            key={launch.id}
+                            href={`/test-launches/${launch.id}`}
+                            className="block border border-stone-200 dark:border-stone-700 p-3 hover:border-violet-300 transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-3 mb-1">
+                              <p className="text-sm font-medium text-stone-800 dark:text-stone-100 truncate">{launch.name}</p>
+                              <StatusBadge status={launch.status} />
+                            </div>
+                            <p className="text-xs text-stone-500">{launch.objective}</p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-stone-400">
+                              <span>{launch.creativeCount} creative match</span>
+                              <span>{launch.creativeStatuses.length} status record</span>
+                            </div>
+                          </a>
+                        ))}
                       </div>
                     )}
                   </div>
