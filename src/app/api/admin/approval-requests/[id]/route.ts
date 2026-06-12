@@ -4,6 +4,71 @@ import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
+type AudienceShape = {
+  ageMin?: number
+  ageMax?: number
+  gender?: string
+  locations?: Array<{ type: string; key: string }>
+  interests?: unknown[]
+}
+
+type BidStrategyShape = {
+  strategy?: string
+  bidAmount?: number
+  roasAverageFloor?: number
+}
+
+function parseJson<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+function parseAudienceFromTargeting(targetingJson: string | null | undefined): AudienceShape {
+  const fallback: AudienceShape = {
+    ageMin: 25,
+    ageMax: 45,
+    gender: 'all',
+    locations: [{ type: 'country', key: 'ID' }],
+  }
+
+  if (!targetingJson) return fallback
+
+  try {
+    const targeting = JSON.parse(targetingJson)
+    if (targeting.audience) return targeting.audience as AudienceShape
+    return {
+      ageMin: targeting.age_min ?? fallback.ageMin,
+      ageMax: targeting.age_max ?? fallback.ageMax,
+      gender: targeting.gender ?? fallback.gender,
+      locations: targeting.geo_locations?.locations ?? fallback.locations,
+      interests: targeting.interests ?? undefined,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function parsePlacements(placementsJson: string | null | undefined): string[] {
+  return parseJson<string[]>(placementsJson, [])
+}
+
+function parseCampaignBidStrategy(notes: string | null | undefined): BidStrategyShape | null {
+  if (!notes) return null
+  try {
+    const parsed = JSON.parse(notes)
+    if (parsed && typeof parsed === 'object' && parsed.bidStrategy) {
+      return parsed.bidStrategy as BidStrategyShape
+    }
+  } catch {
+    // notes can be plain text, ignore
+  }
+  return null
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireAdmin(req)
   if (auth instanceof NextResponse) return auth
@@ -29,6 +94,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       testLaunch: {
         include: {
           creatives: true,
+          adsets: {
+            include: {
+              creatives: {
+                orderBy: { sortOrder: 'asc' },
+              },
+            },
+            orderBy: { sortOrder: 'asc' },
+          },
           metaAccount: true,
         },
       },
@@ -46,11 +119,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const now = new Date()
 
   if (body.status === 'approved') {
-    // Load full TestLaunch with all fields + metaAccount (safe fields only, no encrypted tokens)
     const testLaunch = await prisma.testLaunch.findUnique({
       where: { id: approvalRequest.testLaunchId },
       include: {
         creatives: true,
+        adsets: {
+          include: {
+            creatives: {
+              orderBy: { sortOrder: 'asc' },
+            },
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
         metaAccount: {
           select: {
             id: true,
@@ -68,38 +148,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
     }
 
-    // Update testLaunch status
     await prisma.testLaunch.update({
       where: { id: approvalRequest.testLaunchId },
       data: { status: 'approved' },
     })
 
-    // Parse audience from targetingJson
-    let audience = { ageMin: 25, ageMax: 45, gender: 'all', locations: [{ type: 'country', key: 'ID' }] }
-    if (testLaunch.targetingJson) {
-      try {
-        const targeting = typeof testLaunch.targetingJson === 'string'
-          ? JSON.parse(testLaunch.targetingJson)
-          : testLaunch.targetingJson
-        if (targeting.audience) {
-          audience = targeting.audience
-        }
-      } catch {
-        // Use default audience
-      }
-    }
-
-    // Parse placements from placementsJson
-    let placements: string[] = []
-    if (testLaunch.placementsJson) {
-      try {
-        placements = JSON.parse(testLaunch.placementsJson)
-      } catch {
-        // Use empty
-      }
-    }
-
-    // Resolve actual Meta ad account ID (not HSL DB id). TestLaunch.metaAdAccountId stores MetaAdAccount.id.
+    const audience = parseAudienceFromTargeting(testLaunch.targetingJson)
+    const placements = parsePlacements(testLaunch.placementsJson)
     const selectedAdAccount = testLaunch.metaAdAccountId
       ? await prisma.metaAdAccount.findUnique({
           where: { id: testLaunch.metaAdAccountId },
@@ -107,12 +162,66 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         })
       : null
 
-    const adAccountId = selectedAdAccount?.adAccountId
-      || testLaunch.metaAccount?.defaultAdAccountId
-      || ''
+    const adAccountId = selectedAdAccount?.adAccountId || testLaunch.metaAccount?.defaultAdAccountId || ''
+    const budgetMode = testLaunch.budgetMode || 'CBO'
+    const campaignBidStrategy = parseCampaignBidStrategy(testLaunch.notes)
 
-    // Build complete immutable payload snapshot for full launch
-    const payload = {
+    const adsetsV2 = budgetMode === 'ABO'
+      ? testLaunch.adsets.map((adset, index) => {
+          const adsetAudience = parseJson<AudienceShape | null>(adset.audienceJson, null)
+          const adsetBidStrategy = parseJson<BidStrategyShape | null>(adset.bidStrategyJson, null)
+          return {
+            name: adset.name,
+            dailyBudget: Number(adset.dailyBudget ?? 0),
+            bidStrategy: adsetBidStrategy ?? campaignBidStrategy ?? undefined,
+            audience: adsetAudience ?? audience,
+            placements,
+            placementMode: testLaunch.placementMode || 'automatic',
+            creatives: adset.creatives.map((c) => ({
+              imageUrl: c.creativeUrl || '',
+              primaryText: c.primaryText || c.hookText || c.captionText || '',
+              headline: c.adHeadline || c.headline || '',
+              callToAction: c.callToAction || 'LEARN_MORE',
+            })),
+            sortOrder: adset.sortOrder ?? index,
+          }
+        })
+      : [
+          {
+            name: `${testLaunch.name || `HSL Launch ${now.toISOString()}`} - Adset`,
+            bidStrategy: campaignBidStrategy ?? undefined,
+            audience,
+            placements,
+            placementMode: testLaunch.placementMode || 'automatic',
+            creatives: testLaunch.creatives.map((c) => ({
+              imageUrl: c.creativeUrl || '',
+              primaryText: c.primaryText || c.hookText || c.captionText || '',
+              headline: c.adHeadline || c.headline || '',
+              callToAction: c.callToAction || 'LEARN_MORE',
+            })),
+            sortOrder: 0,
+          },
+        ]
+
+    const payloadV2: Record<string, unknown> = {
+      payloadVersion: 2,
+      budgetMode,
+      campaign: {
+        name: testLaunch.name || `HSL Launch ${now.toISOString()}`,
+        objective: testLaunch.objective || 'OUTCOME_LEADS',
+        ...(budgetMode === 'CBO' ? { dailyBudget: Number(testLaunch.dailyBudget) } : {}),
+        ...(budgetMode === 'CBO' && campaignBidStrategy ? { bidStrategy: campaignBidStrategy } : {}),
+      },
+      adsets: adsetsV2,
+      adAccountId,
+      pageId: testLaunch.pageId || '',
+      igAccountId: testLaunch.igAccountId || '',
+      pixelId: testLaunch.pixelId || '',
+      metaConnectionId: testLaunch.metaAccountId,
+      snapshotAt: now.toISOString(),
+    }
+
+    const legacyPayload = {
       metaConnectionId: testLaunch.metaAccountId,
       adAccountId,
       pageId: testLaunch.pageId || '',
@@ -134,9 +243,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       snapshotAt: now.toISOString(),
     }
 
-    // Determine task type based on launch mode and creatives
-    const hasCreatives = testLaunch.creatives && testLaunch.creatives.length > 0
-    const taskType = hasCreatives ? 'create_full_launch' : 'create_campaign'
+    const payload = budgetMode === 'CBO'
+      ? { ...legacyPayload, ...payloadV2 }
+      : payloadV2
+
+    const taskType = budgetMode === 'ABO' ? 'create_full_launch_abo' : 'create_full_launch'
 
     await prisma.workerTask.create({
       data: {
@@ -148,7 +259,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       },
     })
   } else {
-    // Rejected — update testLaunch status
     await prisma.testLaunch.update({
       where: { id: approvalRequest.testLaunchId },
       data: { status: 'rejected' },
