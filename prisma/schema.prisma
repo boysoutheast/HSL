@@ -645,7 +645,7 @@ model MediaAsset {
   aspectRatio      String?  @map("aspect_ratio") // 9:16 | 1:1 | 16:9
   checksum         String
   status           String    @default("PROCESSING") // PROCESSING | READY | FAILED | ARCHIVED
-  moderationStatus String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  moderationStatus String    @default("PENDING") @map("moderation_status") // PENDING | APPROVED | REJECTED
   generationPrompt String?   @map("generation_prompt")
   generatedByModel String?   @map("generated_by_model")
   primaryText      String?   @map("primary_text") @db.VarChar(125)
