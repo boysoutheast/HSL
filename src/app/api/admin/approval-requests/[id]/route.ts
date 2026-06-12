@@ -253,7 +253,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: {
         type: taskType,
         payloadJson: JSON.stringify(payload),
-        status: 'pending',
+        status: 'PENDING',
         priority: 1,
         testLaunchId: approvalRequest.testLaunchId,
       },
