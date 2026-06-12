@@ -324,6 +324,13 @@ export default function NewTestLaunchPage() {
   const [showPicker, setShowPicker] = useState<Map<string,boolean>>(new Map())
   const [showStepZero, setShowStepZero] = useState(true)
   const [autoSources, setAutoSources] = useState<Record<string, string>>({})
+  const clearAutoSource = (key: string) =>
+    setAutoSources(prev => {
+      if (!(key in prev)) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   const [prefillProductId, setPrefillProductId] = useState<string | null>(null)
   const [prefillLoading, setPrefillLoading] = useState(false)
   const [copyVariants, setCopyVariants] = useState<Record<string, CopyVariant[]>>({})
@@ -427,6 +434,7 @@ export default function NewTestLaunchPage() {
 
   // Handlers
   const handleMetaConnectionChange = (id: string) => {
+    clearAutoSource('metaAccountId')
     setForm((f) => ({ ...f, metaConnectionId: id, metaAdAccountId: '', pageId: '' }))
     setSelectedPage(null)
     setAdAccounts([])
@@ -440,6 +448,8 @@ export default function NewTestLaunchPage() {
   }
 
   const handleAdAccountChange = (id: string) => {
+    clearAutoSource('metaAdAccountId')
+    clearAutoSource('pixelId')
     setAutoSources((s) => ({ ...s, metaAdAccountId: '', pixelId: '' })); setForm((f) => ({ ...f, metaAdAccountId: id, pixelId: '' }))
     setPixels([])
     setCustomAudiences([])
@@ -573,7 +583,7 @@ export default function NewTestLaunchPage() {
       if (!res.ok || !data.prefill) throw new Error(data.error || 'Gagal prefill')
       const p = data.prefill
       setPrefillProductId(productId)
-      if (data.sources) setAutoSources(data.sources)
+      if (p.sources) setAutoSources(Object.fromEntries(Object.entries(p.sources as Record<string, string>).filter(([, v]) => v !== 'default')))
       setForm((f) => ({
         ...f,
         name: p.campaignName || f.name,
@@ -590,8 +600,8 @@ export default function NewTestLaunchPage() {
           gender: p.audience?.gender || adset.gender,
           creatives: adset.creatives.map((c, ci) => ({
             ...c,
-            imageUrl: p.media?.[ci]?.url || c.imageUrl,
-            linkUrl: p.landingPageUrl || c.linkUrl,
+            imageUrl: p.media?.[ci]?.fileUrl || c.imageUrl,
+            linkUrl: p.linkUrl || c.linkUrl,
           })),
         })),
       }))
@@ -915,7 +925,7 @@ export default function NewTestLaunchPage() {
 
               {/* Name */}
               <div>
-                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span> {autoSources.campaignName && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.campaignName.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span> {autoSources.campaignName && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.campaignName === 'auto' ? 'auto' : 'auto · ' + autoSources.campaignName.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                 <input type="text" value={form.name} onChange={(e) => { setAutoSources((s) => ({ ...s, campaignName: '' })); setForm((f) => ({ ...f, name: e.target.value })) }} required className={inputCls} placeholder="Summer Sale Campaign Q3" />
               </div>
 
@@ -936,7 +946,7 @@ export default function NewTestLaunchPage() {
 
               {/* Meta Connection */}
               <div>
-                <label className={labelCls}>Meta Connection <span className="text-red-500">*</span> {autoSources.metaAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.metaAccountId.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <label className={labelCls}>Meta Connection <span className="text-red-500">*</span> {autoSources.metaAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.metaAccountId === 'auto' ? 'auto' : 'auto · ' + autoSources.metaAccountId.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                 <select value={form.metaConnectionId} onChange={(e) => handleMetaConnectionChange(e.target.value)} className={inputCls}>
                   <option value="">-- Pilih Meta Connection --</option>
                   {metaConnections.map((mc) => (
@@ -947,7 +957,7 @@ export default function NewTestLaunchPage() {
 
               {/* Ad Account */}
               <div>
-                <label className={labelCls}>Ad Account <span className="text-red-500">*</span> {autoSources.metaAdAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.metaAdAccountId.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <label className={labelCls}>Ad Account <span className="text-red-500">*</span> {autoSources.metaAdAccountId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.metaAdAccountId === 'auto' ? 'auto' : 'auto · ' + autoSources.metaAdAccountId.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                 {form.metaConnectionId ? (
                   adAccounts.length > 0 ? (
                     <select value={form.metaAdAccountId} onChange={(e) => handleAdAccountChange(e.target.value)} className={inputCls}>
@@ -966,7 +976,7 @@ export default function NewTestLaunchPage() {
 
               {/* Objective */}
               <div>
-                <label className={labelCls}>Objective {autoSources.objective && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.objective.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <label className={labelCls}>Objective {autoSources.objective && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.objective === 'auto' ? 'auto' : 'auto · ' + autoSources.objective.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                 <select value={form.objective} onChange={(e) => { setAutoSources((s) => ({ ...s, objective: '' })); setForm((f) => ({ ...f, objective: e.target.value })) }} className={inputCls}>
                   {OBJECTIVE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
                 </select>
@@ -1142,7 +1152,7 @@ export default function NewTestLaunchPage() {
                       {/* Pixel + Event */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className={labelCls}>Meta Pixel {autoSources.pixelId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.pixelId.replace(/_/g," ").toLowerCase()}</span>}</label>
+                          <label className={labelCls}>Meta Pixel {autoSources.pixelId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.pixelId === 'auto' ? 'auto' : 'auto · ' + autoSources.pixelId.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                           {pixels.length > 0 ? (
                             <select value={adset.pixelId} onChange={(e) => { setAutoSources((s) => ({ ...s, pixelId: '' })); updateAdsetField(adset.id, 'pixelId', e.target.value) }} className={inputCls}>
                               <option value="">-- Pilih Pixel --</option>
@@ -1332,7 +1342,7 @@ export default function NewTestLaunchPage() {
 
               {/* Identity selector */}
               <div>
-                <label className={labelCls}>Facebook Page Identity {autoSources.pageId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">auto · {autoSources.pageId.replace(/_/g," ").toLowerCase()}</span>}</label>
+                <label className={labelCls}>Facebook Page Identity {autoSources.pageId && <span className="inline-flex items-center ml-2 text-[11px] font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">{autoSources.pageId === 'auto' ? 'auto' : 'auto · ' + autoSources.pageId.replace(/_/g, ' ').toLowerCase()}</span>}</label>
                 {availablePages.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {availablePages.map((page) => (
