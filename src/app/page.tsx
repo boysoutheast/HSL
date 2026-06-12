@@ -1,141 +1,276 @@
-import PageInfo from '@/components/ui/PageInfo'
+import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
+function fmtIdr(n: number): string {
+  if (n >= 1_000_000) return `Rp${(n / 1_000_000).toFixed(2).replace('.', ',')}jt`
+  if (n >= 1_000) return `Rp${Math.round(n / 1_000)}rb`
+  return `Rp${Math.round(n)}`
+}
+
 async function getDashboardData() {
+  const startOfDay = new Date()
+  startOfDay.setHours(0, 0, 0, 0)
+
   try {
-    const [
-      activeAccounts,
-      monitors,
-      pendingCep,
-      activeAgents,
-    ] = await Promise.all([
-      prisma.instagramAccount.count({ where: { status: 'active' } }),
-      prisma.postingMonitor.findMany({ select: { status: true } }),
-      prisma.cep.count({ where: { status: 'pending_review' } }),
-      prisma.hermesAgent.count({ where: { status: 'active' } }),
-    ])
+    const [todaySnapshots, runningCampaigns, pendingApprovals, pendingActions, monitors, workers] =
+      await Promise.all([
+        prisma.metricSnapshot.findMany({
+          where: { entityType: 'CAMPAIGN', windowEnd: { gte: startOfDay } },
+          orderBy: { windowEnd: 'desc' },
+          select: { metaEntityId: true, spend: true, roas: true, purchaseValue: true },
+          take: 500,
+        }),
+        prisma.campaignSession.count({ where: { status: 'RUNNING' } }),
+        prisma.approvalRequest.findMany({
+          where: { status: 'pending' },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: { id: true, createdAt: true, testLaunch: { select: { name: true } } },
+        }),
+        prisma.automationAction.findMany({
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: { id: true, actionType: true, source: true, createdAt: true },
+        }),
+        prisma.postingMonitor.findMany({
+          select: {
+            status: true,
+            lastPostAt: true,
+            instagramAccount: { select: { id: true, username: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
+        }),
+        prisma.workerRegistry.findFirst({ orderBy: { lastHeartbeatAt: 'desc' }, select: { lastHeartbeatAt: true } }),
+      ])
+
+    // Spend & ROAS hari ini: snapshot terbaru per campaign
+    const seen = new Set<string>()
+    let spend = 0
+    let weightedRoas = 0
+    for (const s of todaySnapshots) {
+      if (seen.has(s.metaEntityId)) continue
+      seen.add(s.metaEntityId)
+      spend += s.spend
+      if (s.roas) weightedRoas += s.roas * s.spend
+    }
+    const roas = spend > 0 && weightedRoas > 0 ? weightedRoas / spend : null
+
+    const workerHealthy = workers
+      ? Date.now() - new Date(workers.lastHeartbeatAt).getTime() < 120_000
+      : false
 
     return {
-      totalActiveAccounts: activeAccounts,
-      readyUpload: monitors.filter((m) => m.status === 'READY_UPLOAD').length,
-      hotVideo: monitors.filter((m) => m.status === 'HOT_VIDEO').length,
-      stillGrowing: monitors.filter((m) => m.status === 'STILL_GROWING').length,
-      pendingCep,
-      activeAgents,
+      hasMetrics: todaySnapshots.length > 0,
+      spend,
+      roas,
+      runningCampaigns,
+      pendingApprovals,
+      pendingActions,
+      monitors,
+      workerHealthy,
+      workerKnown: !!workers,
     }
-  } catch {
+  } catch (e) {
+    console.error('[dashboard]', e)
     return {
-      totalActiveAccounts: 0,
-      readyUpload: 0,
-      hotVideo: 0,
-      stillGrowing: 0,
-      pendingCep: 0,
-      activeAgents: 0,
+      hasMetrics: false, spend: 0, roas: null, runningCampaigns: 0,
+      pendingApprovals: [], pendingActions: [], monitors: [],
+      workerHealthy: false, workerKnown: false,
     }
   }
 }
 
-interface StatCardProps {
-  label: string
-  value: number
-  tone: string
-  href: string
-  description: string
+const ACTION_LABELS: Record<string, string> = {
+  PAUSE_CAMPAIGN: 'Pause campaign',
+  RESUME_CAMPAIGN: 'Resume campaign',
+  PAUSE_ADSET: 'Pause ad set',
+  RESUME_ADSET: 'Resume ad set',
+  UPDATE_BUDGET: 'Ubah budget',
+  CREATE_CAMPAIGN: 'Buat campaign',
+  CREATE_AD: 'Buat ad',
+  REPLACE_AD: 'Ganti ad',
+  ADD_CREATIVE: 'Tambah creative',
+  NOTIFY: 'Notifikasi',
 }
 
-function StatCard({ label, value, tone, href, description }: StatCardProps) {
-  return (
-    <a href={href} className="card-hover block p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">{label}</p>
-          <p className="mt-2 text-3xl font-semibold text-stone-900">{value}</p>
-          <p className="mt-1 text-sm text-stone-500">{description}</p>
-        </div>
-        <div className={`h-11 w-11 rounded-2xl ${tone} text-white flex items-center justify-center text-sm font-semibold shadow-sm`}>
-          {value}
-        </div>
-      </div>
-    </a>
-  )
+function timeAgo(d: Date): string {
+  const m = Math.round((Date.now() - d.getTime()) / 60_000)
+  if (m < 1) return 'baru saja'
+  if (m < 60) return `${m} mnt lalu`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h} jam lalu`
+  return `${Math.round(h / 24)} hari lalu`
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData()
-  const now = new Date()
+  const d = await getDashboardData()
+  const decisions = d.pendingApprovals.length + d.pendingActions.length
+
+  const posted = d.monitors.filter(m => ['STILL_GROWING', 'HOT_VIDEO', 'MONITORING'].includes(m.status))
+  const ready = d.monitors.filter(m => m.status === 'READY_UPLOAD')
 
   return (
-    <div className="space-y-6">
-      <section className="card p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">Hermes Support Library</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Dashboard</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-              Ringkasan sistem harian. Fokus lihat akun aktif, queue Hermes, posting monitor, dan CEP yang butuh review.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
-            <p className="text-xs font-semibold uppercase tracking-wide text-stone-400">Updated</p>
-            <p className="mt-1 font-medium text-stone-700">
-              {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          </div>
+    <div className="space-y-5">
+      {/* Header strip — 4 angka */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Spend hari ini</p>
+          <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-stone-900">
+            {d.hasMetrics ? fmtIdr(d.spend) : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-stone-400">
+            {d.hasMetrics ? 'snapshot terbaru per campaign' : 'data metrics menyusul'}
+          </p>
         </div>
-      </section>
+        <div className="card p-5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">ROAS blended</p>
+          <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-stone-900">
+            {d.roas ? `${d.roas.toFixed(1)}×` : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-stone-400">
+            {d.roas ? 'weighted by spend' : 'belum ada data hari ini'}
+          </p>
+        </div>
+        <Link href="/ads?tab=monitor" className="card p-5 hover:border-stone-300 transition-colors">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Campaign aktif</p>
+          <p className="mt-1.5 text-2xl font-extrabold tracking-tight text-stone-900">{d.runningCampaigns}</p>
+          <p className="mt-0.5 text-[11px] text-stone-400">status RUNNING</p>
+        </Link>
+        <Link
+          href="/ads?tab=actions"
+          className={`rounded-xl border p-5 transition-colors ${
+            decisions > 0
+              ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
+              : 'card hover:border-stone-300'
+          }`}
+        >
+          <p className={`text-[10px] font-bold uppercase tracking-wider ${decisions > 0 ? 'text-amber-700' : 'text-stone-400'}`}>
+            Butuh keputusan
+          </p>
+          <p className={`mt-1.5 text-2xl font-extrabold tracking-tight ${decisions > 0 ? 'text-amber-800' : 'text-stone-900'}`}>
+            {decisions}
+          </p>
+          <p className={`mt-0.5 text-[11px] ${decisions > 0 ? 'text-amber-600' : 'text-stone-400'}`}>
+            {d.pendingApprovals.length} approval · {d.pendingActions.length} action
+          </p>
+        </Link>
+      </div>
 
-      <PageInfo
-        purpose="Dashboard ini untuk baca status cepat, bukan untuk edit data. Klik kartu di bawah untuk masuk ke modul kerja."
-        wiring={[
-          { label: 'Monitor', desc: 'status upload dan video performance' },
-          { label: 'CEP', desc: 'antrian review dari Hermes Agent' },
-        ]}
-      />
+      {/* Dua kolom: antrian keputusan + influencer */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Antrian keputusan */}
+        <div className="card p-5 lg:col-span-3">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-3.5">
+            ⚡ Butuh keputusan lo
+          </p>
+          {decisions === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-xl mb-1">✓</p>
+              <p className="text-sm text-stone-500 font-medium">Semua beres — nggak ada yang nunggu.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {d.pendingApprovals.map(a => (
+                <Link
+                  key={a.id}
+                  href="/ads?tab=launch"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-violet-100 bg-violet-50/60 hover:bg-violet-50 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-stone-800 truncate">
+                      Approval launch — {a.testLaunch?.name ?? 'launch'}
+                    </p>
+                    <p className="text-[11px] text-stone-400">{timeAgo(a.createdAt)}</p>
+                  </div>
+                  <span className="text-xs font-bold text-violet-600 shrink-0">Review →</span>
+                </Link>
+              ))}
+              {d.pendingActions.map(a => (
+                <Link
+                  key={a.id}
+                  href="/ads?tab=actions"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-amber-100 bg-amber-50/60 hover:bg-amber-50 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-stone-800 truncate">
+                      {ACTION_LABELS[a.actionType] ?? a.actionType}
+                    </p>
+                    <p className="text-[11px] text-stone-400 truncate">{a.source === 'RULE' ? 'dari rule otomatis' : a.source === 'SCHEDULE' ? 'terjadwal' : 'manual'} · {timeAgo(a.createdAt)}</p>
+                  </div>
+                  <span className="text-xs font-bold text-amber-600 shrink-0">Putuskan →</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label="Active Accounts"
-          value={data.totalActiveAccounts}
-          tone="bg-violet-600"
-          href="/accounts"
-          description="Instagram accounts yang aktif dipakai"
-        />
-        <StatCard
-          label="Ready Upload"
-          value={data.readyUpload}
-          tone="bg-emerald-600"
-          href="/monitor"
-          description="Konten siap upload sekarang"
-        />
-        <StatCard
-          label="Hot Videos"
-          value={data.hotVideo}
-          tone="bg-amber-500"
-          href="/monitor?status=HOT_VIDEO"
-          description="Video yang sedang panas"
-        />
-        <StatCard
-          label="Still Growing"
-          value={data.stillGrowing}
-          tone="bg-cyan-600"
-          href="/monitor?status=STILL_GROWING"
-          description="Video masih tumbuh stabil"
-        />
-        <StatCard
-          label="Pending CEP"
-          value={data.pendingCep}
-          tone="bg-rose-500"
-          href="/ceps?tab=pending"
-          description="CEP menunggu approval"
-        />
-        <StatCard
-          label="Active Agents"
-          value={data.activeAgents}
-          tone="bg-stone-700"
-          href="/agents"
-          description="Hermes agent yang sedang aktif"
-        />
-      </section>
+        {/* Influencer hari ini */}
+        <div className="card p-5 lg:col-span-2">
+          <div className="flex items-baseline justify-between mb-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">✦ Influencer hari ini</p>
+            <Link href="/influencer" className="text-[11px] font-semibold text-violet-600 hover:underline">
+              semua →
+            </Link>
+          </div>
+          {d.monitors.length === 0 ? (
+            <p className="text-sm text-stone-400 py-6 text-center">Belum ada posting monitor aktif.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {posted.slice(0, 3).map(m => (
+                <Link
+                  key={m.instagramAccount.id}
+                  href={`/accounts/${m.instagramAccount.id}`}
+                  className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
+                >
+                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center text-[10px] font-bold text-violet-700 shrink-0">
+                    {m.instagramAccount.username.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-stone-800 truncate">@{m.instagramAccount.username}</p>
+                    <p className="text-[10px] text-emerald-600 font-medium">
+                      {m.status === 'HOT_VIDEO' ? '🔥 video panas' : m.status === 'STILL_GROWING' ? '📈 masih tumbuh' : '👁 monitoring'}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+              {ready.slice(0, 4).map(m => (
+                <Link
+                  key={m.instagramAccount.id}
+                  href={`/accounts/${m.instagramAccount.id}`}
+                  className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
+                >
+                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-[10px] font-bold text-amber-700 shrink-0">
+                    {m.instagramAccount.username.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-stone-800 truncate">@{m.instagramAccount.username}</p>
+                    <p className="text-[10px] text-amber-600 font-medium">siap posting — konten?</p>
+                  </div>
+                </Link>
+              ))}
+              {ready.length > 4 && (
+                <p className="text-[11px] text-stone-400 pt-1">+{ready.length - 4} akun lain siap posting</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer sinyal sistem */}
+      <div className="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-4 py-2.5">
+        <span className="text-[11px] text-stone-400 font-medium">Sinyal sistem:</span>
+        <Link href="/system?tab=workers" className="flex items-center gap-1.5 text-[11px] font-semibold hover:underline">
+          <span className={`w-2 h-2 rounded-full ${d.workerHealthy ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
+          <span className={d.workerHealthy ? 'text-emerald-600' : 'text-red-600'}>
+            {d.workerKnown ? (d.workerHealthy ? 'worker sehat' : 'worker tidak heartbeat — cek System') : 'worker belum terdaftar'}
+          </span>
+        </Link>
+      </div>
     </div>
   )
 }

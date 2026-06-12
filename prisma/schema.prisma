@@ -739,7 +739,7 @@ model CreativeVariant {
   status           String    @default("DRAFT") // DRAFT | READY | RESERVED | ACTIVE | ARCHIVED
   usageCount       Int       @default(0) @map("usage_count")
   lastUsedAt       DateTime? @map("last_used_at")
-  qualityScore     Float?
+  qualityScore     Float? @map("quality_score")
   createdFromCepId String?   @map("created_from_cep_id")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -816,7 +816,7 @@ model MetaEntity {
   userId             String   @map("user_id")
   campaignSessionId  String   @map("campaign_session_id")
   metaAdAccountId    String   @map("meta_ad_account_id")
-  entityType         String // CAMPAIGN | ADSET | AD | CREATIVE
+  entityType         String @map("entity_type") // CAMPAIGN | ADSET | AD | CREATIVE
   metaEntityId       String   @map("meta_entity_id")
   parentMetaEntityId String?  @map("parent_meta_entity_id")
   name               String
@@ -863,7 +863,7 @@ model MetricSnapshot {
   userId               String   @map("user_id")
   campaignSessionId    String   @map("campaign_session_id")
   metaEntityId         String   @map("meta_entity_id")
-  entityType           String // CAMPAIGN | ADSET | AD | CREATIVE
+  entityType           String @map("entity_type") // CAMPAIGN | ADSET | AD | CREATIVE
   windowStart          DateTime @map("window_start")
   windowEnd            DateTime @map("window_end")
   attributionWindow    String   @map("attribution_window")
@@ -871,7 +871,7 @@ model MetricSnapshot {
   impressions          Int
   reach                Int?
   clicks               Int
-  linkClicks           Int?
+  linkClicks           Int? @map("link_clicks")
   cpc                  Float?
   ctr                  Float?
   cpm                  Float?
@@ -903,7 +903,7 @@ model AutomationRule {
   version                 Int       @default(1)
   status                  String    @default("DRAFT") // DRAFT | ACTIVE | PAUSED | ARCHIVED
   scope                   String // CAMPAIGN | ADSET | AD
-  ruleCategory            String // THRESHOLD | SCHEDULE | PHASE_TRANSITION | CREATIVE_ROTATION | COMPOSITE
+  ruleCategory            String @map("rule_category") // THRESHOLD | SCHEDULE | PHASE_TRANSITION | CREATIVE_ROTATION | COMPOSITE
   conditionTreeJson       String    @map("condition_tree_json")
   actionSpecJson          String    @map("action_spec_json")
   evaluationWindowMinutes Int?      @map("evaluation_window_minutes")
@@ -953,8 +953,8 @@ model AutomationAction {
   campaignSessionId  String    @map("campaign_session_id")
   ruleExecutionId    String?   @map("rule_execution_id")
   source             String // USER | RULE | SCHEDULE | SYSTEM
-  actionType         String // PAUSE_CAMPAIGN | RESUME_CAMPAIGN | PAUSE_ADSET | RESUME_ADSET | UPDATE_BUDGET | CREATE_CAMPAIGN | CREATE_AD | REPLACE_AD | ADD_CREATIVE | NOTIFY
-  targetEntityType   String?
+  actionType         String @map("action_type") // PAUSE_CAMPAIGN | RESUME_CAMPAIGN | PAUSE_ADSET | RESUME_ADSET | UPDATE_BUDGET | CREATE_CAMPAIGN | CREATE_AD | REPLACE_AD | ADD_CREATIVE | NOTIFY
+  targetEntityType   String? @map("target_entity_type")
   targetMetaEntityId String?   @map("target_meta_entity_id")
   payloadJson        String    @map("payload_json")
   preconditionJson   String?   @map("precondition_json")
@@ -1047,7 +1047,7 @@ model WorkerRegistry {
 
 model WorkerLease {
   id              String   @id @default(cuid())
-  leaseType       String // AD_ACCOUNT_MONITOR | RECONCILE_PARTITION | HEALTH_PARTITION
+  leaseType       String @map("lease_type") // AD_ACCOUNT_MONITOR | RECONCILE_PARTITION | HEALTH_PARTITION
   ownerWorkerId   String   @map("owner_worker_id")
   userId          String?  @map("user_id")
   metaAdAccountId String?  @map("meta_ad_account_id")
