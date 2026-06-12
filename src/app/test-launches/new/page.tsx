@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
@@ -92,7 +92,7 @@ interface AdsetDraft {
   // Targeting extras
   includedCustomAudienceIds: string
   excludedCustomAudienceIds: string
-  interests: Array<{id: string; name: string}>
+  interests: Array<{id: string; name: string; audienceSizeLowerBound?: number}>
   devicePlatform: 'all' | 'mobile' | 'desktop'
   // Identity
   identityPageId: string
@@ -198,6 +198,10 @@ const labelCls = 'block text-sm font-medium text-stone-700 mb-1'
 const sectionCls = 'bg-white rounded-xl border border-stone-200 p-5 space-y-4'
 const cardCls = 'border border-stone-200 rounded-xl p-5 space-y-4 bg-white'
 
+function parseCommaIds(value: string): string[] {
+  return value.split(',').map((s) => s.trim()).filter(Boolean)
+}
+
 function emptyCreative(): CreativeDraft {
   return {
     id: crypto.randomUUID(),
@@ -260,7 +264,6 @@ export default function NewTestLaunchPage() {
   const [customAudienceError, setCustomAudienceError] = useState<string | null>(null)
   const [bidStrategies, setBidStrategies] = useState<BidStrategyOption[]>([])
   const [loadingDeps, setLoadingDeps] = useState(true)
-  const customAudienceFallbackShownRef = useRef(false)
 
   // Form
   const [currentStep, setCurrentStep] = useState<Step>('Campaign')
@@ -402,7 +405,6 @@ export default function NewTestLaunchPage() {
     setPixels([])
     setCustomAudiences([])
     setCustomAudienceError(null)
-    customAudienceFallbackShownRef.current = false
     if (id) {
       fetchPixels(id)
       fetchBidStrategies(id)
@@ -1120,82 +1122,35 @@ export default function NewTestLaunchPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <label className={labelCls}>Custom Audiences</label>
-                            <p className="text-xs text-stone-500">Pilih audience dari ad account aktif. Payload tetap kirim array ID.</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { customAudienceFallbackShownRef.current = !customAudienceFallbackShownRef.current; setCustomAudienceError((prev) => prev) }}
-                            className="text-xs text-violet-700 hover:underline"
-                          >
-                            {customAudienceFallbackShownRef.current ? 'Sembunyikan URL manual' : 'URL manual'}
-                          </button>
-                        </div>
-
-                        {customAudienceError && (
-                          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                            custom audience tidak bisa dimuat
-                            <div className="text-xs mt-1 break-words">{customAudienceError}</div>
-                          </div>
-                        )}
-
-                        {customAudiences.length > 0 && (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className={labelCls}>Included Custom Audiences</label>
-                              <select
-                                multiple
-                                value={adset.includedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)}
-                                onChange={(e) => {
-                                  const ids = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value)
-                                  updateAdsetField(adset.id, 'includedCustomAudienceIds', ids.join(','))
-                                }}
-                                className={`${inputCls} min-h-36`}
-                              >
-                                {customAudiences.map((audience) => (
-                                  <option key={audience.id} value={audience.id}>
-                                    {audience.name}{audience.approximateCount ? ` (~${audience.approximateCount.toLocaleString('id-ID')})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className={labelCls}>Excluded Custom Audiences</label>
-                              <select
-                                multiple
-                                value={adset.excludedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)}
-                                onChange={(e) => {
-                                  const ids = Array.from(e.currentTarget.selectedOptions).map((opt) => opt.value)
-                                  updateAdsetField(adset.id, 'excludedCustomAudienceIds', ids.join(','))
-                                }}
-                                className={`${inputCls} min-h-36`}
-                              >
-                                {customAudiences.map((audience) => (
-                                  <option key={audience.id} value={audience.id}>
-                                    {audience.name}{audience.approximateCount ? ` (~${audience.approximateCount.toLocaleString('id-ID')})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        )}
-
-                        {(customAudienceFallbackShownRef.current || customAudienceError || customAudiences.length === 0) && (
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className={labelCls}>Included Custom Audience IDs (manual, koma pisah)</label>
-                              <input type="text" value={adset.includedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'includedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
-                            </div>
-                            <div>
-                              <label className={labelCls}>Excluded Custom Audience IDs (manual, koma pisah)</label>
-                              <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <CustomAudienceSelector
+                        audiences={customAudiences}
+                        includedIds={parseCommaIds(adset.includedCustomAudienceIds)}
+                        excludedIds={parseCommaIds(adset.excludedCustomAudienceIds)}
+                        error={customAudienceError}
+                        onIncludeToggle={(id) => {
+                          const inc = parseCommaIds(adset.includedCustomAudienceIds)
+                          if (inc.includes(id)) {
+                            updateAdsetField(adset.id, 'includedCustomAudienceIds', inc.filter((i) => i !== id).join(','))
+                          } else {
+                            // also remove from exclude
+                            const exc = parseCommaIds(adset.excludedCustomAudienceIds)
+                            updateAdsetField(adset.id, 'excludedCustomAudienceIds', exc.filter((i) => i !== id).join(','))
+                            updateAdsetField(adset.id, 'includedCustomAudienceIds', [...inc, id].join(','))
+                          }
+                        }}
+                        onExcludeToggle={(id) => {
+                          const exc = parseCommaIds(adset.excludedCustomAudienceIds)
+                          if (exc.includes(id)) {
+                            updateAdsetField(adset.id, 'excludedCustomAudienceIds', exc.filter((i) => i !== id).join(','))
+                          } else {
+                            const inc = parseCommaIds(adset.includedCustomAudienceIds)
+                            updateAdsetField(adset.id, 'includedCustomAudienceIds', inc.filter((i) => i !== id).join(','))
+                            updateAdsetField(adset.id, 'excludedCustomAudienceIds', [...exc, id].join(','))
+                          }
+                        }}
+                        onManualIncludeIds={(ids) => updateAdsetField(adset.id, 'includedCustomAudienceIds', ids)}
+                        onManualExcludeIds={(ids) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', ids)}
+                      />
 
                       {/* Interests */}
                       <InterestSearch
@@ -1481,6 +1436,141 @@ export default function NewTestLaunchPage() {
           </div>
         )}
       </form>
+    </div>
+  )
+}
+
+// ─── Custom Audience Selector ───────────────────────────────────────────────
+
+function CustomAudienceSelector({
+  audiences,
+  includedIds,
+  excludedIds,
+  error,
+  onIncludeToggle,
+  onExcludeToggle,
+  onManualIncludeIds,
+  onManualExcludeIds,
+}: {
+  audiences: CustomAudienceOption[]
+  includedIds: string[]
+  excludedIds: string[]
+  error: string | null
+  onIncludeToggle: (id: string) => void
+  onExcludeToggle: (id: string) => void
+  onManualIncludeIds: (value: string) => void
+  onManualExcludeIds: (value: string) => void
+}) {
+  const [showManual, setShowManual] = useState(false)
+  const byId = new Map(audiences.map((a) => [a.id, a]))
+  const includePool = audiences.filter((a) => !excludedIds.includes(a.id) && !includedIds.includes(a.id))
+  const excludePool = audiences.filter((a) => !includedIds.includes(a.id) && !excludedIds.includes(a.id))
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <label className={labelCls}>Custom Audiences</label>
+          <p className="text-xs text-stone-500">Klik audience untuk masuk ke include atau exclude. Payload tetap kirim ID yang sama.</p>
+        </div>
+        <button type="button" onClick={() => setShowManual((v) => !v)} className="text-xs text-violet-700 hover:underline">
+          {showManual ? 'Sembunyikan input ID manual' : 'input ID manual'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          custom audience tidak bisa dimuat
+          <div className="text-xs mt-1 break-words">{error}</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-violet-700">Include</p>
+            <p className="text-xs text-stone-500">Audience ini tidak akan muncul di pilihan exclude.</p>
+          </div>
+          <div className="border border-violet-100 bg-white rounded-lg max-h-40 overflow-y-auto">
+            {includePool.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-stone-400">Tidak ada audience tersedia</p>
+            ) : includePool.map((audience) => (
+              <button
+                key={audience.id}
+                type="button"
+                onClick={() => onIncludeToggle(audience.id)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-violet-50 border-b border-stone-100 last:border-0"
+              >
+                <span className="font-medium">{audience.name}</span>
+                {audience.approximateCount ? <span className="text-xs text-stone-400 ml-2">(~{audience.approximateCount.toLocaleString('id-ID')})</span> : null}
+              </button>
+            ))}
+          </div>
+          {includedIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {includedIds.map((id) => {
+                const audience = byId.get(id)
+                return (
+                  <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-violet-100 text-violet-700 text-xs rounded-full">
+                    {audience?.name ?? id}
+                    {audience?.approximateCount ? <span className="text-violet-500">~{audience.approximateCount.toLocaleString('id-ID')}</span> : null}
+                    <button type="button" onClick={() => onIncludeToggle(id)} className="text-violet-400 hover:text-violet-700">&times;</button>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-red-700">Exclude</p>
+            <p className="text-xs text-stone-500">Audience ini tidak akan muncul di pilihan include.</p>
+          </div>
+          <div className="border border-red-100 bg-white rounded-lg max-h-40 overflow-y-auto">
+            {excludePool.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-stone-400">Tidak ada audience tersedia</p>
+            ) : excludePool.map((audience) => (
+              <button
+                key={audience.id}
+                type="button"
+                onClick={() => onExcludeToggle(audience.id)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 border-b border-stone-100 last:border-0"
+              >
+                <span className="font-medium">{audience.name}</span>
+                {audience.approximateCount ? <span className="text-xs text-stone-400 ml-2">(~{audience.approximateCount.toLocaleString('id-ID')})</span> : null}
+              </button>
+            ))}
+          </div>
+          {excludedIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {excludedIds.map((id) => {
+                const audience = byId.get(id)
+                return (
+                  <span key={id} className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
+                    {audience?.name ?? id}
+                    {audience?.approximateCount ? <span className="text-red-500">~{audience.approximateCount.toLocaleString('id-ID')}</span> : null}
+                    <button type="button" onClick={() => onExcludeToggle(id)} className="text-red-400 hover:text-red-700">&times;</button>
+                  </span>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {(showManual || !!error || audiences.length === 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Included Custom Audience IDs (manual)</label>
+            <input type="text" value={includedIds.join(',')} onChange={(e) => onManualIncludeIds(e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+          </div>
+          <div>
+            <label className={labelCls}>Excluded Custom Audience IDs (manual)</label>
+            <input type="text" value={excludedIds.join(',')} onChange={(e) => onManualExcludeIds(e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
