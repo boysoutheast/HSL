@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { graphFetch, MetaGraphError } from '@/lib/meta-graph'
+import { graphFetch, MetaGraphError, normalizeMetaAdAccountPath } from '@/lib/meta-graph'
 import { decode } from '@/lib/crypto'
 
 export const dynamic = 'force-dynamic'
@@ -47,26 +47,28 @@ export async function GET(req: NextRequest) {
       name?: string
       currency?: string
       account_status?: number
-    }>(adAccount.adAccountId, token, {
+    }>(normalizeMetaAdAccountPath(adAccount.adAccountId), token, {
       params: { fields: 'capabilities,name,currency,account_status' },
     })
 
     const caps = acc.capabilities ?? []
-    // MIN_ROAS butuh value optimization permission di akun
+    // Meta tidak selalu expose capability granular untuk semua bid mode.
+    // Jadi HIGHEST_VOLUME / COST_CAP / BID_CAP tetap boleh dipilih,
+    // tapi ROAS hanya dibuka kalau signal value optimization memang ada.
     const supportsRoas = caps.some((c) => /ROAS|VALUE_OPTIMIZATION|ADS_VALUE/i.test(c))
 
     const bidStrategies = [
       {
         value: 'HIGHEST_VOLUME',
         label: 'Highest Volume',
-        description: 'Meta auto-bid untuk hasil terbanyak dalam budget (default, recommended untuk testing)',
+        description: 'Meta auto-bid untuk hasil terbanyak dalam budget. Availability final tetap divalidasi Meta saat launch.',
         requiresAmount: false,
         available: true,
       },
       {
         value: 'COST_CAP',
         label: 'Cost Cap',
-        description: 'Jaga rata-rata cost per result di bawah angka target',
+        description: 'Jaga rata-rata cost per result di bawah angka target. Availability final tetap divalidasi Meta saat launch.',
         requiresAmount: true,
         amountLabel: 'Target cost per result',
         available: true,
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
       {
         value: 'BID_CAP',
         label: 'Bid Cap',
-        description: 'Batasi bid maksimum di tiap auction (kontrol paling ketat)',
+        description: 'Batasi bid maksimum di tiap auction. Availability final tetap divalidasi Meta saat launch.',
         requiresAmount: true,
         amountLabel: 'Max bid',
         available: true,

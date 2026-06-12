@@ -18,6 +18,12 @@ interface GraphErrorBody {
   error?: { message?: string; code?: number }
 }
 
+export function normalizeMetaAdAccountPath(adAccountId: string): string {
+  const clean = adAccountId.trim()
+  if (!clean) return clean
+  return clean.startsWith('act_') ? clean : `act_${clean}`
+}
+
 export async function graphFetch<T = unknown>(
   path: string,
   accessToken: string,

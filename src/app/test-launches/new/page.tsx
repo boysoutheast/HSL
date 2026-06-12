@@ -67,7 +67,6 @@ interface FormData {
   objective: string
   dailyBudget: string
   currency: string
-  destinationUrl: string
   bidStrategy: string
   bidAmount: string
   launchMode: string
@@ -243,7 +242,6 @@ export default function NewTestLaunchPage() {
     objective: 'OUTCOME_LEADS',
     dailyBudget: '',
     currency: 'IDR',
-    destinationUrl: '',
     bidStrategy: 'HIGHEST_VOLUME',
     bidAmount: '',
     launchMode: 'new_test',
@@ -1443,29 +1441,41 @@ export default function NewTestLaunchPage() {
                       )}
                     </div>
 
-                    {/* Primary Text */}
+                    {/* Primary Text — max 125 char */}
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">Primary Text (Ad Body)</label>
-                      <textarea
-                        value={creative.primaryText}
-                        onChange={(e) => updateCreative(creative.id, 'primaryText', e.target.value)}
-                        rows={3}
-                        className={`${inputCls} resize-none`}
-                        placeholder="Isi deskripsi utama iklan..."
-                      />
+                      <div className="relative">
+                        <textarea
+                          value={creative.primaryText}
+                          onChange={(e) => {
+                            if (e.target.value.length <= 125) updateCreative(creative.id, 'primaryText', e.target.value)
+                          }}
+                          rows={3}
+                          maxLength={125}
+                          className={`${inputCls} resize-none`}
+                          placeholder="Isi deskripsi utama iklan..."
+                        />
+                        <span className="absolute bottom-2 right-2 text-[10px] text-stone-400">{creative.primaryText.length}/125</span>
+                      </div>
                     </div>
 
-                    {/* Headline & CTA */}
+                    {/* Headline — max 255 char & CTA */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-stone-600 mb-1">Headline</label>
-                        <input
-                          type="text"
-                          value={creative.headline}
-                          onChange={(e) => updateCreative(creative.id, 'headline', e.target.value)}
-                          className={inputCls}
-                          placeholder="Judul iklan..."
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={creative.headline}
+                            onChange={(e) => {
+                              if (e.target.value.length <= 255) updateCreative(creative.id, 'headline', e.target.value)
+                            }}
+                            maxLength={255}
+                            className={inputCls + ' pr-14'}
+                            placeholder="Judul iklan..."
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-stone-400">{creative.headline.length}/255</span>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-stone-600 mb-1">Call to Action</label>

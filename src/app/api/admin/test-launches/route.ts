@@ -80,6 +80,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'dailyBudget must be greater than 0' }, { status: 400 })
   }
 
+  const overPrimaryText = body.creatives?.find((c) => (c.primaryText?.length ?? 0) > 125)
+  if (overPrimaryText) {
+    return NextResponse.json({ error: 'primaryText maksimal 125 karakter' }, { status: 400 })
+  }
+
+  const overHeadline = body.creatives?.find((c) => (c.headline?.length ?? 0) > 255)
+  if (overHeadline) {
+    return NextResponse.json({ error: 'headline maksimal 255 karakter' }, { status: 400 })
+  }
+
   const testLaunch = await prisma.testLaunch.create({
     data: {
       userId: auth.id,
