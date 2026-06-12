@@ -63,6 +63,7 @@ const navSections: NavSection[] = [
     title: 'Accounts',
     items: [
       { label: 'IG Accounts', href: '/accounts', icon: Icon.user },
+      { label: 'Characters', href: '/characters', icon: Icon.sparkles },
       { label: 'Topics & CEPs', href: '/topics', icon: Icon.chat },
       { label: 'Products', href: '/products', icon: Icon.box },
       { label: 'Media Library', href: '/media-library', icon: Icon.photo },
