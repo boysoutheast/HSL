@@ -109,7 +109,7 @@ export default function TestLaunchesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Test Launches</h1>
+          <h1 className="text-2xl font-bold text-stone-900">Launches</h1>
           <p className="text-sm text-stone-500 mt-0.5">
             {loading ? '...' : `${launches.length} launch`}
           </p>
@@ -120,7 +120,7 @@ export default function TestLaunchesPage() {
       </div>
 
       <PageInfo
-        purpose="Kelola Meta Ads test launch. Draft bisa disubmit untuk approval sebelum dieksekusi."
+        purpose="Kelola Meta Ads launch. Draft bisa disubmit untuk approval sebelum dieksekusi."
         inputs={['Nama launch', 'Meta Account', 'Budget harian', 'Objective', 'Launch mode']}
         wiring={[
           { label: '→ Meta Accounts', desc: 'setiap launch terikat satu Meta Ads account' },
@@ -134,7 +134,7 @@ export default function TestLaunchesPage() {
       ) : (
         <Table
           headers={['Nama', 'Akun', 'Budget/Hari', 'Objective', 'Status', 'Creatives', 'Created', 'Actions']}
-          empty="No test launches found."
+          empty="Belum ada launch."
         >
           {launches.map((launch) => (
             <tr key={launch.id} className="hover:bg-stone-50 transition-colors">
