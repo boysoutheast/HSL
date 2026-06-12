@@ -342,7 +342,10 @@ export default function NewTestLaunchPage() {
     setPages([])
     setPixels([])
     setBidStrategies([])
-    if (id) fetchAdAccounts(id)
+    if (id) {
+      fetchAdAccounts(id)
+      fetchPages(id)
+    }
   }
 
   const handleAdAccountChange = (id: string) => {
