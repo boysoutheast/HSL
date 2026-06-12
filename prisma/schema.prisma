@@ -529,16 +529,28 @@ model TestLaunch {
 }
 
 model TestLaunchAdset {
-  id              String   @id @default(cuid())
-  testLaunchId    String   @map("test_launch_id")
-  name            String
-  dailyBudget     Decimal? @map("daily_budget") @db.Decimal(12, 2)
-  bidStrategyJson String?  @map("bid_strategy_json")
-  audienceJson    String?  @map("audience_json")
-  sortOrder       Int      @default(0) @map("sort_order")
-  status          String   @default("pending")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(cuid())
+  testLaunchId     String    @map("test_launch_id")
+  name             String
+  dailyBudget      Decimal?  @map("daily_budget") @db.Decimal(12, 2)
+  bidStrategyJson  String?   @map("bid_strategy_json")
+  audienceJson     String?   @map("audience_json")
+  destinationType  String    @default("WEBSITE") @map("destination_type")
+  optimizationGoal String?   @map("optimization_goal")
+  billingEvent     String?   @map("billing_event")
+  pixelId          String?   @map("pixel_id")
+  customEventType  String?   @map("custom_event_type")
+  startTime        DateTime? @map("start_time")
+  endTime          DateTime? @map("end_time")
+  placementMode    String    @default("automatic") @map("placement_mode")
+  placementsJson   String?   @map("placements_json")
+  targetingJson    String?   @map("targeting_json")
+  identityPageId   String?   @map("identity_page_id")
+  identityIgUserId String?   @map("identity_ig_user_id")
+  sortOrder        Int       @default(0) @map("sort_order")
+  status           String    @default("pending")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   testLaunch TestLaunch           @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
   creatives  TestLaunchCreative[]
@@ -548,23 +560,29 @@ model TestLaunchAdset {
 }
 
 model TestLaunchCreative {
-  id           String   @id @default(cuid())
-  testLaunchId String   @map("test_launch_id")
-  adsetId      String?  @map("adset_id")
-  creativeUrl  String?  @map("creative_url") // uploaded image/video URL
-  captionText  String?  @map("caption_text")
-  hookText     String?  @map("hook_text")
-  headline     String?
-  primaryText  String?  @map("primary_text") // ad primary text (main body)
-  adHeadline   String?  @map("ad_headline") // ad headline
-  callToAction String?  @map("call_to_action") // LEARN_MORE | SHOP_NOW | SIGN_UP
-  sortOrder    Int      @default(0) @map("sort_order")
-  status       String   @default("pending") // pending | testing | winner | killed
-  notes        String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(cuid())
+  testLaunchId         String   @map("test_launch_id")
+  adsetId              String?  @map("adset_id")
+  creativeUrl          String?  @map("creative_url") // uploaded image/video URL
+  captionText          String?  @map("caption_text")
+  hookText             String?  @map("hook_text")
+  headline             String?
+  primaryText          String?  @map("primary_text") // ad primary text (main body)
+  adHeadline           String?  @map("ad_headline") // ad headline
+  callToAction         String?  @map("call_to_action") // LEARN_MORE | SHOP_NOW | SIGN_UP
+  format               String   @default("single") @map("format")
+  linkUrl              String?  @map("link_url")
+  description          String?  @map("description")
+  urlTags              String?  @map("url_tags")
+  childAttachmentsJson String?  @map("child_attachments_json")
+  videoId              String?  @map("video_id")
+  sortOrder            Int      @default(0) @map("sort_order")
+  status               String   @default("pending") // pending | testing | winner | killed
+  notes                String?
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  testLaunch TestLaunch      @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
+  testLaunch TestLaunch       @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
   adset      TestLaunchAdset? @relation(fields: [adsetId], references: [id], onDelete: SetNull)
 
   @@index([testLaunchId])
