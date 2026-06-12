@@ -1,5 +1,5 @@
 -- CreateTable: landing_pages
-CREATE TABLE "landing_pages" (
+CREATE TABLE IF NOT EXISTS "landing_pages" (
     "id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
     "url" TEXT NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE "landing_pages" (
     CONSTRAINT "landing_pages_pkey" PRIMARY KEY ("id")
 );
 
-CREATE INDEX "landing_pages_product_id_idx" ON "landing_pages"("product_id");
+CREATE INDEX IF NOT EXISTS "landing_pages_product_id_idx" ON "landing_pages"("product_id");
 
 ALTER TABLE "landing_pages" ADD CONSTRAINT "landing_pages_product_id_fkey"
     FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;

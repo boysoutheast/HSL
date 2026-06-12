@@ -1,6 +1,6 @@
 -- CreateFeatureFlag
-CREATE TABLE "feature_flags" (
-    "id" TEXT NOT NULL PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+CREATE TABLE IF NOT EXISTS "feature_flags" (
+    "id" TEXT NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
     "key" TEXT NOT NULL UNIQUE,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -12,5 +12,5 @@ CREATE TABLE "feature_flags" (
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX "feature_flags_enabled_scope_idx" ON "feature_flags"("enabled", "scope");
-CREATE INDEX "feature_flags_scope_target_id_idx" ON "feature_flags"("scope", "target_id");
+CREATE INDEX IF NOT EXISTS "feature_flags_enabled_scope_idx" ON "feature_flags"("enabled", "scope");
+CREATE INDEX IF NOT EXISTS "feature_flags_scope_target_id_idx" ON "feature_flags"("scope", "target_id");

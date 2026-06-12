@@ -3,7 +3,7 @@
 
 -- 1. MediaAsset: Stores uploaded or AI-generated media assets
 CREATE TABLE IF NOT EXISTS "media_assets" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "product_id" VARCHAR(25),
     "type" VARCHAR(20) NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS "media_assets" (
 
 -- 2. CreativeVariant: Ad creative combinations of media + copy
 CREATE TABLE IF NOT EXISTS "creative_variants" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "product_id" VARCHAR(25) NOT NULL,
     "media_asset_id" VARCHAR(25) NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS "creative_variants" (
 
 -- 3. MetaMediaBinding: Binds media assets to Meta ad accounts after upload
 CREATE TABLE IF NOT EXISTS "meta_media_bindings" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "media_asset_id" VARCHAR(25) NOT NULL,
     "meta_ad_account_id" VARCHAR(25) NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS "meta_media_bindings" (
 
 -- 4. CampaignSession: Represents an active ad campaign with automation
 CREATE TABLE IF NOT EXISTS "campaign_sessions" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "test_launch_id" VARCHAR(25),
     "product_id" VARCHAR(25) NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS "campaign_sessions" (
 
 -- 5. MetaEntity: Tracks Meta API entities (campaigns, adsets, ads, creatives)
 CREATE TABLE IF NOT EXISTS "meta_entities" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "meta_ad_account_id" VARCHAR(25) NOT NULL,
@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS "meta_entities" (
 
 -- 6. CampaignCreativeLink: Links creative variants to campaign ad entities
 CREATE TABLE IF NOT EXISTS "campaign_creative_links" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "creative_variant_id" VARCHAR(25) NOT NULL,
     "meta_ad_entity_id" VARCHAR(25) NOT NULL,
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS "campaign_creative_links" (
 
 -- 7. MetricSnapshot: Periodic metric snapshots for campaign entities
 CREATE TABLE IF NOT EXISTS "metric_snapshots" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "meta_entity_id" VARCHAR(25) NOT NULL,
@@ -172,7 +172,7 @@ CREATE INDEX IF NOT EXISTS "metric_snapshots_campaign_session_id_window_end_idx"
 
 -- 8. AutomationRule: Defines automation rules for campaign management
 CREATE TABLE IF NOT EXISTS "automation_rules" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "campaign_session_id" VARCHAR(25),
     "name" VARCHAR(200) NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS "automation_rules" (
 
 -- 9. RuleExecution: Records each evaluation of an automation rule
 CREATE TABLE IF NOT EXISTS "rule_executions" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "rule_id" VARCHAR(25) NOT NULL,
     "rule_version" INTEGER NOT NULL,
     "campaign_session_id" VARCHAR(25) NOT NULL,
@@ -220,7 +220,7 @@ CREATE INDEX IF NOT EXISTS "rule_executions_rule_id_campaign_session_id_idx" ON 
 
 -- 10. AutomationAction: Actions triggered by automation rules or manually
 CREATE TABLE IF NOT EXISTS "automation_actions" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "user_id" VARCHAR(25) NOT NULL,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "rule_execution_id" VARCHAR(25),
@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS "automation_actions" (
 
 -- 11. CreativeReservation: Reserves creative variants for ad rotation
 CREATE TABLE IF NOT EXISTS "creative_reservations" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "creative_variant_id" VARCHAR(25) NOT NULL,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "automation_action_id" VARCHAR(25) NOT NULL,
@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS "creative_reservations" (
 
 -- 12. CreativeRotation: Tracks creative replacement rotations
 CREATE TABLE IF NOT EXISTS "creative_rotations" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "campaign_session_id" VARCHAR(25) NOT NULL,
     "automation_action_id" VARCHAR(25) NOT NULL,
     "old_meta_ad_id" VARCHAR(100),
@@ -289,7 +289,7 @@ CREATE TABLE IF NOT EXISTS "creative_rotations" (
 
 -- 13. WorkerRegistry: Tracks registered worker instances
 CREATE TABLE IF NOT EXISTS "worker_registry" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "worker_id" VARCHAR(50) NOT NULL UNIQUE,
     "mode" VARCHAR(30) NOT NULL,
     "instance_id" VARCHAR(100),
@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS "worker_registry" (
 
 -- 14. WorkerLease: Distributed leases for work coordination
 CREATE TABLE IF NOT EXISTS "worker_leases" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "lease_type" VARCHAR(50) NOT NULL,
     "owner_worker_id" VARCHAR(50) NOT NULL,
     "user_id" VARCHAR(25),
@@ -323,7 +323,7 @@ CREATE TABLE IF NOT EXISTS "worker_leases" (
 
 -- 15. WorkerHeartbeatEvent: Heartbeat event log for worker health tracking
 CREATE TABLE IF NOT EXISTS "worker_heartbeat_events" (
-    "id" VARCHAR(25) PRIMARY KEY DEFAULT cuid(),
+    "id" VARCHAR(25) PRIMARY KEY,
     "worker_id" VARCHAR(50) NOT NULL,
     "severity" VARCHAR(20) NOT NULL,
     "event_type" VARCHAR(50) NOT NULL,

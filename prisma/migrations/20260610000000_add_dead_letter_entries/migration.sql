@@ -2,7 +2,7 @@
 -- Created: 2026-06-10
 
 -- Create dead_letter_entries table
-CREATE TABLE "dead_letter_entries" (
+CREATE TABLE IF NOT EXISTS "dead_letter_entries" (
     "id" TEXT NOT NULL,
     "worker_task_id" TEXT NOT NULL,
     "action_id" TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE "dead_letter_entries" (
 );
 
 -- Index for filtering by status + creation time (common query pattern)
-CREATE INDEX "dead_letter_entries_status_created_at_idx" ON "dead_letter_entries"("status", "created_at");
+CREATE INDEX IF NOT EXISTS "dead_letter_entries_status_created_at_idx" ON "dead_letter_entries"("status", "created_at");
 
 -- Index for filtering by task type
-CREATE INDEX "dead_letter_entries_task_type_idx" ON "dead_letter_entries"("task_type");
+CREATE INDEX IF NOT EXISTS "dead_letter_entries_task_type_idx" ON "dead_letter_entries"("task_type");

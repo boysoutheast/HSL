@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "hermes_agents" (
+CREATE TABLE IF NOT EXISTS "hermes_agents" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "api_key_hash" TEXT NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE "hermes_agents" (
 );
 
 -- CreateTable
-CREATE TABLE "instagram_accounts" (
+CREATE TABLE IF NOT EXISTS "instagram_accounts" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "account_name" TEXT,
@@ -27,7 +27,7 @@ CREATE TABLE "instagram_accounts" (
 );
 
 -- CreateTable
-CREATE TABLE "characters" (
+CREATE TABLE IF NOT EXISTS "characters" (
     "id" TEXT NOT NULL,
     "instagram_account_id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE "characters" (
 );
 
 -- CreateTable
-CREATE TABLE "photo_references" (
+CREATE TABLE IF NOT EXISTS "photo_references" (
     "id" TEXT NOT NULL,
     "uploaded_by" TEXT,
     "file_url" TEXT NOT NULL,
@@ -65,7 +65,7 @@ CREATE TABLE "photo_references" (
 );
 
 -- CreateTable
-CREATE TABLE "topics" (
+CREATE TABLE IF NOT EXISTS "topics" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE "topics" (
 );
 
 -- CreateTable
-CREATE TABLE "products" (
+CREATE TABLE IF NOT EXISTS "products" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -99,7 +99,7 @@ CREATE TABLE "products" (
 );
 
 -- CreateTable
-CREATE TABLE "ceps" (
+CREATE TABLE IF NOT EXISTS "ceps" (
     "id" TEXT NOT NULL,
     "topic_id" TEXT,
     "product_id" TEXT,
@@ -117,7 +117,7 @@ CREATE TABLE "ceps" (
 );
 
 -- CreateTable
-CREATE TABLE "assignments" (
+CREATE TABLE IF NOT EXISTS "assignments" (
     "id" TEXT NOT NULL,
     "hermes_agent_id" TEXT NOT NULL,
     "assignable_type" TEXT NOT NULL,
@@ -130,7 +130,7 @@ CREATE TABLE "assignments" (
 );
 
 -- CreateTable
-CREATE TABLE "generated_content_logs" (
+CREATE TABLE IF NOT EXISTS "generated_content_logs" (
     "id" TEXT NOT NULL,
     "hermes_agent_id" TEXT NOT NULL,
     "instagram_account_id" TEXT NOT NULL,
@@ -154,7 +154,7 @@ CREATE TABLE "generated_content_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "performance_trackers" (
+CREATE TABLE IF NOT EXISTS "performance_trackers" (
     "id" TEXT NOT NULL,
     "generated_content_log_id" TEXT NOT NULL,
     "instagram_account_id" TEXT NOT NULL,
@@ -173,7 +173,7 @@ CREATE TABLE "performance_trackers" (
 );
 
 -- CreateTable
-CREATE TABLE "performance_snapshots" (
+CREATE TABLE IF NOT EXISTS "performance_snapshots" (
     "id" TEXT NOT NULL,
     "performance_tracker_id" TEXT NOT NULL,
     "generated_content_log_id" TEXT NOT NULL,
@@ -190,7 +190,7 @@ CREATE TABLE "performance_snapshots" (
 );
 
 -- CreateTable
-CREATE TABLE "posting_monitors" (
+CREATE TABLE IF NOT EXISTS "posting_monitors" (
     "id" TEXT NOT NULL,
     "instagram_account_id" TEXT NOT NULL,
     "latest_content_log_id" TEXT,
@@ -212,7 +212,7 @@ CREATE TABLE "posting_monitors" (
 );
 
 -- CreateTable
-CREATE TABLE "posting_monitor_settings" (
+CREATE TABLE IF NOT EXISTS "posting_monitor_settings" (
     "id" TEXT NOT NULL,
     "check_interval_minutes" INTEGER NOT NULL DEFAULT 60,
     "minimum_decision_age_minutes" INTEGER NOT NULL DEFAULT 180,
@@ -231,7 +231,7 @@ CREATE TABLE "posting_monitor_settings" (
 );
 
 -- CreateTable
-CREATE TABLE "admin_users" (
+CREATE TABLE IF NOT EXISTS "admin_users" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
@@ -244,22 +244,22 @@ CREATE TABLE "admin_users" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "hermes_agents_api_key_hash_key" ON "hermes_agents"("api_key_hash");
+CREATE UNIQUE INDEX IF NOT EXISTS "hermes_agents_api_key_hash_key" ON "hermes_agents"("api_key_hash");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "instagram_accounts_username_key" ON "instagram_accounts"("username");
+CREATE UNIQUE INDEX IF NOT EXISTS "instagram_accounts_username_key" ON "instagram_accounts"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "assignments_hermes_agent_id_assignable_type_assignable_id_key" ON "assignments"("hermes_agent_id", "assignable_type", "assignable_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "assignments_hermes_agent_id_assignable_type_assignable_id_key" ON "assignments"("hermes_agent_id", "assignable_type", "assignable_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "performance_trackers_generated_content_log_id_key" ON "performance_trackers"("generated_content_log_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "performance_trackers_generated_content_log_id_key" ON "performance_trackers"("generated_content_log_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "posting_monitors_instagram_account_id_key" ON "posting_monitors"("instagram_account_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "posting_monitors_instagram_account_id_key" ON "posting_monitors"("instagram_account_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "admin_users_email_key" ON "admin_users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "admin_users_email_key" ON "admin_users"("email");
 
 -- AddForeignKey
 ALTER TABLE "characters" ADD CONSTRAINT "characters_instagram_account_id_fkey" FOREIGN KEY ("instagram_account_id") REFERENCES "instagram_accounts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -9,7 +9,7 @@ ALTER TABLE "instagram_accounts" ADD COLUMN     "created_by_user_id" TEXT;
 ALTER TABLE "products" ADD COLUMN     "created_by_user_id" TEXT;
 
 -- CreateTable
-CREATE TABLE "sessions" (
+CREATE TABLE IF NOT EXISTS "sessions" (
     "id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
@@ -20,13 +20,13 @@ CREATE TABLE "sessions" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sessions_token_key" ON "sessions"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "sessions_token_key" ON "sessions"("token");
 
 -- CreateIndex
-CREATE INDEX "sessions_token_idx" ON "sessions"("token");
+CREATE INDEX IF NOT EXISTS "sessions_token_idx" ON "sessions"("token");
 
 -- CreateIndex
-CREATE INDEX "sessions_user_id_idx" ON "sessions"("user_id");
+CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions"("user_id");
 
 -- AddForeignKey
 ALTER TABLE "instagram_accounts" ADD CONSTRAINT "instagram_accounts_created_by_user_id_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

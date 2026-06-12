@@ -1,5 +1,5 @@
 -- CreateTable: meta_accounts
-CREATE TABLE "meta_accounts" (
+CREATE TABLE IF NOT EXISTS "meta_accounts" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "ad_account_id" TEXT NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE "meta_accounts" (
 );
 
 -- CreateTable: test_launches
-CREATE TABLE "test_launches" (
+CREATE TABLE IF NOT EXISTS "test_launches" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "meta_account_id" TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE "test_launches" (
 );
 
 -- CreateTable: test_launch_creatives
-CREATE TABLE "test_launch_creatives" (
+CREATE TABLE IF NOT EXISTS "test_launch_creatives" (
     "id" TEXT NOT NULL,
     "test_launch_id" TEXT NOT NULL,
     "creative_url" TEXT,
@@ -59,7 +59,7 @@ CREATE TABLE "test_launch_creatives" (
 );
 
 -- CreateTable: approval_requests
-CREATE TABLE "approval_requests" (
+CREATE TABLE IF NOT EXISTS "approval_requests" (
     "id" TEXT NOT NULL,
     "test_launch_id" TEXT NOT NULL,
     "requested_by_id" TEXT NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE "approval_requests" (
 );
 
 -- CreateTable: worker_tasks
-CREATE TABLE "worker_tasks" (
+CREATE TABLE IF NOT EXISTS "worker_tasks" (
     "id" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "payload_json" TEXT NOT NULL,
@@ -94,14 +94,14 @@ CREATE TABLE "worker_tasks" (
 );
 
 -- CreateIndexes
-CREATE INDEX "meta_accounts_user_id_idx" ON "meta_accounts"("user_id");
-CREATE INDEX "test_launches_user_id_idx" ON "test_launches"("user_id");
-CREATE INDEX "test_launches_status_idx" ON "test_launches"("status");
-CREATE INDEX "test_launch_creatives_test_launch_id_idx" ON "test_launch_creatives"("test_launch_id");
-CREATE UNIQUE INDEX "approval_requests_test_launch_id_key" ON "approval_requests"("test_launch_id");
-CREATE INDEX "approval_requests_status_idx" ON "approval_requests"("status");
-CREATE INDEX "worker_tasks_status_priority_idx" ON "worker_tasks"("status", "priority");
-CREATE INDEX "worker_tasks_test_launch_id_idx" ON "worker_tasks"("test_launch_id");
+CREATE INDEX IF NOT EXISTS "meta_accounts_user_id_idx" ON "meta_accounts"("user_id");
+CREATE INDEX IF NOT EXISTS "test_launches_user_id_idx" ON "test_launches"("user_id");
+CREATE INDEX IF NOT EXISTS "test_launches_status_idx" ON "test_launches"("status");
+CREATE INDEX IF NOT EXISTS "test_launch_creatives_test_launch_id_idx" ON "test_launch_creatives"("test_launch_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "approval_requests_test_launch_id_key" ON "approval_requests"("test_launch_id");
+CREATE INDEX IF NOT EXISTS "approval_requests_status_idx" ON "approval_requests"("status");
+CREATE INDEX IF NOT EXISTS "worker_tasks_status_priority_idx" ON "worker_tasks"("status", "priority");
+CREATE INDEX IF NOT EXISTS "worker_tasks_test_launch_id_idx" ON "worker_tasks"("test_launch_id");
 
 -- AddForeignKeys
 ALTER TABLE "meta_accounts" ADD CONSTRAINT "meta_accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "admin_users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
