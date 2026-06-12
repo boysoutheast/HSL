@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       id: a.id,
       label: a.accountName || a.username || 'Unknown',
       type: 'instagram' as const,
-      href: `/?tab=instagram`,
+      href: `/accounts/${a.id}`,
       subtitle: '@' + (a.username || ''),
     })),
 
