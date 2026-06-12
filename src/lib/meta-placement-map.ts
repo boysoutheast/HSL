@@ -1,9 +1,14 @@
 /**
  * Meta Placement Map — curated tokens to MAPI publisher_platforms + positions.
  *
- * ⚠️ ALL position values are INFERRED (MAPI v25 docs require login;
- * R10 research confirmed NOT_FOUND for official enum).
- * MUST live-write/readback validate when worker write-mode first activates.
+ * Live write/readback validation 2026-06-12 (act_620404546493153):
+ * VERIFIED — instagram_feed (stream), instagram_reels (reels),
+ * facebook_feed (feed): Meta accepted, readback matched token-for-token.
+ * ⚠️ Remaining 12 tokens still INFERRED (R10: official enum NOT_FOUND) —
+ * validate each on first live use.
+ * publisher_platforms MUST always be sent explicitly for manual placement:
+ * omitting it makes Meta default to ALL platforms including WhatsApp →
+ * error 4399008 ("WhatsApp status requires Instagram Stories").
  *
  * UI default: Automatic (omit all placement fields).
  */
