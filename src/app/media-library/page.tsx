@@ -57,6 +57,8 @@ export default function MediaLibraryPage() {
   const [filterProduct, setFilterProduct] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterSource, setFilterSource] = useState('')
+  const [filterType, setFilterType] = useState<'' | 'IMAGE' | 'VIDEO'>('')
+  const [filterUnused, setFilterUnused] = useState(false)
   const [search, setSearch] = useState('')
 
   // Upload modal
@@ -203,6 +205,25 @@ export default function MediaLibraryPage() {
     window.location.href = `/media-library/${assetId}`
   }
 
+  // Client-side filters + koleksi per produk
+  const visibleAssets = assets.filter(a =>
+    (!filterType || a.type === filterType) &&
+    (!filterUnused || a._count.creativeVariants === 0)
+  )
+  const productGroups = (() => {
+    const map = new Map<string, { name: string; items: MediaAsset[] }>()
+    for (const a of visibleAssets) {
+      const key = a.product?.id ?? '__none__'
+      const name = a.product?.name ?? 'Tanpa produk'
+      if (!map.has(key)) map.set(key, { name, items: [] })
+      map.get(key)!.items.push(a)
+    }
+    // "Tanpa produk" selalu terakhir
+    return [...map.entries()].sort(([a], [b]) =>
+      a === '__none__' ? 1 : b === '__none__' ? -1 : 0
+    )
+  })()
+
   return (
     <div>
       {/* Header */}
@@ -232,95 +253,164 @@ export default function MediaLibraryPage() {
         ]}
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6 items-center">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className={`${inputCls} w-48`}
-        />
-        <select value={filterProduct} onChange={e => setFilterProduct(e.target.value)} className={inputCls + ' w-48'}>
-          <option value="">All Products</option>
+      {/* Toolbar — satu baris: search + chip filter + product + view */}
+      <div className="flex flex-wrap gap-2 mb-6 items-center bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
+        <div className="relative flex-1 min-w-[160px]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">⌕</span>
+          <input
+            type="text"
+            placeholder="Cari label, prompt, produk..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full border border-stone-200 rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-400 bg-stone-50 focus:bg-white transition-colors"
+          />
+        </div>
+        {([['',' Semua'],['IMAGE','Foto'],['VIDEO','Video']] as const).map(([val, label]) => (
+          <button
+            key={val}
+            onClick={() => setFilterType(val as '' | 'IMAGE' | 'VIDEO')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
+              filterType === val
+                ? 'bg-violet-100 text-violet-700 border-violet-200'
+                : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
+            }`}
+          >
+            {label.trim()}
+          </button>
+        ))}
+        <button
+          onClick={() => setFilterStatus(filterStatus === 'READY' ? '' : 'READY')}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
+            filterStatus === 'READY'
+              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+              : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          READY
+        </button>
+        <button
+          onClick={() => setFilterUnused(v => !v)}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
+            filterUnused
+              ? 'bg-amber-100 text-amber-700 border-amber-200'
+              : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          Belum dipakai
+        </button>
+        <select
+          value={filterProduct}
+          onChange={e => setFilterProduct(e.target.value)}
+          className="border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30 max-w-[150px]"
+        >
+          <option value="">Semua produk</option>
           {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={inputCls + ' w-40'}>
-          <option value="">All Statuses</option>
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+        <select
+          value={filterSource}
+          onChange={e => setFilterSource(e.target.value)}
+          className="border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-stone-600 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+        >
+          <option value="">Semua sumber</option>
+          {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s === 'USER_UPLOAD' ? 'Upload' : 'AI'}</option>)}
         </select>
-        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={inputCls + ' w-40'}>
-          <option value="">All Sources</option>
-          {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <div className="ml-auto flex gap-1">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`btn-ghost btn-sm ${viewMode === 'grid' ? 'border-violet-500 text-violet-700 dark:text-violet-300' : ''}`}
-          >
-            Grid
-          </button>
-          <button
-            onClick={() => setViewMode('table')}
-            className={`btn-ghost btn-sm ${viewMode === 'table' ? 'border-violet-500 text-violet-700 dark:text-violet-300' : ''}`}
-          >
-            Table
-          </button>
+        <div className="flex rounded-lg border border-stone-200 overflow-hidden">
+          {(['grid', 'table'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => setViewMode(m)}
+              className={`px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                viewMode === m ? 'bg-stone-800 text-white' : 'bg-white text-stone-500 hover:bg-stone-50'
+              }`}
+            >
+              {m === 'grid' ? '▦' : '☰'}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>
-      ) : assets.length === 0 ? (
-        <div className="text-center py-16 text-stone-400 text-sm">No assets found.</div>
+      ) : visibleAssets.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-2xl mb-2">🗂</p>
+          <p className="text-sm text-stone-500 font-medium mb-1">Belum ada media yang cocok.</p>
+          <p className="text-xs text-stone-400 mb-4">Upload manual atau generate dari produk.</p>
+          <div className="flex justify-center gap-2">
+            <button onClick={() => setShowGenerate(true)} className="btn-outline btn-sm">✨ Generate</button>
+            <button onClick={() => setShowUpload(true)} className="btn-primary btn-sm">⬆ Upload</button>
+          </div>
+        </div>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {assets.map(asset => (
-            <div
-              key={asset.id}
-              className="card-hover cursor-pointer overflow-hidden"
-              onClick={() => openDetail(asset)}
-            >
-              {/* Image */}
-              <div className="aspect-square bg-stone-100 dark:bg-stone-800 overflow-hidden border-b border-stone-200 dark:border-stone-700">
-                {asset.publicUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={asset.publicUrl} alt={asset.primaryText ?? asset.generationPrompt ?? 'asset'} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
+        <div className="space-y-8">
+          {productGroups.map(([groupId, group], gi) => (
+            <div key={groupId}>
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-stone-400">{group.name}</p>
+                <span className="text-xs text-stone-300 font-medium">{group.items.length}</span>
+                <div className="flex-1 h-px bg-stone-100" />
               </div>
-              {/* Card body */}
-              <div className="p-3">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="text-sm font-medium text-stone-800 dark:text-stone-100 truncate">
-                    {asset.primaryText ?? asset.generationPrompt ?? asset.id.slice(0, 8)}
-                  </p>
-                  <StatusBadge status={asset.status} />
-                </div>
-                {asset.product && (
-                  <p className="text-xs text-stone-500 mb-1 truncate">{asset.product.name}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {/* Kartu Generate — selalu sel pertama grup pertama */}
+                {gi === 0 && (
+                  <button
+                    onClick={() => setShowGenerate(true)}
+                    className="aspect-square rounded-xl border-2 border-dashed border-violet-200 bg-violet-50/50 hover:bg-violet-50 hover:border-violet-300 transition-colors flex flex-col items-center justify-center gap-1.5 text-violet-600"
+                  >
+                    <span className="text-xl">✨</span>
+                    <span className="text-xs font-bold">Generate</span>
+                    <span className="text-[10px] text-violet-400 font-medium">dari produk</span>
+                  </button>
                 )}
-                <p className="text-xs text-stone-400 mb-3">{asset._count.creativeVariants} variant{asset._count.creativeVariants !== 1 ? 's' : ''}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={e => { e.stopPropagation(); openVariantPage(asset.id) }}
-                    className="btn-ghost btn-sm flex-1"
+                {group.items.map(asset => (
+                  <div
+                    key={asset.id}
+                    className="group relative aspect-square rounded-xl overflow-hidden border border-stone-200 hover:border-violet-400 hover:shadow-md transition-all cursor-pointer bg-stone-100"
+                    onClick={() => openDetail(asset)}
                   >
-                    View Variants
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleArchive(asset.id) }}
-                    className="btn-ghost btn-sm text-red-600 dark:text-red-400"
-                  >
-                    Archive
-                  </button>
-                </div>
+                    {asset.publicUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={asset.publicUrl} alt={asset.primaryText ?? asset.generationPrompt ?? 'asset'} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    {/* Badge type video */}
+                    {asset.type === 'VIDEO' && (
+                      <span className="absolute top-2 right-2 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">▶</span>
+                    )}
+                    {/* Badge status / usage */}
+                    <span className={`absolute bottom-2 left-2 text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm ${
+                      asset.status === 'READY'
+                        ? asset._count.creativeVariants > 0
+                          ? 'bg-amber-100/95 text-amber-800'
+                          : 'bg-emerald-100/95 text-emerald-700'
+                        : asset.status === 'PROCESSING'
+                          ? 'bg-violet-100/95 text-violet-700'
+                          : 'bg-white/95 text-stone-500'
+                    }`}>
+                      {asset.status === 'READY'
+                        ? asset._count.creativeVariants > 0
+                          ? `DIPAKAI ${asset._count.creativeVariants}×`
+                          : 'READY'
+                        : asset.status}
+                    </span>
+                    {/* Hover overlay actions */}
+                    <div className="absolute inset-x-0 top-0 p-2 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={e => { e.stopPropagation(); handleArchive(asset.id) }}
+                        className="bg-white/90 hover:bg-white text-stone-500 hover:text-red-600 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm"
+                        title="Arsip"
+                      >
+                        Arsip
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -336,7 +426,7 @@ export default function MediaLibraryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200 dark:divide-stone-700">
-              {assets.map(asset => (
+              {visibleAssets.map(asset => (
                 <tr key={asset.id} className="hover:bg-stone-50 dark:hover:bg-stone-800 cursor-pointer" onClick={() => openDetail(asset)}>
                   <td className="px-4 py-3 w-16">
                     {asset.publicUrl ? (
