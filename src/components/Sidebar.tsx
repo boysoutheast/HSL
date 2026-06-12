@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface User { id: string; name: string | null; email: string; role: 'admin' | 'user' }
 
@@ -30,6 +30,25 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
   const isAdmin = user?.role === 'admin'
   const initials = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
   const [showCreate, setShowCreate] = useState(false)
+  const [badges, setBadges] = useState<{ ads: number; influencer: number }>({ ads: 0, influencer: 0 })
+
+  useEffect(() => {
+    let live = true
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/nav-badges', { credentials: 'include' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (live) setBadges({ ads: Number(data.ads || 0), influencer: Number(data.influencer || 0) })
+      } catch {}
+    }
+    load()
+    const t = setInterval(load, 60_000)
+    return () => {
+      live = false
+      clearInterval(t)
+    }
+  }, [])
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
@@ -71,13 +90,15 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         {pillars.map(p => {
           if (p.adminOnly && !isAdmin) return null
           const active = isActive(p.href)
+          const badge = p.label === 'Ads' ? badges.ads : p.label === 'Influencer' ? badges.influencer : 0
           return (
             <Link key={p.href} href={p.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'
               }`}>
               {p.icon}
-              <span>{p.label}</span>
+              <span className="flex-1">{p.label}</span>
+              {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
             </Link>
           )
         })}
