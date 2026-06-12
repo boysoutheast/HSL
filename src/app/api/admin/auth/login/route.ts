@@ -2,23 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createSession, setSessionCookie } from '@/lib/session'
-import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit'
+import { isLocked, recordFailure, recordSuccess, getRateLimitKey } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  // Rate limit: 5 attempts per 15 minutes per IP
   const rlKey = getRateLimitKey(req, 'login')
-  const rl = checkRateLimit(rlKey, 5, 15 * 60 * 1000)
-  if (!rl.allowed) {
+
+  // Cek dulu apakah sedang dalam masa lockout
+  const lockCheck = isLocked(rlKey)
+  if (!lockCheck.allowed) {
     return NextResponse.json(
-      { ok: false, error: 'Too many attempts. Coba lagi nanti.', resetAt: rl.resetAt },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } },
+      {
+        ok: false,
+        error: `Terlalu banyak percobaan gagal. Coba lagi dalam ${lockCheck.waitSeconds} detik.`,
+        resetAt: lockCheck.resetAt,
+        waitSeconds: lockCheck.waitSeconds,
+      },
+      { status: 429, headers: { 'Retry-After': String(lockCheck.waitSeconds) } },
     )
   }
 
   let body: { email: string; password: string }
-
   try {
     body = await req.json()
   } catch {
@@ -31,22 +36,35 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.adminUser.findUnique({ where: { email: body.email } })
 
-  if (!user || user.status !== 'active') {
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-  }
+  const valid = user && user.status === 'active'
+    ? await bcrypt.compare(body.password, user.passwordHash)
+    : false
 
-  const valid = await bcrypt.compare(body.password, user.passwordHash)
   if (!valid) {
+    // Hitung sebagai percobaan gagal → mungkin trigger lockout
+    const failResult = recordFailure(rlKey)
+    if (!failResult.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Terlalu banyak percobaan gagal. Coba lagi dalam ${failResult.waitSeconds} detik.`,
+          resetAt: failResult.resetAt,
+          waitSeconds: failResult.waitSeconds,
+        },
+        { status: 429, headers: { 'Retry-After': String(failResult.waitSeconds) } },
+      )
+    }
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  const token = await createSession(user.id)
+  // Login sukses → reset counter
+  recordSuccess(rlKey)
 
+  const token = await createSession(user!.id)
   const res = NextResponse.json({
     success: true,
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    user: { id: user!.id, email: user!.email, name: user!.name, role: user!.role },
   })
-
   setSessionCookie(res, token)
   return res
 }
