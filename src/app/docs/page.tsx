@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'auth' | 'library' | 'characters' | 'tasks' | 'content' | 'capi' | 'admin'
+type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'capi' | 'admin'
 
 function Code({ children }: { children: string }) {
   return (
@@ -47,7 +47,6 @@ export default function DocsPage() {
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'auth', label: '🔑 Auth' },
     { key: 'library', label: '📚 Library' },
-    { key: 'characters', label: '🎭 Characters' },
     { key: 'tasks', label: '⚡ Task Queue' },
     { key: 'content', label: '🛍️ Content' },
     { key: 'capi', label: '📡 CAPI' },
@@ -135,36 +134,31 @@ export default function DocsPage() {
           <>
             <Section title="GET /api/hermes/library">
               <p className="text-sm text-stone-600 mb-3">
-                Satu endpoint untuk semua data assigned: akun IG, characters, topics, CEPs, products
-                (termasuk <strong>landingPages</strong>), photo references, dan <strong>mediaAssets</strong> (foto+video).
+                Satu endpoint untuk semua data assigned. <strong>Persona (character) sudah embedded langsung di setiap instagramAccount</strong> — tidak ada array <code className="text-xs bg-stone-100 px-1 rounded">characters[]</code> terpisah. Termasuk <code className="text-xs bg-stone-100 px-1 rounded">photoReferences[]</code> per akun.
               </p>
               <Code>{`{
   "agent": { "id": "...", "name": "Worker A" },
   "library": {
     "instagramAccounts": [
       {
-        "id": "acc_xxx", "username": "budi_official",
-        "accountName": "Budi Official", "gender": "M",
-        "status": "active", "purpose": "cpas"
-      }
-    ],
-    "characters": [
-      {
-        "id": "char_xxx",
-        "name": "Budi Santoso",
-        "description": "Karakter ibu rumah tangga 30an, bercerita produk kecantikan",
+        "id": "acc_xxx",
+        "username": "budi_official",
+        "accountName": "Budi Official",
+        "gender": "F",
+        "status": "active",
+        "purpose": "cpas",
+        "characterDescription": "Ibu rumah tangga 30an, bercerita produk kecantikan",
         "behavior": "Santai, hangat, relatable. Sesekali pakai bahasa Jawa.",
         "speakingStyle": "Casual, sering pakai kata 'aku', kalimat pendek",
         "expressionStyle": "Ekspresif, sering tersenyum, kontak mata ke kamera",
         "movementStyle": "Gerakan natural, tidak kaku, kadang sambil masak",
         "forbiddenRules": "Jangan sebut kompetitor. Jangan klaim medis.",
-        "status": "active",
-        "photoCount": 5,
+        "photoCount": 3,
         "photoReferences": [
           {
             "id": "...", "fileUrl": "https://ai.boytenggara.com/api/photos/serve/...",
             "thumbnailUrl": "https://...", "label": "Foto referensi 1",
-            "category": "face", "status": "active"
+            "category": "portrait", "status": "active"
           }
         ]
       }
@@ -188,114 +182,6 @@ export default function DocsPage() {
               <Endpoint method="GET" path="/api/hermes/ready-upload" desc="Akun berikutnya yang siap di-post (polling lama, masih jalan)" />
               <Endpoint method="GET" path="/api/hermes/photos" desc="Foto referensi assigned" />
               <Endpoint method="GET" path="/api/hermes/ceps" desc="CEP assigned" />
-            </Section>
-          </>
-        )}
-
-        {/* ── CHARACTERS ── */}
-        {tab === 'characters' && (
-          <>
-            <Section title="Apa itu Character?">
-              <p className="text-sm text-stone-600">
-                Character adalah <strong>persona AI</strong> yang dikaitkan ke akun Instagram tertentu.
-                Hermes pakai data ini untuk menghasilkan konten yang konsisten — gaya bicara, ekspresi,
-                gerakan, dan aturan yang harus dipatuhi. Satu akun IG bisa punya banyak character;
-                satu character bisa punya banyak topics dan foto referensi.
-              </p>
-            </Section>
-
-            <Section title="Fields Character">
-              <div className="space-y-2">
-                {[
-                  ['id', 'String', 'ID unik character (CUID)'],
-                  ['instagramAccountId', 'String', 'ID akun Instagram yang dipakai character ini'],
-                  ['name', 'String', 'Nama karakter — dipakai sebagai identitas di konten'],
-                  ['description', 'String', 'Deskripsi singkat siapa karakter ini (latar belakang, persona)'],
-                  ['behavior', 'String?', 'Cara berperilaku secara umum — tone, sikap, nilai'],
-                  ['speakingStyle', 'String?', 'Gaya bicara: formal/casual, panjang kalimat, kata khas'],
-                  ['expressionStyle', 'String?', 'Ekspresi wajah dan emosi yang sering ditampilkan'],
-                  ['movementStyle', 'String?', 'Gaya gerakan tubuh saat di depan kamera'],
-                  ['forbiddenRules', 'String?', 'Larangan keras: topik, kata, klaim yang tidak boleh muncul'],
-                  ['status', '"active"|"inactive"', 'Hanya character active yang masuk library Hermes'],
-                  ['photoCount', 'number', 'Jumlah foto referensi active (computed, bukan kolom DB)'],
-                  ['photoReferences', 'Array', 'Foto referensi penampilan karakter (untuk video generation)'],
-                ].map(([field, type, desc]) => (
-                  <div key={field} className="grid grid-cols-[140px_1fr] gap-2 text-xs border-b border-stone-100 pb-2">
-                    <div>
-                      <code className="font-mono text-violet-700">{field}</code>
-                      <span className="block text-stone-400">{type}</span>
-                    </div>
-                    <span className="text-stone-600">{desc}</span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Hermes — Akses via Library">
-              <p className="text-sm text-stone-600 mb-3">
-                Character tersedia di <code className="text-xs bg-stone-100 px-1 rounded">GET /api/hermes/library</code> →{' '}
-                <code className="text-xs bg-stone-100 px-1 rounded">library.characters[]</code>.
-                Hanya character yang <strong>di-assign ke agent</strong> yang muncul (lewat halaman Assignments).
-              </p>
-              <Code>{`# Ambil semua data termasuk characters
-curl -H "Authorization: Bearer hsl_xxx" \\
-  ${BASE}/api/hermes/library
-
-# Filter characters dari response
-# library.characters[] → gunakan fields:
-#   name, description, behavior, speakingStyle,
-#   expressionStyle, movementStyle, forbiddenRules
-#   photoReferences[].fileUrl  → URL foto referensi`}</Code>
-            </Section>
-
-            <Section title="Admin API — CRUD Characters">
-              <p className="text-sm text-stone-600 mb-2">
-                Semua endpoint pakai <strong>session cookie admin</strong>. Non-admin hanya bisa akses character
-                milik akun IG yang dia punya.
-              </p>
-              <Endpoint method="GET" path="/api/admin/characters" desc="List semua characters. Query: ?instagramAccountId=&status=active" />
-              <Endpoint method="POST" path="/api/admin/characters" desc="Buat character baru. Required: instagramAccountId, name, description" />
-              <Endpoint method="GET" path="/api/admin/characters/[id]" desc="Detail character + instagramAccount + photoReferences active + topics active" />
-              <Endpoint method="PATCH" path="/api/admin/characters/[id]" desc="Update field apapun (name/description/behavior/speakingStyle/expressionStyle/movementStyle/forbiddenRules/status)" />
-              <Endpoint method="DELETE" path="/api/admin/characters/[id]" desc="Hapus character + cascade delete topics, CEPs, photo files dari storage" />
-            </Section>
-
-            <Section title="Contoh: Buat Character">
-              <Code>{`curl -X POST -H "Content-Type: application/json" \\
-  -b "session=..." \\
-  -d '{
-    "instagramAccountId": "acc_xxx",
-    "name": "Budi Santoso",
-    "description": "Ibu rumah tangga 30an, bercerita produk kecantikan",
-    "behavior": "Hangat, relatable, sesekali humor ringan",
-    "speakingStyle": "Casual, kalimat pendek, sering pakai kata aku",
-    "expressionStyle": "Ekspresif, sering tersenyum, kontak mata ke kamera",
-    "movementStyle": "Natural, tidak kaku, kadang sambil aktivitas dapur",
-    "forbiddenRules": "Jangan sebut kompetitor. Jangan klaim medis atau klinis.",
-    "status": "active"
-  }' \\
-  ${BASE}/api/admin/characters
-
-# → 201 { "character": { "id": "char_xxx", ... } }`}</Code>
-            </Section>
-
-            <Section title="Foto Referensi Character">
-              <p className="text-sm text-stone-600 mb-2">
-                Foto referensi dipakai untuk video/image generation — Hermes tahu tampilan fisik karakter.
-                Upload via halaman Characters di dashboard (atau endpoint admin photos).
-                Semua URL sudah absolute di response library.
-              </p>
-              <Code>{`# library.characters[0].photoReferences
-[
-  {
-    "id": "photo_xxx",
-    "fileUrl": "https://ai.boytenggara.com/api/photos/serve/characters/char_xxx/1.jpg",
-    "thumbnailUrl": "https://ai.boytenggara.com/api/photos/serve/thumb/...",
-    "label": "Foto referensi utama",
-    "category": "face",
-    "status": "active"
-  }
-]`}</Code>
             </Section>
           </>
         )}
@@ -431,12 +317,15 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
               <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
               <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
             </Section>
-            <Section title="Instagram Accounts">
+            <Section title="Instagram Accounts (+ Persona)">
+              <p className="text-sm text-stone-600 mb-2">
+                Persona/character fields langsung ada di akun — tidak perlu endpoint terpisah.
+              </p>
               <Endpoint method="GET" path="/api/admin/accounts" desc="List akun IG. Query: ?status=active" />
-              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun. Body: { username*, accountName?, gender? ('M'|'F'), purpose?, notes? }" />
-              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + characters + postingMonitor" />
-              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update field: username/accountName/gender/purpose/notes/status" />
-              <Endpoint method="DELETE" path="/api/admin/accounts/[id]" desc="Hapus akun + cascade characters/topics/CEPs/contentLogs" />
+              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun. Body: { username*, accountName?, gender? ('M'|'F'), purpose?, notes?, characterDescription?, behavior?, speakingStyle?, expressionStyle?, movementStyle?, forbiddenRules? }" />
+              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + photoReferences + postingMonitor (semua persona fields included)" />
+              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update field apapun termasuk persona: characterDescription/behavior/speakingStyle/expressionStyle/movementStyle/forbiddenRules" />
+              <Endpoint method="DELETE" path="/api/admin/accounts/[id]" desc="Hapus akun + cascade topics/CEPs/contentLogs" />
             </Section>
             <Section title="Worker Tasks">
               <Endpoint method="GET" path="/api/admin/worker-tasks?status=pending" desc="Monitor antrian task + counts per status" />

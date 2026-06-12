@@ -46,6 +46,17 @@ export async function GET(req: NextRequest) {
     return url.startsWith('http') ? url : `${base}${url}`
   }
 
+  // Resolve character assignments → parent account IDs (backward compat)
+  let charParentAccountIds: string[] = []
+  if (characterIds.length > 0) {
+    const charAccounts = await prisma.character.findMany({
+      where: { id: { in: characterIds } },
+      select: { instagramAccountId: true },
+    })
+    charParentAccountIds = charAccounts.map(c => c.instagramAccountId)
+  }
+  const allAccountIds = [...new Set([...accountIds, ...charParentAccountIds])]
+
   // Resolve character assignments → their active topics (for CEP lookup)
   let characterTopicIds: string[] = []
   if (characterIds.length > 0) {
@@ -67,14 +78,11 @@ export async function GET(req: NextRequest) {
     ],
   }
 
-  const [accounts, characters, topics, ceps, products] = await Promise.all([
+  const [accounts, topics, ceps, products] = await Promise.all([
     prisma.instagramAccount.findMany({
-      where: { id: { in: accountIds }, status: 'active' },
-    }),
-    prisma.character.findMany({
-      where: { id: { in: characterIds }, status: 'active' },
+      where: { id: { in: allAccountIds }, status: 'active' },
       include: {
-        photoReferences: { where: { status: 'active' } },
+        photoReferences: { where: { status: 'active' }, orderBy: { createdAt: 'asc' } },
       },
     }),
     prisma.topic.findMany({
@@ -148,21 +156,19 @@ export async function GET(req: NextRequest) {
     thumbnailUrl: toAbsoluteUrl(a.thumbnailUrl),
   }))
 
-  // Add photoCount to characters
-  const charactersWithCount = absoluteify(characters).map(char => ({
-    ...char,
-    photoCount: char.photoReferences?.length ?? 0,
+  const accountsWithPhotos = absoluteify(accounts).map(acc => ({
+    ...acc,
+    photoCount: acc.photoReferences?.length ?? 0,
   }))
 
   return NextResponse.json({
     agent: { id: agent.id, name: agent.name },
     library: {
-      instagramAccounts: accounts,
-      characters: charactersWithCount,
+      instagramAccounts: accountsWithPhotos,
       topics: absoluteify(topics),
       ceps,
-      products: absoluteify(products),  // includes landingPages[]
-      mediaAssets: absoluteMediaAssets, // photo + video assets
+      products: absoluteify(products),
+      mediaAssets: absoluteMediaAssets,
     },
   })
 }

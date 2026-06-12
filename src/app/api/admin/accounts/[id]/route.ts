@@ -32,11 +32,11 @@ export async function GET(
   const account = await prisma.instagramAccount.findUnique({
     where: { id: params.id },
     include: {
-      characters: true,
       postingMonitor: {
         include: { hermesAgent: { select: { id: true, name: true } } },
       },
       performanceTrackers: { take: 10, orderBy: { createdAt: 'desc' } },
+      photoReferences: { where: { status: 'active' }, orderBy: { createdAt: 'asc' } },
     },
   })
 
@@ -65,6 +65,12 @@ export async function PATCH(
     status?: string
     purpose?: string
     notes?: string
+    characterDescription?: string
+    behavior?: string
+    speakingStyle?: string
+    expressionStyle?: string
+    movementStyle?: string
+    forbiddenRules?: string
   }
 
   try {

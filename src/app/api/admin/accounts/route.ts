@@ -37,6 +37,12 @@ export async function POST(req: NextRequest) {
     status?: string
     purpose?: string
     notes?: string
+    characterDescription?: string
+    behavior?: string
+    speakingStyle?: string
+    expressionStyle?: string
+    movementStyle?: string
+    forbiddenRules?: string
   }
 
   try {
@@ -57,6 +63,12 @@ export async function POST(req: NextRequest) {
       status: body.status ?? 'active',
       purpose: body.purpose,
       notes: body.notes,
+      characterDescription: body.characterDescription,
+      behavior: body.behavior,
+      speakingStyle: body.speakingStyle,
+      expressionStyle: body.expressionStyle,
+      movementStyle: body.movementStyle,
+      forbiddenRules: body.forbiddenRules,
       createdByUserId: auth.id,
     },
   })

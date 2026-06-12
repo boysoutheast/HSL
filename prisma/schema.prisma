@@ -24,17 +24,24 @@ model HermesAgent {
 }
 
 model InstagramAccount {
-  id              String    @id @default(cuid())
-  username        String    @unique
-  accountName     String?   @map("account_name")
-  gender          String?   @map("gender")
-  status          String    @default("active")
-  purpose         String?
-  notes           String?
-  lastPostAt      DateTime? @map("last_post_at")
-  createdByUserId String?   @map("created_by_user_id")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                   String    @id @default(cuid())
+  username             String    @unique
+  accountName          String?   @map("account_name")
+  gender               String?   @map("gender")
+  status               String    @default("active")
+  purpose              String?
+  notes                String?
+  lastPostAt           DateTime? @map("last_post_at")
+  createdByUserId      String?   @map("created_by_user_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  // character/persona fields — merged from Character model
+  characterDescription String?   @map("character_description")
+  behavior             String?   @map("behavior")
+  speakingStyle        String?   @map("speaking_style")
+  expressionStyle      String?   @map("expression_style")
+  movementStyle        String?   @map("movement_style")
+  forbiddenRules       String?   @map("forbidden_rules")
 
   createdByUser       AdminUser?            @relation(fields: [createdByUserId], references: [id])
   characters          Character[]
@@ -42,6 +49,7 @@ model InstagramAccount {
   postingMonitor      PostingMonitor?
   performanceTrackers PerformanceTracker[]
   mediaAssets         MediaAsset[]
+  photoReferences     PhotoReference[]
 
   @@map("instagram_accounts")
 }
@@ -86,10 +94,11 @@ model PhotoReference {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  character   Character?            @relation(fields: [characterId], references: [id])
-  topic       Topic?                @relation(fields: [topicId], references: [id])
-  product     Product?              @relation(fields: [productId], references: [id])
-  contentLogs GeneratedContentLog[]
+  instagramAccount InstagramAccount?      @relation(fields: [instagramAccountId], references: [id])
+  character        Character?            @relation(fields: [characterId], references: [id])
+  topic            Topic?                @relation(fields: [topicId], references: [id])
+  product          Product?              @relation(fields: [productId], references: [id])
+  contentLogs      GeneratedContentLog[]
 
   @@map("photo_references")
 }

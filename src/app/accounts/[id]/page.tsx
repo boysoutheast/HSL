@@ -4,16 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
-import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
-
-interface Character {
-  id: string
-  name: string
-  status: string
-  description: string
-}
 
 interface PostingMonitor {
   id: string
@@ -23,6 +15,14 @@ interface PostingMonitor {
   lastPostAt: string | null
   reason: string | null
   hermesAgent: { name: string } | null
+}
+
+interface PhotoRef {
+  id: string
+  fileUrl: string
+  thumbnailUrl: string | null
+  label: string
+  category: string | null
 }
 
 interface AccountDetail {
@@ -35,7 +35,13 @@ interface AccountDetail {
   notes: string | null
   lastPostAt: string | null
   createdAt: string
-  characters: Character[]
+  characterDescription: string | null
+  behavior: string | null
+  speakingStyle: string | null
+  expressionStyle: string | null
+  movementStyle: string | null
+  forbiddenRules: string | null
+  photoReferences: PhotoRef[]
   postingMonitor: PostingMonitor | null
   _count?: { assignments: number }
 }
@@ -46,6 +52,12 @@ const EMPTY_ACCOUNT_FORM = {
   gender: '',
   purpose: 'organic',
   notes: '',
+  characterDescription: '',
+  behavior: '',
+  speakingStyle: '',
+  expressionStyle: '',
+  movementStyle: '',
+  forbiddenRules: '',
 }
 
 function formatDate(d: string | null) {
@@ -63,15 +75,9 @@ export default function AccountDetailPage() {
   const [account, setAccount] = useState<AccountDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [showAddChar, setShowAddChar] = useState(false)
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT_FORM)
-  const [newChar, setNewChar] = useState({ name: '', description: '', topicsRaw: '' })
-  const [charPhoto, setCharPhoto] = useState<File | null>(null)
-  const [dragOver, setDragOver] = useState(false)
   const [savingAccount, setSavingAccount] = useState(false)
-  const [addCharLoading, setAddCharLoading] = useState(false)
   const [saveAccountError, setSaveAccountError] = useState<string | null>(null)
-  const [deleteCharLoading, setDeleteCharLoading] = useState<string | null>(null)
 
   const fetchAccount = useCallback(async () => {
     try {
@@ -88,23 +94,6 @@ export default function AccountDetailPage() {
 
   useEffect(() => { fetchAccount() }, [fetchAccount])
 
-  const handleDeleteChar = async (charId: string, charName: string) => {
-    if (!confirm(`Hapus karakter "${charName}" beserta semua topik, foto, dan CEP-nya?\n\nTidak bisa dibatalkan.`)) return
-    setDeleteCharLoading(charId)
-    try {
-      const res = await fetch(`/api/admin/characters/${charId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error((await res.json()).error)
-      await fetchAccount()
-    } catch (err) {
-      alert('Gagal hapus: ' + String(err))
-    } finally {
-      setDeleteCharLoading(null)
-    }
-  }
-
   const openEditAccount = () => {
     if (!account) return
     setAccountForm({
@@ -113,6 +102,12 @@ export default function AccountDetailPage() {
       gender: account.gender ?? '',
       purpose: account.purpose ?? 'organic',
       notes: account.notes ?? '',
+      characterDescription: account.characterDescription ?? '',
+      behavior: account.behavior ?? '',
+      speakingStyle: account.speakingStyle ?? '',
+      expressionStyle: account.expressionStyle ?? '',
+      movementStyle: account.movementStyle ?? '',
+      forbiddenRules: account.forbiddenRules ?? '',
     })
     setShowEditModal(true)
   }
@@ -131,6 +126,12 @@ export default function AccountDetailPage() {
           gender: accountForm.gender || null,
           purpose: accountForm.purpose || undefined,
           notes: accountForm.notes.trim() || undefined,
+          characterDescription: accountForm.characterDescription.trim() || null,
+          behavior: accountForm.behavior.trim() || null,
+          speakingStyle: accountForm.speakingStyle.trim() || null,
+          expressionStyle: accountForm.expressionStyle.trim() || null,
+          movementStyle: accountForm.movementStyle.trim() || null,
+          forbiddenRules: accountForm.forbiddenRules.trim() || null,
         }),
       })
       if (!res.ok) throw new Error()
@@ -144,61 +145,6 @@ export default function AccountDetailPage() {
     }
   }
 
-  const handleAddChar = async () => {
-    if (!newChar.name.trim()) return
-    setAddCharLoading(true)
-    try {
-      // Step 1: Create character
-      const res = await fetch('/api/admin/characters', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          instagramAccountId: accountId,
-          name: newChar.name.trim(),
-          description: newChar.description.trim() || null,
-          status: 'active',
-        }),
-      })
-      if (!res.ok) throw new Error('Gagal membuat karakter')
-      const data = await res.json()
-      const character = data.character ?? data
-
-      // Step 2: Upload foto jika ada
-      if (charPhoto) {
-        const fd = new FormData()
-        fd.append('file', charPhoto)
-        fd.append('characterId', character.id)
-        fd.append('label', newChar.name.trim())
-        fd.append('category', 'portrait')
-        await fetch('/api/photos/upload', { method: 'POST', credentials: 'include', body: fd })
-      }
-
-      // Step 3: Buat topik awal (jika ada)
-      const topicNames = newChar.topicsRaw.split('\n').map(t => t.trim()).filter(Boolean)
-      if (topicNames.length > 0) {
-        await Promise.all(
-          topicNames.map(name =>
-            fetch('/api/admin/topics', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ characterId: character.id, name, status: 'active' }),
-            })
-          )
-        )
-      }
-
-      setShowAddChar(false)
-      setNewChar({ name: '', description: '', topicsRaw: '' })
-      setCharPhoto(null)
-      await fetchAccount()
-    } catch (err) {
-      alert('Error: ' + String(err))
-    } finally {
-      setAddCharLoading(false)
-    }
-  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Loading...</div>
@@ -223,10 +169,10 @@ export default function AccountDetailPage() {
       </div>
 
       <PageInfo
-        purpose={`Detail akun @${account.username} — status monitor, karakter yang dimiliki, dan relasi ke Hermes Agent.`}
+        purpose={`Detail akun @${account.username} — persona, foto referensi, posting monitor, dan relasi Hermes Agent.`}
         wiring={[
           { label: '→ Posting Monitor', desc: 'status real-time akun ini' },
-          { label: '→ Characters', desc: `${account.characters.length} karakter terdaftar — klik nama untuk drill-down` },
+          { label: '→ Persona', desc: 'character fields langsung di akun ini (behavior, speaking style, dll)' },
           { label: '→ Assignments', desc: `${account._count?.assignments ?? 0} Hermes agent ter-assign` },
         ]}
       />
@@ -308,56 +254,49 @@ export default function AccountDetailPage() {
         </div>
       )}
 
-      {/* Characters */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-stone-900">
-            Characters ({account.characters.length})
-          </h2>
-          <button onClick={() => { setNewChar({ name: '', description: '', topicsRaw: '' }); setCharPhoto(null); setShowAddChar(true) }} className="btn-primary">
-            + Add Character
-          </button>
+      {/* Persona */}
+      <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-stone-900">Persona</h2>
+          <button onClick={openEditAccount} className="btn-warning btn-sm">Edit</button>
         </div>
-
-        <Table
-          headers={['Name', 'Status', 'Description', 'Actions']}
-          empty="No characters yet. Add one to get started."
-        >
-          {account.characters.map((char) => (
-            <tr key={char.id} className="hover:bg-stone-50">
-              <td className="px-4 py-3">
-                <Link
-                  href={`/accounts/${account.id}/characters/${char.id}`}
-                  className="font-medium text-violet-700 hover:underline"
-                >
-                  {char.name}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge status={char.status} />
-              </td>
-              <td className="px-4 py-3 text-stone-500 max-w-sm truncate">{char.description}</td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/accounts/${account.id}/characters/${char.id}`}
-                    className="btn-info btn-sm"
-                  >
-                    Detail →
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteChar(char.id, char.name)}
-                    disabled={deleteCharLoading === char.id}
-                    className="btn-danger btn-sm"
-                  >
-                    {deleteCharLoading === char.id ? '...' : 'Delete'}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
+        {[
+          ['Deskripsi', account.characterDescription],
+          ['Behavior', account.behavior],
+          ['Speaking Style', account.speakingStyle],
+          ['Expression Style', account.expressionStyle],
+          ['Movement Style', account.movementStyle],
+          ['Forbidden Rules', account.forbiddenRules],
+        ].map(([label, value]) => value ? (
+          <div key={label} className="border-b border-stone-100 py-2.5 last:border-0">
+            <p className="text-xs text-stone-500 font-medium mb-0.5">{label}</p>
+            <p className="text-sm text-stone-800 whitespace-pre-wrap">{value}</p>
+          </div>
+        ) : null)}
+        {!account.characterDescription && !account.behavior && !account.speakingStyle && !account.expressionStyle && !account.movementStyle && !account.forbiddenRules && (
+          <p className="text-sm text-stone-400 italic">Belum ada persona. Klik Edit untuk mengisi.</p>
+        )}
       </div>
+
+      {/* Foto Referensi */}
+      {account.photoReferences.length > 0 && (
+        <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
+          <h2 className="text-base font-semibold text-stone-900 mb-4">Foto Referensi ({account.photoReferences.length})</h2>
+          <div className="flex flex-wrap gap-3">
+            {account.photoReferences.map(p => (
+              <div key={p.id} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.thumbnailUrl ?? p.fileUrl}
+                  alt={p.label}
+                  className="w-20 h-20 object-cover rounded-lg border border-stone-200"
+                />
+                <p className="text-[10px] text-stone-400 mt-1 truncate w-20 text-center">{p.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Edit Account Modal */}
       <Modal open={showEditModal} onClose={() => setShowEditModal(false)} title={`Edit @${account.username}`}>
@@ -412,9 +351,31 @@ export default function AccountDetailPage() {
             <textarea
               value={accountForm.notes}
               onChange={(e) => setAccountForm({ ...accountForm, notes: e.target.value })}
-              rows={3}
+              rows={2}
               className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
+          </div>
+          <div className="border-t border-stone-100 pt-3">
+            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Persona</p>
+            {[
+              { key: 'characterDescription', label: 'Deskripsi', placeholder: 'Siapa karakter ini? Latar belakang, kepribadian...' },
+              { key: 'behavior', label: 'Behavior', placeholder: 'Cara berperilaku umum, tone, sikap...' },
+              { key: 'speakingStyle', label: 'Speaking Style', placeholder: 'Gaya bicara, kata khas, panjang kalimat...' },
+              { key: 'expressionStyle', label: 'Expression Style', placeholder: 'Ekspresi wajah, emosi yang sering ditampilkan...' },
+              { key: 'movementStyle', label: 'Movement Style', placeholder: 'Gaya gerakan tubuh di depan kamera...' },
+              { key: 'forbiddenRules', label: 'Forbidden Rules', placeholder: 'Topik, kata, klaim yang DILARANG muncul...' },
+            ].map(({ key, label, placeholder }) => (
+              <div key={key} className="mb-3">
+                <label className="block text-sm font-medium text-stone-700 mb-1">{label}</label>
+                <textarea
+                  value={accountForm[key as keyof typeof accountForm]}
+                  onChange={(e) => setAccountForm({ ...accountForm, [key]: e.target.value })}
+                  rows={2}
+                  placeholder={placeholder}
+                  className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+                />
+              </div>
+            ))}
           </div>
           {saveAccountError && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
@@ -430,122 +391,6 @@ export default function AccountDetailPage() {
         </form>
       </Modal>
 
-      {/* Add Character Modal */}
-      {showAddChar && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-stone-900">Tambah Karakter</h2>
-              <button onClick={() => setShowAddChar(false)} className="text-stone-400 hover:text-stone-600 text-xl leading-none">×</button>
-            </div>
-
-            {/* 1. Upload Foto */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Foto Karakter</label>
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={e => {
-                  e.preventDefault(); setDragOver(false)
-                  const file = e.dataTransfer.files[0]
-                  if (file && file.type.startsWith('image/')) setCharPhoto(file)
-                }}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  dragOver ? 'border-violet-400 bg-violet-50' : 'border-stone-300 hover:border-violet-300'
-                }`}
-                onClick={() => document.getElementById('char-photo-input')?.click()}
-              >
-                {charPhoto ? (
-                  <div className="flex items-center justify-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={URL.createObjectURL(charPhoto)} alt="preview" className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-stone-700">{charPhoto.name}</p>
-                      <button
-                        onClick={e => { e.stopPropagation(); setCharPhoto(null) }}
-                        className="text-xs text-red-500 hover:text-red-700 mt-0.5"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-stone-400 space-y-1 py-2">
-                    <p className="text-2xl">📷</p>
-                    <p className="text-sm">Drag & drop atau klik untuk upload</p>
-                    <p className="text-xs">JPG, PNG, WEBP</p>
-                  </div>
-                )}
-              </div>
-              <input
-                id="char-photo-input"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => setCharPhoto(e.target.files?.[0] ?? null)}
-              />
-            </div>
-
-            {/* 2. Nama */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Nama Karakter <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={newChar.name}
-                onChange={e => setNewChar({ ...newChar, name: e.target.value })}
-                placeholder="Misal: Ibu Sari, Tante Dewi"
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-
-            {/* 3. Persona */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Persona</label>
-              <textarea
-                value={newChar.description}
-                onChange={e => setNewChar({ ...newChar, description: e.target.value })}
-                rows={4}
-                placeholder="Siapa karakter ini? Latar belakang, kepribadian, cara bicara, target audiens yang relate..."
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
-              />
-            </div>
-
-            {/* 4. Topik Awal */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Topik Awal
-                <span className="text-xs text-stone-400 font-normal ml-1">(pisahkan dengan Enter)</span>
-              </label>
-              <textarea
-                value={newChar.topicsRaw}
-                onChange={e => setNewChar({ ...newChar, topicsRaw: e.target.value })}
-                rows={3}
-                placeholder={"Kaki kering diabetes\nEmotional keluarga\nSocial embarrassment"}
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none font-mono text-xs"
-              />
-              <p className="text-xs text-stone-400 mt-1">
-                Topik bisa ditambah / diedit lagi di halaman detail karakter.
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowAddChar(false)} className="btn-ghost flex-1">
-                Cancel
-              </button>
-              <button
-                onClick={handleAddChar}
-                disabled={addCharLoading || !newChar.name.trim()}
-                className="btn-primary flex-1"
-              >
-                {addCharLoading ? 'Menyimpan...' : 'Buat Karakter'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
