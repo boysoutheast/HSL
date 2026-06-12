@@ -44,47 +44,78 @@ interface Page {
   igName: string | null
 }
 
-interface Creative {
+interface Pixel {
   id: string
+  name: string
+}
+
+interface CreativeDraft {
+  id: string
+  format: 'single' | 'carousel'
   imageUrl: string
+  linkUrl: string
   primaryText: string
   headline: string
-  caption: string
+  description: string
   callToAction: string
+  urlTags: string
+  childAttachmentsJson: string // JSON stringified carousel cards
 }
 
 interface AdsetDraft {
   id: string
   name: string
-  dailyBudget: string
+  dailyBudget: string          // ABO only
+  bidStrategy: string           // JSON, ABO only, null = inherit
+  pixelId: string
+  customEventType: string
+  // Audience
+  ageMin: number
+  ageMax: number
+  gender: 'all' | 'male' | 'female'
+  // Schedule
+  scheduleMode: 'now' | 'scheduled'
+  startTime: string
+  endTime: string
+  // Placement
+  placementMode: 'automatic' | 'manual'
+  placements: string[]
+  // Targeting extras
+  excludedCustomAudienceIds: string
+  interests: Array<{id: string; name: string}>
+  devicePlatform: 'all' | 'mobile' | 'desktop'
+  // Identity
+  identityPageId: string
+  identityIgUserId: string
+  // Creatives per adset
+  creatives: CreativeDraft[]
 }
 
 interface FormData {
+  // Step 1: Campaign
   name: string
   metaConnectionId: string
   metaAdAccountId: string
   objective: string
   dailyBudget: string
   currency: string
-  destinationUrl: string
-  launchMode: string
-  sourceAdsetId: string
-  notes: string
-  // Step 2
-  pageId: string
-  // Step 3
-  placementMode: 'automatic' | 'manual'
-  placements: string[]
-  // Step 4
-  ageMin: number
-  ageMax: number
-  gender: 'all' | 'male' | 'female'
-  // Step 5 (ABO) or Step 4 (CBO)
   budgetMode: 'CBO' | 'ABO'
+  bidStrategy: string          // JSON for CBO campaign-level
+  
+  // Step 2 & 3: Ad Sets & Ads
   adsets: AdsetDraft[]
-  // Step 5 / 6
-  creatives: Creative[]
-  pixelId: string
+  
+  // Derived
+  notes: string
+}
+
+interface BidStrategyOption {
+  value: string
+  label: string
+  description: string
+  requiresAmount: boolean
+  amountLabel?: string
+  available: boolean
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -93,11 +124,6 @@ const OBJECTIVE_OPTIONS = [
   { value: 'OUTCOME_LEADS', label: 'Leads' },
   { value: 'OUTCOME_SALES', label: 'Sales' },
   { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
-]
-
-const LAUNCH_MODE_OPTIONS = [
-  { value: 'new_test', label: 'Test Baru' },
-  { value: 'duplicate_winner', label: 'Duplikat Winner' },
 ]
 
 const BUDGET_MODE_OPTIONS = [
@@ -109,22 +135,8 @@ const CTA_OPTIONS = [
   { value: 'LEARN_MORE', label: 'Learn More' },
   { value: 'SHOP_NOW', label: 'Shop Now' },
   { value: 'SIGN_UP', label: 'Sign Up' },
-]
-
-const PIXEL_OPTIONS = [
-  { id: '1360774452473859', name: 'Taracare Brand (Aktif)' },
-  { id: '1576663299586793', name: 'Klinik Dokter Dataset Pixel' },
-  { id: '1516726336224849', name: 'LBLO' },
-  { id: '1635207137470687', name: 'TTC - Trading Pixel Dataset' },
-]
-
-const PLACEMENT_OPTIONS = [
-  { value: 'facebook_feed', label: 'Facebook Feed' },
-  { value: 'facebook_stories', label: 'Facebook Stories' },
-  { value: 'instagram_feed', label: 'Instagram Feed' },
-  { value: 'instagram_stories', label: 'Instagram Stories' },
-  { value: 'instagram_reels', label: 'Instagram Reels' },
-  { value: 'instagram_explore', label: 'Instagram Explore' },
+  { value: 'PURCHASE', label: 'Purchase' },
+  { value: 'BOOK_NOW', label: 'Book Now' },
 ]
 
 const GENDER_OPTIONS = [
@@ -133,29 +145,90 @@ const GENDER_OPTIONS = [
   { value: 'female', label: 'Perempuan' },
 ]
 
-const CBO_STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
-const ABO_STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Ad Sets', 'Pixel', 'Creatives'] as const
-type Step = string
+const PLACEMENT_OPTIONS = [
+  { value: 'facebook_feed', label: 'Facebook Feed' },
+  { value: 'facebook_stories', label: 'Facebook Stories' },
+  { value: 'facebook_reels', label: 'Facebook Reels' },
+  { value: 'facebook_video_feeds', label: 'Facebook Video Feeds' },
+  { value: 'facebook_marketplace', label: 'Facebook Marketplace' },
+  { value: 'facebook_search', label: 'Facebook Search' },
+  { value: 'instagram_feed', label: 'Instagram Feed' },
+  { value: 'instagram_stories', label: 'Instagram Stories' },
+  { value: 'instagram_reels', label: 'Instagram Reels' },
+  { value: 'instagram_explore', label: 'Instagram Explore' },
+  { value: 'instagram_profile_feed', label: 'Instagram Profile Feed' },
+  { value: 'messenger_inbox', label: 'Messenger Inbox' },
+  { value: 'messenger_stories', label: 'Messenger Stories' },
+  { value: 'audience_network_native', label: 'Audience Network Native' },
+  { value: 'audience_network_rewarded', label: 'Audience Network Rewarded' },
+]
+
+const EVENT_OPTIONS = [
+  { value: 'PURCHASE', label: 'Purchase' },
+  { value: 'LEAD', label: 'Lead' },
+  { value: 'ADD_TO_CART', label: 'Add to Cart' },
+  { value: 'COMPLETE_REGISTRATION', label: 'Complete Registration' },
+  { value: 'INITIATED_CHECKOUT', label: 'Initiated Checkout' },
+  { value: 'CONTACT', label: 'Contact' },
+]
+
+const DEVICE_OPTIONS = [
+  { value: 'all', label: 'Semua Device' },
+  { value: 'mobile', label: 'Mobile Saja' },
+  { value: 'desktop', label: 'Desktop Saja' },
+]
+
+const STEPS = ['Campaign', 'Ad Sets', 'Ads', 'Review'] as const
+type Step = typeof STEPS[number]
 
 const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const labelCls = 'block text-sm font-medium text-stone-700 mb-1'
 const sectionCls = 'bg-white rounded-xl border border-stone-200 p-5 space-y-4'
+const cardCls = 'border border-stone-200 rounded-xl p-5 space-y-4 bg-white'
 
-function emptyCreative(): Creative {
-  return { id: crypto.randomUUID(), imageUrl: '', primaryText: '', headline: '', caption: '', callToAction: 'LEARN_MORE' }
+function emptyCreative(): CreativeDraft {
+  return {
+    id: crypto.randomUUID(),
+    format: 'single',
+    imageUrl: '',
+    linkUrl: '',
+    primaryText: '',
+    headline: '',
+    description: '',
+    callToAction: 'LEARN_MORE',
+    urlTags: '',
+    childAttachmentsJson: '[]',
+  }
 }
 
-function emptyAdset(): AdsetDraft {
-  return { id: crypto.randomUUID(), name: '', dailyBudget: '' }
+function emptyAdset(name: string, idx: number): AdsetDraft {
+  return {
+    id: crypto.randomUUID(),
+    name: name || `Adset ${idx + 1}`,
+    dailyBudget: '',
+    bidStrategy: '',
+    pixelId: '',
+    customEventType: 'PURCHASE',
+    ageMin: 25,
+    ageMax: 45,
+    gender: 'all',
+    scheduleMode: 'now',
+    startTime: '',
+    endTime: '',
+    placementMode: 'automatic',
+    placements: [],
+    excludedCustomAudienceIds: '',
+    interests: [],
+    devicePlatform: 'all',
+    identityPageId: '',
+    identityIgUserId: '',
+    creatives: [emptyCreative()],
+  }
 }
 
-function formatDate(d: string | null) {
+function day(d: string) {
   if (!d) return '—'
-  return new Date(d).toLocaleString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function getSteps(budgetMode: string): readonly string[] {
-  return budgetMode === 'ABO' ? ABO_STEPS : CBO_STEPS
+  return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -163,14 +236,16 @@ function getSteps(budgetMode: string): readonly string[] {
 export default function NewTestLaunchPage() {
   const router = useRouter()
 
-  // ── Deps ─────────────────────────────────────────────────────────────────
+  // Deps
   const [metaConnections, setMetaConnections] = useState<MetaConnection[]>([])
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
   const [pages, setPages] = useState<Page[]>([])
+  const [pixels, setPixels] = useState<Pixel[]>([])
+  const [bidStrategies, setBidStrategies] = useState<BidStrategyOption[]>([])
   const [loadingDeps, setLoadingDeps] = useState(true)
 
-  // ── Form ─────────────────────────────────────────────────────────────────
-  const [currentStep, setCurrentStep] = useState<Step>('Basic Config')
+  // Form
+  const [currentStep, setCurrentStep] = useState<Step>('Campaign')
   const [form, setForm] = useState<FormData>({
     name: '',
     metaConnectionId: '',
@@ -178,32 +253,22 @@ export default function NewTestLaunchPage() {
     objective: 'OUTCOME_LEADS',
     dailyBudget: '',
     currency: 'IDR',
-    destinationUrl: '',
-    launchMode: 'new_test',
-    sourceAdsetId: '',
-    notes: '',
-    pageId: '',
-    placementMode: 'automatic',
-    placements: [],
-    ageMin: 25,
-    ageMax: 45,
-    gender: 'all',
     budgetMode: 'CBO',
-    adsets: [emptyAdset()],
-    creatives: [emptyCreative()],
-    pixelId: '',
+    bidStrategy: '',
+    adsets: [emptyAdset('', 0)],
+    notes: '',
   })
 
-  // ── UI State ─────────────────────────────────────────────────────────────
+  // UI state
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<Page | null>(null)
-  const [selectedPixel, setSelectedPixel] = useState<{id: string; name: string} | null>(null)
+  const [availablePages, setAvailablePages] = useState<Page[]>([])
 
-  const steps = getSteps(form.budgetMode)
-  const stepIndex = steps.indexOf(currentStep)
+  const stepIndex = (STEPS as readonly string[]).indexOf(currentStep)
 
-  // ── Fetch Meta Connections on mount ─────────────────────────────────────
+  // ── Fetch logic ──────────────────────────────────────────────────────────
+
   const fetchMetaConnections = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/meta-connections', { credentials: 'include' })
@@ -217,7 +282,6 @@ export default function NewTestLaunchPage() {
 
   useEffect(() => { fetchMetaConnections() }, [fetchMetaConnections])
 
-  // ── Fetch Ad Accounts when meta connection selected ────────────────────
   const fetchAdAccounts = useCallback(async (metaConnectionId: string) => {
     if (!metaConnectionId) { setAdAccounts([]); return }
     try {
@@ -229,72 +293,86 @@ export default function NewTestLaunchPage() {
     } catch { /* silent */ }
   }, [])
 
-  // ── Fetch Pages when meta connection selected (Step 2) ─────────────────
   const fetchPages = useCallback(async (metaConnectionId: string) => {
     if (!metaConnectionId) { setPages([]); return }
     try {
       const res = await fetch(`/api/admin/assets/pages?metaAccountId=${metaConnectionId}`, { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
-        setPages(data.pages ?? [])
+        const plist = data.pages ?? []
+        setPages(plist)
+        setAvailablePages(plist)
       }
     } catch { /* silent */ }
   }, [])
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  const fetchPixels = useCallback(async (adAccountId: string) => {
+    if (!adAccountId) { setPixels([]); return }
+    try {
+      const res = await fetch(`/api/admin/meta-tools/adspixels?adAccountId=${adAccountId}`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setPixels(data.pixels ?? [])
+      }
+    } catch { setPixels([]) }
+  }, [])
+
+  const fetchBidStrategies = useCallback(async (adAccountId: string) => {
+    if (!adAccountId) { setBidStrategies([]); return }
+    try {
+      const res = await fetch(`/api/admin/meta-tools/adaccount-capabilities?adAccountId=${adAccountId}`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setBidStrategies(data.bidStrategies ?? [])
+      }
+    } catch { setBidStrategies([]) }
+  }, [])
+
+  // Handlers
   const handleMetaConnectionChange = (id: string) => {
     setForm((f) => ({ ...f, metaConnectionId: id, metaAdAccountId: '', pageId: '' }))
     setSelectedPage(null)
     setAdAccounts([])
     setPages([])
+    setPixels([])
+    setBidStrategies([])
+    if (id) fetchAdAccounts(id)
+  }
+
+  const handleAdAccountChange = (id: string) => {
+    setForm((f) => ({ ...f, metaAdAccountId: id, pixelId: '' }))
+    setPixels([])
     if (id) {
-      fetchAdAccounts(id)
+      fetchPixels(id)
+      fetchBidStrategies(id)
     }
   }
 
-  const handleStep2Continue = () => {
-    if (!form.metaConnectionId) {
-      alert('Pilih Meta Connection terlebih dahulu.')
-      return
-    }
-    fetchPages(form.metaConnectionId)
-    setCurrentStep('Page & Instagram')
-  }
-
-  const handlePageSelect = (page: Page) => {
+  const handleSelectPage = (page: Page) => {
     setSelectedPage(page)
-    setForm((f) => ({ ...f, pageId: page.pageId }))
-  }
-
-  const handlePlacementsChange = (value: string) => {
-    setForm((f) => {
-      const has = f.placements.includes(value)
-      return {
-        ...f,
-        placements: has
-          ? f.placements.filter((p) => p !== value)
-          : [...f.placements, value],
-      }
-    })
-  }
-
-  const addCreative = () => {
-    setForm((f) => ({ ...f, creatives: [...f.creatives, emptyCreative()] }))
-  }
-
-  const removeCreative = (id: string) => {
-    setForm((f) => ({ ...f, creatives: f.creatives.filter((c) => c.id !== id) }))
-  }
-
-  const updateCreative = (id: string, field: keyof Creative, value: string) => {
+    // Update identity on all adsets
     setForm((f) => ({
       ...f,
-      creatives: f.creatives.map((c) => (c.id === id ? { ...c, [field]: value } : c)),
+      adsets: f.adsets.map((a) => ({
+        ...a,
+        identityPageId: page.pageId,
+        identityIgUserId: page.igBusinessAccountId || '',
+      })),
+    }))
+  }
+
+  const updateAdsetField = (id: string, field: string, value: unknown) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) => (a.id === id ? { ...a, [field]: value } : a)),
     }))
   }
 
   const addAdset = () => {
-    setForm((f) => ({ ...f, adsets: [...f.adsets, emptyAdset()] }))
+    setForm((f) => ({
+      ...f,
+      adsets: [...f.adsets, emptyAdset(f.name, f.adsets.length)],
+    }))
   }
 
   const removeAdset = (id: string) => {
@@ -304,61 +382,95 @@ export default function NewTestLaunchPage() {
     }))
   }
 
-  const updateAdset = (id: string, field: keyof AdsetDraft, value: string) => {
+  const duplicateAdset = (id: string) => {
+    setForm((f) => {
+      const src = f.adsets.find((a) => a.id === id)
+      if (!src) return f
+      const copy: AdsetDraft = {
+        ...structuredClone(src),
+        id: crypto.randomUUID(),
+        name: src.name + ' (copy)',
+        creatives: src.creatives.map((c) => ({ ...c, id: crypto.randomUUID() })),
+      }
+      const idx = f.adsets.findIndex((a) => a.id === id)
+      const adsets = [...f.adsets]
+      adsets.splice(idx + 1, 0, copy)
+      return { ...f, adsets }
+    })
+  }
+
+  const addCreativeToAdset = (adsetId: string) => {
     setForm((f) => ({
       ...f,
-      adsets: f.adsets.map((a) => (a.id === id ? { ...a, [field]: value } : a)),
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId ? { ...a, creatives: [...a.creatives, emptyCreative()] } : a
+      ),
+    }))
+  }
+
+  const removeCreativeFromAdset = (adsetId: string, creativeId: string) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId
+          ? { ...a, creatives: a.creatives.length > 1 ? a.creatives.filter((c) => c.id !== creativeId) : a.creatives }
+          : a
+      ),
+    }))
+  }
+
+  const updateCreativeField = (adsetId: string, creativeId: string, field: string, value: string) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId
+          ? {
+              ...a,
+              creatives: a.creatives.map((c) => (c.id === creativeId ? { ...c, [field]: value } : c)),
+            }
+          : a
+      ),
+    }))
+  }
+
+  const addInterest = (adsetId: string, interest: { id: string; name: string }) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId && !a.interests.some((i) => i.id === interest.id)
+          ? { ...a, interests: [...a.interests, interest] }
+          : a
+      ),
+    }))
+  }
+
+  const removeInterest = (adsetId: string, interestId: string) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) =>
+        a.id === adsetId ? { ...a, interests: a.interests.filter((i) => i.id !== interestId) } : a
+      ),
     }))
   }
 
   const handleBudgetModeChange = (mode: 'CBO' | 'ABO') => {
-    // Reset step to Basic Config when switching modes to avoid invalid step
-    setCurrentStep('Basic Config')
     setForm((f) => ({
       ...f,
       budgetMode: mode,
       dailyBudget: mode === 'CBO' ? f.dailyBudget : '',
-      adsets: mode === 'ABO' ? f.adsets : [emptyAdset()],
     }))
   }
 
+  // ── Submit ──────────────────────────────────────────────────────────────────
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { setSaveError('Nama launch harus diisi.'); return }
-    if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return }
-    if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return }
-
-    if (form.budgetMode === 'CBO') {
-      if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
-    } else {
-      for (let i = 0; i < form.adsets.length; i++) {
-        const a = form.adsets[i]
-        if (!a.name.trim()) { setSaveError(`Ad Set #${i + 1}: nama harus diisi.`); return }
-        if (!a.dailyBudget || Number(a.dailyBudget) <= 0) { setSaveError(`Ad Set "${a.name}": budget harus lebih dari 0.`); return }
-      }
-    }
-
-    if (form.creatives.length === 0 || !form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())) {
-      setSaveError('Minimal 1 creative dengan image URL atau primary text.'); return
-    }
-    if (form.objective === 'OUTCOME_SALES' && !form.pixelId) {
-      setSaveError('OUTCOME_SALES memerlukan pixel. Pilih pixel di step Pixel.'); return
-    }
+    if (!validate()) return
 
     setSaving(true)
     setSaveError(null)
 
-    const audienceJson = JSON.stringify({
-      ageMin: form.ageMin,
-      ageMax: form.ageMax,
-      gender: form.gender,
-      locations: [{ type: 'country', key: 'ID' }],
-    })
-
-    const placementsJson = form.placementMode === 'manual' ? JSON.stringify(form.placements) : undefined
-
-    // Determine metaAdAccountId internal id vs adAccountId string
-    const selectedAdAccount = adAccounts.find((a) => a.id === form.metaAdAccountId)
+    const audienceJson = JSON.stringify({ ageMin: 25, ageMax: 45, gender: 'all', locations: [{ type: 'country', key: 'ID' }] })
 
     try {
       const body: Record<string, unknown> = {
@@ -368,52 +480,68 @@ export default function NewTestLaunchPage() {
         name: form.name.trim(),
         objective: form.objective,
         currency: form.currency,
-        destinationUrl: form.destinationUrl.trim() || undefined,
-        launchMode: form.launchMode,
-        sourceAdsetId: form.launchMode === 'duplicate_winner' ? form.sourceAdsetId.trim() || undefined : undefined,
+        launchMode: 'new_test',
         notes: form.notes.trim() || undefined,
-        pageId: selectedPage?.pageId || undefined,
-        igAccountId: selectedPage?.igBusinessAccountId || undefined,
-        pixelId: form.pixelId || undefined,
-        placementMode: form.placementMode,
-        placementsJson: placementsJson !== undefined ? placementsJson : undefined,
         audienceJson,
+        placementMode: 'automatic',
+        placementsJson: undefined,
+        bidStrategy: form.bidStrategy ? JSON.parse(form.bidStrategy) : undefined,
       }
 
       if (form.budgetMode === 'CBO') {
         body.dailyBudget = Number(form.dailyBudget)
-        body.creatives = form.creatives
-          .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
-          .map((c, i) => ({
-            creativeUrl: c.imageUrl.trim() || undefined,
-            primaryText: c.primaryText.trim() || undefined,
-            headline: c.headline.trim() || undefined,
-            captionText: c.caption.trim() || undefined,
-            callToAction: c.callToAction || undefined,
-            sortOrder: i,
-          }))
-      } else {
-        // ABO: group creatives by adset
-        const adsetsBody: Array<Record<string, unknown>> = []
-        for (let i = 0; i < form.adsets.length; i++) {
-          const a = form.adsets[i]
-          adsetsBody.push({
-            name: a.name.trim(),
-            dailyBudget: Number(a.dailyBudget),
-            creatives: form.creatives
-              .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
-              .map((c, ci) => ({
-                creativeUrl: c.imageUrl.trim() || undefined,
-                primaryText: c.primaryText.trim() || undefined,
-                headline: c.headline.trim() || undefined,
-                captionText: c.caption.trim() || undefined,
-                callToAction: c.callToAction || undefined,
-                sortOrder: ci,
-              })),
-          })
-        }
-        body.adsets = adsetsBody
       }
+
+      body.adsets = form.adsets.map((adset) => {
+        const hasManual = adset.placementMode === 'manual' && adset.placements.length > 0
+        const tgt: Record<string, unknown> = {}
+
+        if (adset.interests.length > 0 || adset.excludedCustomAudienceIds || adset.devicePlatform !== 'all') {
+          const targeting: Record<string, unknown> = {}
+          if (adset.interests.length > 0) {
+            targeting.flexibleSpec = [{ interests: adset.interests.map((it) => ({ id: it.id, name: it.name })) }]
+          }
+          if (adset.excludedCustomAudienceIds?.trim()) {
+            targeting.excludedCustomAudienceIds = adset.excludedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)
+          }
+          if (adset.devicePlatform !== 'all') {
+            targeting.devicePlatforms = [adset.devicePlatform]
+          }
+          tgt.targetingJson = JSON.stringify(targeting)
+        }
+
+        const evt = adset.customEventType || (form.objective === 'OUTCOME_LEADS' ? 'LEAD' : form.objective === 'OUTCOME_SALES' ? 'PURCHASE' : undefined)
+
+        return {
+          name: adset.name,
+          dailyBudget: form.budgetMode === 'ABO' ? Number(adset.dailyBudget) : undefined,
+          ...(form.budgetMode === 'ABO' && adset.bidStrategy ? { bidStrategy: JSON.parse(adset.bidStrategy) } : {}),
+          pixelId: adset.pixelId || undefined,
+          customEventType: evt || undefined,
+          startTime: adset.scheduleMode === 'scheduled' && adset.startTime ? adset.startTime : null,
+          endTime: adset.scheduleMode === 'scheduled' && adset.endTime ? adset.endTime : null,
+          placementMode: adset.placementMode,
+          placements: hasManual ? adset.placements : undefined,
+          identityPageId: adset.identityPageId || undefined,
+          identityIgUserId: adset.identityIgUserId || undefined,
+          audienceJson,
+          ...tgt,
+          creatives: adset.creatives
+            .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+            .map((c, i) => ({
+              creativeUrl: c.imageUrl.trim() || undefined,
+              linkUrl: c.linkUrl.trim() || undefined,
+              primaryText: c.primaryText.trim() || undefined,
+              headline: c.headline.trim() || undefined,
+              description: c.description.trim() || undefined,
+              callToAction: c.callToAction || undefined,
+              format: c.format,
+              urlTags: c.urlTags?.trim() || undefined,
+              childAttachments: c.format === 'carousel' ? safeParseJson<unknown[]>(c.childAttachmentsJson, []) : undefined,
+              sortOrder: i,
+            })),
+        }
+      })
 
       const res = await fetch('/api/admin/test-launches', {
         method: 'POST',
@@ -435,49 +563,77 @@ export default function NewTestLaunchPage() {
     }
   }
 
-  const canAdvanceFromStep1 = () => {
-    if (!form.metaConnectionId) return false
-    if (!form.name.trim()) return false
-    if (form.budgetMode === 'CBO') return !!form.dailyBudget && Number(form.dailyBudget) > 0
+  function validate(): boolean {
+    if (!form.name.trim()) { setSaveError('Nama launch harus diisi.'); return false }
+    if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return false }
+    if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return false }
+
+    if (form.budgetMode === 'CBO') {
+      if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return false }
+    }
+
+    for (let i = 0; i < form.adsets.length; i++) {
+      const a = form.adsets[i]
+      if (!a.name.trim()) { setSaveError(`Ad Set #${i + 1}: nama harus diisi.`); return false }
+      if (form.budgetMode === 'ABO' && (!a.dailyBudget || Number(a.dailyBudget) <= 0)) {
+        setSaveError(`Ad Set "${a.name}": budget harus lebih dari 0.`); return false
+      }
+      if (form.objective === 'OUTCOME_SALES' && !a.pixelId) {
+        setSaveError(`Ad Set "${a.name}": pixel wajib untuk Sales objective.`); return false
+      }
+      if (!a.identityPageId) {
+        setSaveError(`Ad Set "${a.name}": pilih Page identity di step Ads.`); return false
+      }
+      const validCreatives = a.creatives.filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+      if (validCreatives.length === 0) {
+        setSaveError(`Ad Set "${a.name}": minimal 1 creative.`); return false
+      }
+      for (const c of validCreatives) {
+        if (!c.linkUrl?.trim()) { setSaveError(`Ad Set "${a.name}": linkUrl wajib di setiap creative.`); return false }
+        if (c.primaryText?.length > 125) { setSaveError(`Ad Set "${a.name}": primaryText maksimal 125 karakter.`); return false }
+        if (c.headline?.length > 255) { setSaveError(`Ad Set "${a.name}": headline maksimal 255 karakter.`); return false }
+      }
+    }
     return true
   }
 
-  const canAdvanceFromStep2 = !!selectedPage
+  function safeParseJson<T>(value: string, fallback: T): T {
+    try { return value ? JSON.parse(value) : fallback } catch { return fallback }
+  }
 
-  const canAdvanceFromAdSets = form.budgetMode !== 'ABO' || form.adsets.every((a) => a.name.trim() && a.dailyBudget && Number(a.dailyBudget) > 0)
+  // ── Computed ────────────────────────────────────────────────────────────────
 
-  const hasValidCreative = form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())
+  const totalBudget = form.budgetMode === 'CBO'
+    ? Number(form.dailyBudget) || 0
+    : form.adsets.reduce((s, a) => s + (Number(a.dailyBudget) || 0), 0)
 
-  const adsetTotalBudget = form.budgetMode === 'ABO'
-    ? form.adsets.reduce((sum, a) => sum + (Number(a.dailyBudget) || 0), 0)
-    : 0
+  const creativeCount = form.adsets.reduce((s, a) => s + a.creatives.filter((c) => c.imageUrl.trim() || c.primaryText.trim()).length, 0)
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loadingDeps) {
     return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <Link href="/test-launches" className="text-sm text-stone-400 hover:text-stone-600">← Test Launches</Link>
         </div>
         <h1 className="text-2xl font-bold text-stone-900">New Test Launch</h1>
-        <p className="text-sm text-stone-500 mt-0.5">Buat Meta Ads test launch baru dengan langkah demi langkah</p>
+        <p className="text-sm text-stone-500 mt-0.5">4-step wizard: Campaign → Ad Sets → Ads → Review</p>
       </div>
 
       {/* Step Indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-1">
-          {steps.map((step, i) => (
+          {STEPS.map((step, i) => (
             <div key={step} className="flex items-center gap-1 flex-1">
               <button
                 type="button"
-                onClick={() => {
-                  if (i === 0) setCurrentStep(step)
-                  else if (i <= stepIndex) setCurrentStep(step)
-                }}
+                onClick={() => { if (i <= stepIndex) setCurrentStep(step) }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex-1 justify-center ${
                   i === stepIndex
                     ? 'bg-violet-600 text-white'
@@ -491,40 +647,31 @@ export default function NewTestLaunchPage() {
                 </span>
                 <span className="hidden sm:inline">{step}</span>
               </button>
-              {i < steps.length - 1 && <div className="w-2" />}
+              {i < STEPS.length - 1 && <div className="w-2" />}
             </div>
           ))}
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-
-        {/* ── STEP 1: Basic Config ──────────────────────────────────────── */}
-        {currentStep === 'Basic Config' && (
+        {/* ── STEP 1: Campaign ──────────────────────────────────────────────── */}
+        {currentStep === 'Campaign' && (
           <div className="space-y-5">
             <PageInfo
-              purpose="Informasi dasar test launch. Meta Connection menentukan akun Meta Ads yang akan digunakan."
-              inputs={['Nama launch', 'Meta Connection', 'Ad Account', 'Objective', 'Daily Budget', 'Launch Mode', 'Catatan']}
+              purpose="Informasi dasar campaign. Budget diatur campaign-level (CBO) atau per ad set (ABO)."
+              inputs={['Nama', 'Meta Connection', 'Ad Account', 'Objective', 'Budget Mode', 'Daily Budget (CBO)']}
               wiring={[
-                { label: '→ Ad Accounts', desc: 'diambil dari Meta Connection yang dipilih' },
-                { label: '→ Step 2', desc: 'pilih Facebook Page & Instagram' },
+                { label: '→ Ad Sets', desc: 'atur audience, placement, pixel per ad set' },
+                { label: '→ Review', desc: 'review sebelum submit' },
               ]}
             />
-
             <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Informasi Dasar</h2>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Informasi Campaign</h2>
 
               {/* Name */}
               <div>
-                <label className={labelCls}>Nama Launch <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  required
-                  className={inputCls}
-                  placeholder="Summer Sale Campaign Q3"
-                />
+                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span></label>
+                <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required className={inputCls} placeholder="Summer Sale Campaign Q3" />
               </div>
 
               {/* Budget Mode */}
@@ -532,22 +679,10 @@ export default function NewTestLaunchPage() {
                 <label className={labelCls}>Budget Mode</label>
                 <div className="flex gap-3">
                   {BUDGET_MODE_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                        form.budgetMode === opt.value
-                          ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="budgetMode"
-                        value={opt.value}
-                        checked={form.budgetMode === opt.value}
-                        onChange={() => handleBudgetModeChange(opt.value as 'CBO' | 'ABO')}
-                        className="sr-only"
-                      />
+                    <label key={opt.value} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                      form.budgetMode === opt.value ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}>
+                      <input type="radio" name="budgetMode" value={opt.value} checked={form.budgetMode === opt.value} onChange={() => handleBudgetModeChange(opt.value as 'CBO' | 'ABO')} className="sr-only" />
                       {opt.label}
                     </label>
                   ))}
@@ -556,887 +691,594 @@ export default function NewTestLaunchPage() {
 
               {/* Meta Connection */}
               <div>
-                <label className={labelCls}>
-                  Meta Connection <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={form.metaConnectionId}
-                  onChange={(e) => handleMetaConnectionChange(e.target.value)}
-                  className={inputCls}
-                >
+                <label className={labelCls}>Meta Connection <span className="text-red-500">*</span></label>
+                <select value={form.metaConnectionId} onChange={(e) => handleMetaConnectionChange(e.target.value)} className={inputCls}>
                   <option value="">-- Pilih Meta Connection --</option>
                   {metaConnections.map((mc) => (
-                    <option key={mc.id} value={mc.id}>
-                      {mc.name ?? mc.appId ?? mc.id} ({mc.status}) — {mc.accountName ?? 'no name'}
-                    </option>
+                    <option key={mc.id} value={mc.id}>{mc.name ?? mc.appId ?? mc.id} ({mc.status}) — {mc.accountName ?? 'no name'}</option>
                   ))}
                 </select>
-                {metaConnections.length === 0 && (
-                  <p className="text-xs text-stone-400 mt-1">
-                    Belum ada Meta Connection.{' '}
-                    <Link href="/meta-connections/new" className="text-violet-600 hover:underline">Buat baru →</Link>
-                  </p>
-                )}
               </div>
 
               {/* Ad Account */}
               <div>
-                <label className={labelCls}>
-                  Ad Account <span className="text-red-500">*</span>
-                </label>
+                <label className={labelCls}>Ad Account <span className="text-red-500">*</span></label>
                 {form.metaConnectionId ? (
                   adAccounts.length > 0 ? (
-                    <select
-                      value={form.metaAdAccountId}
-                      onChange={(e) => setForm((f) => ({ ...f, metaAdAccountId: e.target.value }))}
-                      className={inputCls}
-                    >
+                    <select value={form.metaAdAccountId} onChange={(e) => handleAdAccountChange(e.target.value)} className={inputCls}>
                       <option value="">-- Pilih Ad Account --</option>
                       {adAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.adAccountName ?? acc.adAccountId} ({acc.adAccountId})
-                          {acc.currency ? ` · ${acc.currency}` : ''}
-                        </option>
+                        <option key={acc.id} value={acc.id}>{acc.adAccountName ?? acc.adAccountId} ({acc.adAccountId}){acc.currency ? ` · ${acc.currency}` : ''}</option>
                       ))}
                     </select>
                   ) : (
                     <p className="text-sm text-stone-400 py-2">Memuat ad accounts...</p>
                   )
                 ) : (
-                  <select disabled className={`${inputCls} bg-stone-50 text-stone-400`}>
-                    <option value="">Pilih Meta Connection terlebih dahulu</option>
-                  </select>
+                  <select disabled className={`${inputCls} bg-stone-50 text-stone-400`}><option value="">Pilih Meta Connection terlebih dahulu</option></select>
                 )}
               </div>
 
-              {/* Objective & Budget */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Objective</label>
-                  <select
-                    value={form.objective}
-                    onChange={(e) => setForm((f) => ({ ...f, objective: e.target.value }))}
-                    className={inputCls}
-                  >
-                    {OBJECTIVE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  {form.budgetMode === 'CBO' ? (
-                    <>
-                      <label className={labelCls}>
-                        Daily Budget (IDR) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={form.dailyBudget}
-                        onChange={(e) => setForm((f) => ({ ...f, dailyBudget: e.target.value }))}
-                        required
-                        min="1000"
-                        step="1000"
-                        className={inputCls}
-                        placeholder="50000"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <label className={labelCls}>Daily Budget (IDR)</label>
-                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>
-                        Budget diisi per ad set
-                      </div>
-                    </>
-                  )}
-                </div>
+              {/* Objective */}
+              <div>
+                <label className={labelCls}>Objective</label>
+                <select value={form.objective} onChange={(e) => setForm((f) => ({ ...f, objective: e.target.value }))} className={inputCls}>
+                  {OBJECTIVE_OPTIONS.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+                </select>
               </div>
 
-              {/* Destination URL */}
+              {/* Budget */}
               <div>
-                <label className={labelCls}>Destination URL</label>
-                <input
-                  type="url"
-                  value={form.destinationUrl}
-                  onChange={(e) => setForm((f) => ({ ...f, destinationUrl: e.target.value }))}
-                  className={inputCls}
-                  placeholder="https://..."
-                />
-              </div>
-
-              {/* Launch Mode */}
-              <div>
-                <label className={labelCls}>Launch Mode</label>
-                <div className="flex gap-3">
-                  {LAUNCH_MODE_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                        form.launchMode === opt.value
-                          ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="launchMode"
-                        value={opt.value}
-                        checked={form.launchMode === opt.value}
-                        onChange={(e) => setForm((f) => ({ ...f, launchMode: e.target.value }))}
-                        className="sr-only"
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Source Adset ID for duplicate_winner */}
-              {form.launchMode === 'duplicate_winner' && (
-                <div>
-                  <label className={labelCls}>Source Adset ID</label>
-                  <input
-                    type="text"
-                    value={form.sourceAdsetId}
-                    onChange={(e) => setForm((f) => ({ ...f, sourceAdsetId: e.target.value }))}
-                    className={inputCls}
-                    placeholder="act_1234567890#238512345678901234"
-                  />
-                </div>
-              )}
-
-              {/* Notes */}
-              <div>
-                <label className={labelCls}>Notes</label>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={2}
-                  className={`${inputCls} resize-none`}
-                  placeholder="Catatan tambahan (opsional)..."
-                />
+                {form.budgetMode === 'CBO' ? (
+                  <>
+                    <label className={labelCls}>Daily Budget (IDR) <span className="text-red-500">*</span></label>
+                    <input type="number" value={form.dailyBudget} onChange={(e) => setForm((f) => ({ ...f, dailyBudget: e.target.value }))} required min="1000" step="1000" className={inputCls} placeholder="50000" />
+                  </>
+                ) : (
+                  <>
+                    <label className={labelCls}>Daily Budget (IDR)</label>
+                    <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Budget diisi per ad set</div>
+                  </>
+                )}
               </div>
             </div>
 
             {saveError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-                ⚠️ {saveError}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">⚠️ {saveError}</div>
             )}
 
             <div className="flex justify-end gap-3 pb-6">
               <Link href="/test-launches" className="btn-ghost">Batal</Link>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!form.metaConnectionId) { alert('Pilih Meta Connection terlebih dahulu.'); return }
-                  if (!form.name.trim()) { alert('Nama launch harus diisi.'); return }
-                  if (form.budgetMode === 'CBO' && (!form.dailyBudget || Number(form.dailyBudget) <= 0)) {
-                    alert('Daily Budget harus lebih dari 0.'); return
-                  }
-                  handleStep2Continue()
-                }}
-                className="btn-primary"
-              >
-                Lanjut ke Page & Instagram →
+              <button type="button" onClick={() => setCurrentStep('Ad Sets')} className="btn-primary">
+                Lanjut ke Ad Sets →
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 2: Page & Instagram ──────────────────────────────────── */}
-        {currentStep === 'Page & Instagram' && (
-          <div className="space-y-5">
-            <PageInfo
-              purpose="Pilih Facebook Page yang akan digunakan. Jika page memiliki Instagram Business Account, bisa digunakan untuk iklan Instagram."
-              inputs={['Facebook Page', 'Instagram (jika ada)']}
-              wiring={[
-                { label: '→ Page Cards', desc: 'klik untuk memilih page' },
-                { label: '→ Warning', desc: 'page tanpa IG tidak bisa dipakai untuk iklan Instagram' },
-              ]}
-            />
-
-            <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">
-                Pilih Facebook Page
-              </h2>
-              <p className="text-xs text-stone-500">
-                Pilih 1 page. Jika page memiliki Instagram Business Account, Anda bisa menjalankan iklan Instagram.
-              </p>
-
-              {pages.length === 0 ? (
-                <div className="text-center py-8 text-stone-400 text-sm">
-                  Memuat pages...
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {pages.map((page) => (
-                    <button
-                      key={page.id}
-                      type="button"
-                      onClick={() => handlePageSelect(page)}
-                      className={`text-left p-4 rounded-xl border-2 transition-all ${
-                        selectedPage?.id === page.id
-                          ? 'border-violet-500 bg-violet-50'
-                          : 'border-stone-200 hover:border-violet-300 hover:bg-stone-50'
-                      }`}
-                    >
-                      {/* Page icon + name */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                          </svg>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-stone-900 text-sm truncate">
-                            {page.pageName ?? page.pageId}
-                          </p>
-                          <p className="text-xs text-stone-400 font-mono truncate">{page.pageId}</p>
-                        </div>
-                      </div>
-
-                      {/* Instagram info */}
-                      {page.igBusinessAccountId ? (
-                        <div className="flex items-center gap-2 bg-pink-50 rounded-lg px-3 py-2 mt-1">
-                          <svg className="w-4 h-4 text-pink-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.445.649-1.445 1.445 0 .796.649 1.445 1.445 1.445s1.445-.649 1.445-1.445c0-.796-.649-1.445-1.445-1.445z"/>
-                          </svg>
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-pink-700">@{page.igUsername}</p>
-                            <p className="text-xs text-pink-500">Instagram Business ✓</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 bg-stone-100 rounded-lg px-3 py-2 mt-1">
-                          <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.445.649-1.445 1.445 0 .796.649 1.445 1.445 1.445s1.445-.649 1.445-1.445c0-.796-.649-1.445-1.445-1.445z"/>
-                          </svg>
-                          <p className="text-xs text-stone-500">Tidak ada Instagram</p>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* No IG warning */}
-              {selectedPage && !selectedPage.igBusinessAccountId && (
-                <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
-                  ⚠️ <strong>Page ini belum punya Instagram.</strong> Iklan Instagram tidak bisa jalan. Pilih page lain atau lanjutkan hanya dengan Facebook Ads.
-                </div>
-              )}
-
-              {/* Selected page summary */}
-              {selectedPage && (
-                <div className="mt-4 p-4 bg-violet-50 rounded-xl border border-violet-200">
-                  <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Page Terpilih</p>
-                  <p className="font-medium text-stone-900">{selectedPage.pageName ?? selectedPage.pageId}</p>
-                  {selectedPage.igUsername && (
-                    <p className="text-sm text-pink-600 mt-1">
-                      Instagram: @{selectedPage.igUsername}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Basic Config')} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!selectedPage) { alert('Pilih Facebook Page terlebih dahulu.'); return }
-                  setCurrentStep('Placement')
-                }}
-                className="btn-primary"
-              >
-                Lanjut ke Placement →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 3: Placement ─────────────────────────────────────────── */}
-        {currentStep === 'Placement' && (
-          <div className="space-y-5">
-            <PageInfo
-              purpose="Pilih bagaimana iklan ditampilkan. Automatic = Meta optimasi otomatis. Manual = pilih placement spesifik."
-              inputs={['Placement Mode', 'Placements (jika manual)']}
-              wiring={[
-                { label: '→ Automatic', desc: 'Meta tentukan placement terbaik' },
-                { label: '→ Manual', desc: 'pilih sendiri placement yang diinginkan' },
-              ]}
-            />
-
-            <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Placement</h2>
-
-              {/* Mode Toggle */}
-              <div>
-                <label className={labelCls}>Mode</label>
-                <div className="flex gap-3">
-                  {(['automatic', 'manual'] as const).map((mode) => (
-                    <label
-                      key={mode}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                        form.placementMode === mode
-                          ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="placementMode"
-                        value={mode}
-                        checked={form.placementMode === mode}
-                        onChange={() => setForm((f) => ({ ...f, placementMode: mode }))}
-                        className="sr-only"
-                      />
-                      {mode === 'automatic' ? '⚡ Automatic' : '✋ Manual'}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Manual placements */}
-              {form.placementMode === 'manual' && (
-                <div>
-                  <label className={labelCls}>Pilih Placements</label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {PLACEMENT_OPTIONS.map((opt) => {
-                      const checked = form.placements.includes(opt.value)
-                      return (
-                        <label
-                          key={opt.value}
-                          className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors text-sm ${
-                            checked
-                              ? 'border-violet-500 bg-violet-50 text-violet-700'
-                              : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => handlePlacementsChange(opt.value)}
-                            className="sr-only"
-                          />
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                            checked ? 'bg-violet-600 border-violet-600' : 'border-stone-300'
-                          }`}>
-                            {checked && (
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
-                              </svg>
-                            )}
-                          </div>
-                          {opt.label}
-                        </label>
-                      )
-                    })}
-                  </div>
-                  {form.placements.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-2">Pilih minimal 1 placement.</p>
-                  )}
-                </div>
-              )}
-
-              {form.placementMode === 'automatic' && (
-                <div className="bg-stone-50 rounded-lg p-4 text-sm text-stone-600">
-                  <p>Meta akan secara otomatis memilih placement terbaik untuk mencapai objective <strong>{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</strong>.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Page & Instagram')} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (form.placementMode === 'manual' && form.placements.length === 0) {
-                    alert('Pilih minimal 1 placement.'); return
-                  }
-                  setCurrentStep('Audience')
-                }}
-                className="btn-primary"
-              >
-                Lanjut ke Audience →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 4: Audience ──────────────────────────────────────────── */}
-        {currentStep === 'Audience' && (
-          <div className="space-y-5">
-            <PageInfo
-              purpose="Tentukan siapa yang melihat iklan Anda. Default: umur 25-45, semua gender, Indonesia."
-              inputs={['Age Range', 'Gender', 'Location']}
-              wiring={[
-                { label: '→ Location', desc: 'saat ini hanya negara (Indonesia)' },
-                { label: '→ Step 5', desc: 'tambahkan creatives untuk iklan' },
-              ]}
-            />
-
-            <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Audience</h2>
-
-              {/* Age Range */}
-              <div>
-                <label className={labelCls}>Age Range</label>
-                <div className="flex items-center gap-3 mt-1">
-                  <div className="flex-1">
-                    <label className="block text-xs text-stone-500 mb-1">Min</label>
-                    <input
-                      type="number"
-                      value={form.ageMin}
-                      onChange={(e) => setForm((f) => ({ ...f, ageMin: Math.max(18, Math.min(65, Number(e.target.value))) }))}
-                      min={18}
-                      max={65}
-                      className={inputCls}
-                    />
-                  </div>
-                  <span className="text-stone-400 mt-5">—</span>
-                  <div className="flex-1">
-                    <label className="block text-xs text-stone-500 mb-1">Max</label>
-                    <input
-                      type="number"
-                      value={form.ageMax}
-                      onChange={(e) => setForm((f) => ({ ...f, ageMax: Math.max(18, Math.min(65, Number(e.target.value))) }))}
-                      min={18}
-                      max={65}
-                      className={inputCls}
-                    />
-                  </div>
-                </div>
-                {(form.ageMin > form.ageMax) && (
-                  <p className="text-xs text-red-500 mt-1">Age min tidak boleh lebih besar dari age max.</p>
-                )}
-              </div>
-
-              {/* Gender */}
-              <div>
-                <label className={labelCls}>Gender</label>
-                <div className="flex gap-3">
-                  {GENDER_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.value}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
-                        form.gender === opt.value
-                          ? 'border-violet-500 bg-violet-50 text-violet-700'
-                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={opt.value}
-                        checked={form.gender === opt.value}
-                        onChange={() => setForm((f) => ({ ...f, gender: opt.value as 'all' | 'male' | 'female' }))}
-                        className="sr-only"
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className={labelCls}>Location</label>
-                <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 rounded-lg border border-stone-200 text-sm">
-                  <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  </svg>
-                  <span className="text-stone-700">Indonesia</span>
-                  <span className="text-xs text-stone-400 ml-auto">Country · ID</span>
-                </div>
-                <p className="text-xs text-stone-400 mt-1">Location tingkat negara saja untuk saat ini.</p>
-              </div>
-
-              {/* Summary */}
-              <div className="bg-violet-50 rounded-lg p-4 text-sm">
-                <p className="text-xs font-semibold text-violet-600 uppercase mb-2">Audience Summary</p>
-                <p className="text-stone-800">
-                  Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
-                  Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
-                  Lokasi <strong>Indonesia</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Placement')} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = form.budgetMode === 'ABO' ? 'Ad Sets' : form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
-                  setCurrentStep(next)
-                }}
-                className="btn-primary"
-              >
-                {form.budgetMode === 'ABO' ? 'Lanjut ke Ad Sets →' : form.objective === 'OUTCOME_SALES' ? 'Lanjut ke Pixel →' : 'Lanjut ke Creatives →'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 5: Ad Sets (ABO only) ────────────────────────────────── */}
+        {/* ── STEP 2: Ad Sets ──────────────────────────────────────────────── */}
         {currentStep === 'Ad Sets' && (
           <div className="space-y-5">
             <PageInfo
-              purpose="Buat ad set dengan budget masing-masing. Minimal 1 ad set. Setiap ad set bisa punya nama dan budget sendiri."
-              inputs={['Nama Ad Set', 'Daily Budget']}
+              purpose="Atur audience, placement, pixel, dan budget (ABO) per ad set. Bisa duplicate ad set untuk variasi audience."
+              inputs={['Nama', 'Budget (ABO)', 'Pixel & Event', 'Audience', 'Placement', 'Targeting']}
               wiring={[
-                { label: '→ Ad Set Cards', desc: 'tambah/edit ad set' },
-                { label: '→ Step 6', desc: 'tambahkan creatives untuk iklan' },
+                { label: '→ Ads', desc: 'atur identity & creatives per ad set' },
+                { label: '→ Duplicate', desc: 'copy ad set dengan semua field' },
               ]}
             />
 
             <div className={sectionCls}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Ad Sets</h2>
-                <button
-                  type="button"
-                  onClick={addAdset}
-                  className="btn-primary btn-sm"
-                >
-                  + Tambah Ad Set
-                </button>
+                <button type="button" onClick={addAdset} className="btn-primary btn-sm">+ Tambah Ad Set</button>
               </div>
 
-              <div className="space-y-4">
-                {form.adsets.map((adset, idx) => (
-                  <div key={adset.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-stone-50">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-stone-500 uppercase">Ad Set #{idx + 1}</p>
-                      {form.adsets.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeAdset(adset.id)}
-                          className="text-red-500 hover:text-red-700 text-xs font-medium"
-                        >
-                          Hapus
-                        </button>
+              {form.adsets.map((adset, idx) => {
+                const ps = pages.find((p) => p.pageId === adset.identityPageId)
+                return (
+                  <details key={adset.id} className={cardCls} open>
+                    <summary className="text-sm font-semibold text-stone-700 cursor-pointer flex items-center gap-2">
+                      <span>Ad Set #{idx + 1}: {adset.name || '(no name)'}</span>
+                      <span className="text-xs text-stone-400 font-normal">
+                        {form.budgetMode === 'ABO' ? `· Rp${Number(adset.dailyBudget || 0).toLocaleString('id-ID')}/hari` : ''}
+                        · {adset.identityPageId ? (ps?.pageName ?? 'Page ✓') : '⚠️ No Page'}
+                        · {adset.creatives.length} creative(s)
+                      </span>
+                    </summary>
+
+                    <div className="mt-4 space-y-3">
+                      {/* Name + Delete + Duplicate */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className={labelCls}>Nama Ad Set</label>
+                          <input type="text" value={adset.name} onChange={(e) => updateAdsetField(adset.id, 'name', e.target.value)} className={inputCls} placeholder="Ad Set Jawa" />
+                        </div>
+                        <div className="flex gap-1 items-end pb-1">
+                          <button type="button" onClick={() => duplicateAdset(adset.id)} className="text-xs text-violet-600 hover:underline px-2 py-1">Duplicate</button>
+                          {form.adsets.length > 1 && (
+                            <button type="button" onClick={() => removeAdset(adset.id)} className="text-xs text-red-500 hover:underline px-2 py-1">Hapus</button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Budget + Bid Strategy (ABO only) */}
+                      {form.budgetMode === 'ABO' && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className={labelCls}>Daily Budget (IDR)</label>
+                            <input type="number" value={adset.dailyBudget} onChange={(e) => updateAdsetField(adset.id, 'dailyBudget', e.target.value)} min="1000" step="1000" className={inputCls} placeholder="30000" />
+                          </div>
+                          {bidStrategies.length > 0 && (
+                            <div>
+                              <label className={labelCls}>Bid Strategy (opsional)</label>
+                              <select value={adset.bidStrategy} onChange={(e) => updateAdsetField(adset.id, 'bidStrategy', e.target.value)} className={inputCls}>
+                                <option value="">Inherit (default)</option>
+                                {bidStrategies.filter((b) => b.available).map((bs) => (
+                                  <option key={bs.value} value={JSON.stringify({ strategy: bs.value })}>{bs.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </div>
 
-                    {/* Name */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Nama Ad Set</label>
-                      <input
-                        type="text"
-                        value={adset.name}
-                        onChange={(e) => updateAdset(adset.id, 'name', e.target.value)}
-                        className={inputCls}
-                        placeholder="Ad Set Jawa, Ad Set Sumatera..."
+                      {/* Pixel + Event */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Meta Pixel</label>
+                          {pixels.length > 0 ? (
+                            <select value={adset.pixelId} onChange={(e) => updateAdsetField(adset.id, 'pixelId', e.target.value)} className={inputCls}>
+                              <option value="">-- Pilih Pixel --</option>
+                              {pixels.map((px) => (<option key={px.id} value={px.id}>{px.name}</option>))}
+                            </select>
+                          ) : (
+                            <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>
+                              {form.metaAdAccountId ? 'Pixels not available' : 'Pilih Ad Account dulu'}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelCls}>Custom Event</label>
+                          <select value={adset.customEventType} onChange={(e) => updateAdsetField(adset.id, 'customEventType', e.target.value)} className={inputCls}>
+                            <option value="">-- Default --</option>
+                            {EVENT_OPTIONS.map((evt) => (<option key={evt.value} value={evt.value}>{evt.label}</option>))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Schedule */}
+                      <div>
+                        <label className={labelCls}>Jadwal</label>
+                        <div className="flex gap-3">
+                          {(['now', 'scheduled'] as const).map((mode) => (
+                            <label key={mode} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
+                              adset.scheduleMode === mode ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                            }`}>
+                              <input type="radio" checked={adset.scheduleMode === mode} onChange={() => updateAdsetField(adset.id, 'scheduleMode', mode)} className="sr-only" />
+                              {mode === 'now' ? 'Mulai Sekarang' : 'Jadwalkan'}
+                            </label>
+                          ))}
+                        </div>
+                        {adset.scheduleMode === 'scheduled' && (
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                              <label className={labelCls}>Start Time</label>
+                              <input type="datetime-local" value={adset.startTime} onChange={(e) => updateAdsetField(adset.id, 'startTime', e.target.value)} className={inputCls} />
+                            </div>
+                            <div>
+                              <label className={labelCls}>End Time (opsional)</label>
+                              <input type="datetime-local" value={adset.endTime} onChange={(e) => updateAdsetField(adset.id, 'endTime', e.target.value)} className={inputCls} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Audience */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className={labelCls}>Age Min</label>
+                          <input type="number" value={adset.ageMin} onChange={(e) => updateAdsetField(adset.id, 'ageMin', Math.max(18, Math.min(65, Number(e.target.value))))} min={18} max={65} className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Age Max</label>
+                          <input type="number" value={adset.ageMax} onChange={(e) => updateAdsetField(adset.id, 'ageMax', Math.max(18, Math.min(65, Number(e.target.value))))} min={18} max={65} className={inputCls} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Gender</label>
+                          <select value={adset.gender} onChange={(e) => updateAdsetField(adset.id, 'gender', e.target.value)} className={inputCls}>
+                            {GENDER_OPTIONS.map((g) => (<option key={g.value} value={g.value}>{g.label}</option>))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Placement */}
+                      <div>
+                        <label className={labelCls}>Placement</label>
+                        <div className="flex gap-3 mb-2">
+                          {(['automatic', 'manual'] as const).map((mode) => (
+                            <label key={mode} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
+                              adset.placementMode === mode ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                            }`}>
+                              <input type="radio" checked={adset.placementMode === mode} onChange={() => updateAdsetField(adset.id, 'placementMode', mode)} className="sr-only" />
+                              {mode === 'automatic' ? '⚡ Automatic' : '✋ Manual'}
+                            </label>
+                          ))}
+                        </div>
+                        {adset.placementMode === 'manual' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            {PLACEMENT_OPTIONS.map((opt) => {
+                              const checked = adset.placements.includes(opt.value)
+                              return (
+                                <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
+                                  checked ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                                }`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => updateAdsetField(adset.id, 'placements',
+                                      checked ? adset.placements.filter((p) => p !== opt.value) : [...adset.placements, opt.value]
+                                    )}
+                                    className="sr-only"
+                                  />
+                                  {opt.label}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Device */}
+                      <div>
+                        <label className={labelCls}>Device</label>
+                        <div className="flex gap-3">
+                          {DEVICE_OPTIONS.map((opt) => (
+                            <label key={opt.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
+                              adset.devicePlatform === opt.value ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                            }`}>
+                              <input type="radio" checked={adset.devicePlatform === opt.value} onChange={() => updateAdsetField(adset.id, 'devicePlatform', opt.value)} className="sr-only" />
+                              {opt.label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Excluded CAs */}
+                      <div>
+                        <label className={labelCls}>Excluded Custom Audience IDs (koma, pisah)</label>
+                        <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                      </div>
+
+                      {/* Interests */}
+                      <InterestSearch
+                        value={adset.interests}
+                        metaConnectionId={form.metaConnectionId}
+                        onAdd={(interest) => addInterest(adset.id, interest)}
+                        onRemove={(interestId) => removeInterest(adset.id, interestId)}
                       />
                     </div>
+                  </details>
+                )
+              })}
 
-                    {/* Daily Budget */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Daily Budget (IDR)</label>
-                      <input
-                        type="number"
-                        value={adset.dailyBudget}
-                        onChange={(e) => updateAdset(adset.id, 'dailyBudget', e.target.value)}
-                        min="1000"
-                        step="1000"
-                        className={inputCls}
-                        placeholder="30000"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Total Budget */}
               <div className="bg-violet-50 rounded-lg p-4 text-sm">
                 <p className="text-xs font-semibold text-violet-600 uppercase mb-1">Total Budget</p>
-                <p className="text-lg font-bold text-violet-700">Rp{adsetTotalBudget.toLocaleString('id-ID')} /hari</p>
-                {form.adsets.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">Minimal 1 ad set diperlukan.</p>
+                <p className="text-lg font-bold text-violet-700">Rp{totalBudget.toLocaleString('id-ID')} /hari</p>
+              </div>
+            </div>
+
+            <div className="flex justify-between gap-3 pb-6">
+              <button type="button" onClick={() => setCurrentStep('Campaign')} className="btn-ghost">← Kembali</button>
+              <button type="button" onClick={() => setCurrentStep('Ads')} className="btn-primary">Lanjut ke Ads →</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: Ads ──────────────────────────────────────────────────── */}
+        {currentStep === 'Ads' && (
+          <div className="space-y-5">
+            <PageInfo
+              purpose="Tentukan Facebook Page + Instagram identity dan creatives per ad set."
+              inputs={['Identity (Page + IG)', 'Creative per ad set', 'Image URL', 'Primary Text', 'Headline', 'CTA']}
+              wiring={[
+                { label: '→ Review', desc: 'cek semua sebelum submit' },
+                { label: '→ Copy creatives', desc: 'duplikasi cepat antar ad set' },
+              ]}
+            />
+            <div className={sectionCls}>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Identity & Creatives</h2>
+              <p className="text-xs text-stone-500">Pilih Page identity yang akan digunakan untuk semua iklan. Tiap ad set bisa punya creatives sendiri.</p>
+
+              {/* Identity selector */}
+              <div>
+                <label className={labelCls}>Facebook Page Identity</label>
+                {availablePages.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {availablePages.map((page) => (
+                      <button
+                        key={page.id}
+                        type="button"
+                        onClick={() => handleSelectPage(page)}
+                        className={`text-left p-4 rounded-xl border-2 transition-all ${
+                          selectedPage?.id === page.id ? 'border-violet-500 bg-violet-50' : 'border-stone-200 hover:border-violet-300 hover:bg-stone-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-stone-900 text-sm truncate">{page.pageName ?? page.pageId}</p>
+                            <p className="text-xs text-stone-400 font-mono truncate">{page.pageId}</p>
+                          </div>
+                        </div>
+                        {page.igBusinessAccountId && (
+                          <div className="text-xs text-pink-600">Instagram: @{page.igUsername}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-stone-400 py-2">Pilih Meta Connection di step Campaign terlebih dahulu.</p>
                 )}
               </div>
 
-              {form.adsets.some((a) => !a.name.trim() || !a.dailyBudget || Number(a.dailyBudget) <= 0) && (
-                <p className="text-xs text-amber-600">Lengkapi semua ad set (nama + budget {'>'} 0).</p>
-              )}
-            </div>
+              {/* Creatives per adset */}
+              {form.adsets.map((adset, idx) => (
+                <div key={adset.id} className={cardCls}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-stone-700">Creatives — Ad Set #{idx + 1}: {adset.name}</h3>
+                    <button type="button" onClick={() => addCreativeToAdset(adset.id)} className="btn-primary btn-sm">+ Creative</button>
+                  </div>
 
-            <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Audience')} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!canAdvanceFromAdSets) {
-                    alert('Lengkapi semua ad set (nama + budget > 0).')
-                    return
-                  }
-                  const next = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
-                  setCurrentStep(next)
-                }}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {form.objective === 'OUTCOME_SALES' ? 'Lanjut ke Pixel →' : 'Lanjut ke Creatives →'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP Pixel ────────────────────────────────────────────────── */}
-        {currentStep === 'Pixel' && (
-          <div className="space-y-5">
-            <PageInfo
-              purpose="Pilih Meta Pixel untuk tracking conversions. Diperlukan untuk objective Sales."
-              inputs={['Pixel']}
-              wiring={[
-                { label: '→ Creative', desc: 'tambahkan creative untuk iklan' },
-              ]}
-            />
-
-            <div className={sectionCls}>
-              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Pilih Meta Pixel</h2>
-              <p className="text-xs text-stone-500 mb-3">
-                Pixel melacak conversions di website Anda. Pilih salah satu dari pixel yang tersedia di ad account.
-              </p>
-              <div className="space-y-2">
-                {PIXEL_OPTIONS.map((px) => (
-                  <button
-                    key={px.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPixel(px)
-                      setForm((f) => ({ ...f, pixelId: px.id }))
-                    }}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      selectedPixel?.id === px.id
-                        ? 'border-violet-500 bg-violet-50'
-                        : 'border-stone-200 hover:border-violet-300 hover:bg-stone-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
+                  {adset.creatives.map((creative, ci) => (
+                    <div key={creative.id} className="border border-stone-200 rounded-lg p-4 bg-stone-50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-stone-500 uppercase">Creative #{ci + 1}</span>
+                        {adset.creatives.length > 1 && (
+                          <button type="button" onClick={() => removeCreativeFromAdset(adset.id, creative.id)} className="text-xs text-red-500 hover:underline">Hapus</button>
+                        )}
                       </div>
+
+                      {/* Format */}
+                      <div className="flex gap-3">
+                        {(['single', 'carousel'] as const).map((fmt) => (
+                          <label key={fmt} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer text-xs ${
+                            creative.format === fmt ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-stone-200 text-stone-600'
+                          }`}>
+                            <input type="radio" checked={creative.format === fmt} onChange={() => updateCreativeField(adset.id, creative.id, 'format', fmt)} className="sr-only" />
+                            {fmt === 'single' ? 'Single' : 'Carousel'}
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Image URL */}
                       <div>
-                        <p className="font-medium text-stone-900 text-sm">{px.name}</p>
-                        <p className="text-xs text-stone-400 font-mono">{px.id}</p>
+                        <label className={labelCls}>Media URL <span className="text-red-500">*</span></label>
+                        <input type="url" value={creative.imageUrl} onChange={(e) => updateCreativeField(adset.id, creative.id, 'imageUrl', e.target.value)} className={inputCls} placeholder="https://..." />
                       </div>
-                      {selectedPixel?.id === px.id && (
-                        <span className="ml-auto text-violet-500 text-sm font-medium">✓ Dipilih</span>
+
+                      {/* Link URL */}
+                      <div>
+                        <label className={labelCls}>Website URL <span className="text-red-500">*</span></label>
+                        <input type="url" value={creative.linkUrl} onChange={(e) => updateCreativeField(adset.id, creative.id, 'linkUrl', e.target.value)} className={inputCls} placeholder="https://..." />
+                      </div>
+
+                      {/* Text fields */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Primary Text {creative.primaryText.length > 0 && <span className="text-stone-400 font-normal">({creative.primaryText.length}/125)</span>}</label>
+                          <textarea value={creative.primaryText} onChange={(e) => updateCreativeField(adset.id, creative.id, 'primaryText', e.target.value)} rows={2} maxLength={125} className={`${inputCls} resize-none`} placeholder="Primary text..." />
+                          {creative.primaryText.length > 125 && <p className="text-xs text-red-500 mt-0.5">Maksimal 125 karakter</p>}
+                        </div>
+                        <div>
+                          <label className={labelCls}>Headline {creative.headline.length > 0 && <span className="text-stone-400 font-normal">({creative.headline.length}/255)</span>}</label>
+                          <input type="text" value={creative.headline} onChange={(e) => updateCreativeField(adset.id, creative.id, 'headline', e.target.value)} maxLength={255} className={inputCls} placeholder="Headline..." />
+                          {creative.headline.length > 255 && <p className="text-xs text-red-500 mt-0.5">Maksimal 255 karakter</p>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={labelCls}>Description (opsional)</label>
+                        <textarea value={creative.description} onChange={(e) => updateCreativeField(adset.id, creative.id, 'description', e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="Description..." />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Call to Action</label>
+                          <select value={creative.callToAction} onChange={(e) => updateCreativeField(adset.id, creative.id, 'callToAction', e.target.value)} className={inputCls}>
+                            {CTA_OPTIONS.map((cta) => (<option key={cta.value} value={cta.value}>{cta.label}</option>))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelCls}>URL Tags (opsional)</label>
+                          <input type="text" value={creative.urlTags} onChange={(e) => updateCreativeField(adset.id, creative.id, 'urlTags', e.target.value)} className={inputCls} placeholder="utm_source=fb&utm_campaign=..." />
+                        </div>
+                      </div>
+
+                      {creative.format === 'carousel' && (
+                        <div>
+                          <label className={labelCls}>Carousel Cards (JSON array)</label>
+                          <textarea value={creative.childAttachmentsJson} onChange={(e) => updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', e.target.value)} rows={4} className={`${inputCls} resize-none font-mono text-xs`} placeholder='[{"mediaUrl":"https://...","headline":"Card 1","linkUrl":"https://..."}]' />
+                        </div>
                       )}
                     </div>
-                  </button>
-                ))}
-              </div>
-              {!form.pixelId && (
-                <p className="text-xs text-amber-600 mt-2">
-                  ⚠️ Pixel wajib dipilih untuk objective Sales.
-                </p>
-              )}
+                  ))}
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => {
-                const prev = form.budgetMode === 'ABO' ? 'Ad Sets' : 'Audience'
-                setCurrentStep(prev)
-              }} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!form.pixelId) { alert('Pilih pixel terlebih dahulu.'); return }
-                  setCurrentStep('Creatives')
-                }}
-                disabled={!form.pixelId}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Lanjut ke Creatives →
-              </button>
+              <button type="button" onClick={() => setCurrentStep('Ad Sets')} className="btn-ghost">← Kembali</button>
+              <button type="button" onClick={() => setCurrentStep('Review')} className="btn-primary">Lanjut ke Review →</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP Creatives ─────────────────────────────────────────────── */}
-        {currentStep === 'Creatives' && (
+        {/* ── STEP 4: Review ──────────────────────────────────────────────── */}
+        {currentStep === 'Review' && (
           <div className="space-y-5">
             <PageInfo
-              purpose="Tambahkan creative untuk iklan. Minimal 1 creative. Anda bisa menambah beberapa creative untuk A/B testing."
-              inputs={['Image URL', 'Primary Text', 'Headline', 'Caption', 'Call to Action']}
+              purpose="Review semua data sebelum submit. Pastikan tidak ada error."
+              inputs={['Semua data yang sudah diisi']}
               wiring={[
                 { label: '→ Submit', desc: 'POST /api/admin/test-launches' },
-                { label: '→ Redirect', desc: 'ke halaman detail setelah berhasil' },
+                { label: '→ Detail page', desc: 'redirect setelah berhasil' },
               ]}
             />
 
             <div className={sectionCls}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Creatives</h2>
-                <button
-                  type="button"
-                  onClick={addCreative}
-                  className="btn-primary btn-sm"
-                >
-                  + Tambah Creative
-                </button>
+              <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Review</h2>
+
+              {/* Campaign */}
+              <div className="space-y-1 text-sm">
+                <p><strong>Campaign:</strong> {form.name || '(no name)'}</p>
+                <p><strong>Budget Mode:</strong> {form.budgetMode}</p>
+                {form.budgetMode === 'CBO' && <p><strong>Daily Budget:</strong> Rp{Number(form.dailyBudget).toLocaleString('id-ID')}</p>}
+                <p><strong>Objective:</strong> {OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
+                <p><strong>Total Ad Sets:</strong> {form.adsets.length}</p>
+                <p><strong>Total Creatives:</strong> {creativeCount}</p>
+                <p><strong>Total Budget:</strong> Rp{totalBudget.toLocaleString('id-ID')}/hari</p>
               </div>
 
-              {form.creatives.length === 0 && (
-                <p className="text-sm text-stone-400 text-center py-4">Belum ada creative. Klik Tambah Creative.</p>
-              )}
+              <hr className="border-stone-200" />
 
-              <div className="space-y-4">
-                {form.creatives.map((creative, idx) => (
-                  <div key={creative.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-stone-50">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-semibold text-stone-500 uppercase">Creative #{idx + 1}</p>
-                      {form.creatives.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeCreative(creative.id)}
-                          className="text-red-500 hover:text-red-700 text-xs font-medium"
-                        >
-                          Hapus
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Image URL */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Image URL</label>
-                      <input
-                        type="url"
-                        value={creative.imageUrl}
-                        onChange={(e) => updateCreative(creative.id, 'imageUrl', e.target.value)}
-                        className={inputCls}
-                        placeholder="https://..."
-                      />
-                    </div>
-
-                    {/* Primary Text */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Primary Text (Ad Body)</label>
-                      <textarea
-                        value={creative.primaryText}
-                        onChange={(e) => updateCreative(creative.id, 'primaryText', e.target.value)}
-                        rows={3}
-                        className={`${inputCls} resize-none`}
-                        placeholder="Isi deskripsi utama iklan..."
-                      />
-                    </div>
-
-                    {/* Headline & CTA */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-stone-600 mb-1">Headline</label>
-                        <input
-                          type="text"
-                          value={creative.headline}
-                          onChange={(e) => updateCreative(creative.id, 'headline', e.target.value)}
-                          className={inputCls}
-                          placeholder="Judul iklan..."
-                        />
+              {/* Ad Sets */}
+              {form.adsets.map((adset, idx) => {
+                const ps = pages.find((p) => p.pageId === adset.identityPageId)
+                const ac = adset.creatives.filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+                return (
+                  <div key={adset.id} className="space-y-1 text-sm">
+                    <p className="font-semibold text-violet-700">Ad Set #{idx + 1}: {adset.name}</p>
+                    <p className="text-xs text-stone-500 ml-2">
+                      Page: {(ps?.pageName ?? adset.identityPageId) || '❌ Not set'}
+                      {ps?.igBusinessAccountId ? ` · IG: @${ps.igUsername}` : ''}
+                    </p>
+                    {form.budgetMode === 'ABO' && <p className="text-xs text-stone-500 ml-2">Budget: Rp{Number(adset.dailyBudget || 0).toLocaleString('id-ID')}/hari</p>}
+                    {adset.pixelId && <p className="text-xs text-stone-500 ml-2">Pixel: {adset.pixelId} · Event: {adset.customEventType}</p>}
+                    <p className="text-xs text-stone-500 ml-2">Age: {adset.ageMin}–{adset.ageMax} · Gender: {GENDER_OPTIONS.find((g) => g.value === adset.gender)?.label}</p>
+                    <p className="text-xs text-stone-500 ml-2">Placement: {adset.placementMode}{adset.placementMode === 'manual' ? ` (${adset.placements.length} token)` : ''}</p>
+                    {adset.interests.length > 0 && <p className="text-xs text-stone-500 ml-2">Interests: {adset.interests.map((i) => i.name).join(', ')}</p>}
+                    <p className="text-xs text-stone-500 ml-2">Device: {DEVICE_OPTIONS.find((d) => d.value === adset.devicePlatform)?.label}</p>
+                    <p className="text-xs text-stone-500 ml-2">Creatives: {ac.length}</p>
+                    {ac.map((c, ci) => (
+                      <div key={c.id} className="ml-4 text-xs text-stone-400 bg-stone-50 rounded p-2 mt-1">
+                        <span className="font-medium">#{ci + 1}</span>
+                        {' · '}{c.linkUrl ? (c.linkUrl.length > 40 ? c.linkUrl.slice(0, 40) + '...' : c.linkUrl) : '❌ No link'}
+                        {c.primaryText && ` · "${c.primaryText.slice(0, 50)}${c.primaryText.length > 50 ? '...' : ''}"`}
+                        {c.headline && ` · [${c.headline.slice(0, 30)}${c.headline.length > 30 ? '...' : ''}]`}
+                        {' · '}{c.format}
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-stone-600 mb-1">Call to Action</label>
-                        <select
-                          value={creative.callToAction}
-                          onChange={(e) => updateCreative(creative.id, 'callToAction', e.target.value)}
-                          className={inputCls}
-                        >
-                          {CTA_OPTIONS.map((c) => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Caption */}
-                    <div>
-                      <label className="block text-xs font-medium text-stone-600 mb-1">Caption</label>
-                      <input
-                        type="text"
-                        value={creative.caption}
-                        onChange={(e) => updateCreative(creative.id, 'caption', e.target.value)}
-                        className={inputCls}
-                        placeholder="Caption tambahan..."
-                      />
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })}
 
-              {!hasValidCreative && (
-                <p className="text-xs text-amber-600 mt-2">
-                  ⚠️ Minimal 1 creative harus memiliki Image URL atau Primary Text.
-                </p>
+              {saveError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">⚠️ {saveError}</div>
               )}
-            </div>
-
-            {saveError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-                ⚠️ {saveError}
-              </div>
-            )}
-
-            {/* Summary before submit */}
-            <div className="bg-stone-50 rounded-xl border border-stone-200 p-5 space-y-2 text-sm">
-              <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Ringkasan Launch</p>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <p className="text-stone-500">Nama</p>
-                <p className="font-medium text-stone-900">{form.name || '—'}</p>
-                <p className="text-stone-500">Objective</p>
-                <p className="text-stone-900">{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
-                <p className="text-stone-500">Budget Mode</p>
-                <p className="text-stone-900">{form.budgetMode === 'ABO' ? 'ABO' : 'CBO'}</p>
-                <p className="text-stone-500">Daily Budget</p>
-                <p className="text-stone-900">
-                  {form.budgetMode === 'CBO'
-                    ? `Rp${Number(form.dailyBudget).toLocaleString('id-ID') || '—'}`
-                    : `Rp${adsetTotalBudget.toLocaleString('id-ID')} (${form.adsets.length} ad set${form.adsets.length > 1 ? 's' : ''})`}
-                </p>
-                <p className="text-stone-500">Launch Mode</p>
-                <p className="text-stone-900">{LAUNCH_MODE_OPTIONS.find((l) => l.value === form.launchMode)?.label}</p>
-                <p className="text-stone-500">Placement</p>
-                <p className="text-stone-900">{form.placementMode === 'automatic' ? 'Automatic' : `${form.placements.length} placements`}</p>
-                <p className="text-stone-500">Audience</p>
-                <p className="text-stone-900">{form.ageMin}–{form.ageMax} · {GENDER_OPTIONS.find((g) => g.value === form.gender)?.label} · ID</p>
-                <p className="text-stone-500">Creatives</p>
-                <p className="text-stone-900">{form.creatives.length}</p>
-              </div>
             </div>
 
             <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => {
-                const prev = form.objective === 'OUTCOME_SALES' ? 'Pixel' : form.budgetMode === 'ABO' ? 'Ad Sets' : 'Audience'
-                setCurrentStep(prev)
-              }} className="btn-ghost">
-                ← Kembali
-              </button>
-              <button
-                type="submit"
-                disabled={saving || !hasValidCreative || form.ageMin > form.ageMax}
-                className="btn-primary"
-              >
-                {saving ? 'Menyimpan...' : '💾 Simpan Draft'}
-              </button>
+              <button type="button" onClick={() => setCurrentStep('Ads')} className="btn-ghost">← Kembali</button>
+              <div className="flex gap-2">
+                <Link href="/test-launches" className="btn-ghost">Batal</Link>
+                <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
+                  {saving ? 'Menyimpan...' : 'Submit Launch →'}
+                </button>
+              </div>
             </div>
           </div>
         )}
-
       </form>
+    </div>
+  )
+}
+
+// ─── Interest Search sub-component ──────────────────────────────────────────
+
+function InterestSearch({
+  value,
+  metaConnectionId,
+  onAdd,
+  onRemove,
+}: {
+  value: Array<{id: string; name: string}>
+  metaConnectionId: string
+  onAdd: (interest: {id: string; name: string}) => void
+  onRemove: (interestId: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Array<{id: string; name: string; audience_size_lower_bound?: number}>>([])
+  const [searching, setSearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!query.trim() || !metaConnectionId) {
+      setResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/admin/meta-tools/interest-search?q=${encodeURIComponent(query.trim())}&metaAccountId=${metaConnectionId}`, { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          setResults(data.interests ?? [])
+        } else {
+          setError('Interest search tidak tersedia')
+          setResults([])
+        }
+      } catch {
+        setError('Interest search tidak tersedia')
+        setResults([])
+      }
+      setSearching(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [query, metaConnectionId])
+
+  const already = new Set(value.map((i) => i.id))
+
+  return (
+    <div>
+      <label className={labelCls}>Detailed Targeting — Interests</label>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className={inputCls}
+        placeholder="Cari interest... (ketik minimal 2 huruf)"
+      />
+      {searching && <p className="text-xs text-stone-400 mt-1">Mencari...</p>}
+      {error && <p className="text-xs text-amber-600 mt-1">{error}</p>}
+      {results.length > 0 && (
+        <div className="mt-1 border border-stone-200 rounded-lg max-h-32 overflow-y-auto">
+          {results.filter((r) => !already.has(r.id)).slice(0, 10).map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => { onAdd(r); setQuery(''); setResults([]) }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-violet-50 border-b border-stone-100 last:border-0"
+            >
+              <span className="font-medium">{r.name}</span>
+              {r.audience_size_lower_bound && <span className="text-xs text-stone-400 ml-2">(~{(r.audience_size_lower_bound / 1000).toFixed(0)}K)</span>}
+            </button>
+          ))}
+        </div>
+      )}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {value.map((interest) => (
+            <span key={interest.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full">
+              {interest.name}
+              <button type="button" onClick={() => onRemove(interest.id)} className="text-violet-400 hover:text-violet-700">&times;</button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
