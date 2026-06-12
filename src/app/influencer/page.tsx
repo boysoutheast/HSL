@@ -1,5 +1,5 @@
 import TabLayout from '@/components/TabLayout'
-import AccountsPage from '../accounts/page'
+import InfluencerRoster from '@/components/InfluencerRoster'
 import TopicsPage from '../topics/page'
 
 const tabs = [
@@ -14,7 +14,7 @@ export default async function InfluencerPage({ searchParams }: { searchParams: P
 
   return (
     <TabLayout tabs={tabs}>
-      {key === 'roster' && <AccountsPage />}
+      {key === 'roster' && <InfluencerRoster />}
       {key === 'topics' && <TopicsPage />}
       {key === 'generate' && (
         <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
