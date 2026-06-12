@@ -1,5 +1,6 @@
-import Link from 'next/link'
 import TabLayout from '@/components/TabLayout'
+import MediaLibraryPage from '../media-library/page'
+import ProductsPage from '../products/page'
 
 const tabs = [
   { id: 'library', label: 'Library', href: '/media?tab=library' },
@@ -12,28 +13,18 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   const key = tab || 'library'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Media</h1>
-        <p className="text-sm text-stone-500 mt-1">Library, products, dan generate task.</p>
-      </div>
-      <TabLayout tabs={tabs}>
-        {key === 'library' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <Link href="/media-library" className="inline-flex px-4 py-2 text-sm font-medium bg-stone-50 border border-stone-200 rounded-lg hover:bg-white hover:border-violet-200">Buka Media Library</Link>
-          </div>
-        )}
-        {key === 'products' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <Link href="/products" className="inline-flex px-4 py-2 text-sm font-medium bg-stone-50 border border-stone-200 rounded-lg hover:bg-white hover:border-violet-200">Buka Products</Link>
-          </div>
-        )}
-        {key === 'generate' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <p className="text-sm text-stone-400">Generate v1 — coming soon.</p>
-          </div>
-        )}
-      </TabLayout>
-    </div>
+    <TabLayout tabs={tabs}>
+      {key === 'library' && <MediaLibraryPage />}
+      {key === 'products' && <ProductsPage />}
+      {key === 'generate' && (
+        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
+          <p className="text-2xl mb-2">✨</p>
+          <p className="text-sm font-semibold text-stone-700 mb-1">Generate dari Produk</p>
+          <p className="text-sm text-stone-400">
+            Antrian GENERATE_PHOTO / GENERATE_VIDEO via Hermes worker — menunggu handler worker tersedia.
+          </p>
+        </div>
+      )}
+    </TabLayout>
   )
 }

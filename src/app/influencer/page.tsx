@@ -1,5 +1,6 @@
-import Link from 'next/link'
 import TabLayout from '@/components/TabLayout'
+import AccountsPage from '../accounts/page'
+import TopicsPage from '../topics/page'
 
 const tabs = [
   { id: 'roster', label: 'Roster', href: '/influencer?tab=roster' },
@@ -12,28 +13,18 @@ export default async function InfluencerPage({ searchParams }: { searchParams: P
   const key = tab || 'roster'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">Influencer</h1>
-        <p className="text-sm text-stone-500 mt-1">Instagram accounts, topics, dan persona.</p>
-      </div>
-      <TabLayout tabs={tabs}>
-        {key === 'roster' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <Link href="/accounts" className="inline-flex px-4 py-2 text-sm font-medium bg-stone-50 border border-stone-200 rounded-lg hover:bg-white hover:border-violet-200">Buka Roster IG Accounts</Link>
-          </div>
-        )}
-        {key === 'topics' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <Link href="/topics" className="inline-flex px-4 py-2 text-sm font-medium bg-stone-50 border border-stone-200 rounded-lg hover:bg-white hover:border-violet-200">Buka Topics &amp; CEPs</Link>
-          </div>
-        )}
-        {key === 'generate' && (
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-            <p className="text-sm text-stone-400">Content Engine — coming soon.</p>
-          </div>
-        )}
-      </TabLayout>
-    </div>
+    <TabLayout tabs={tabs}>
+      {key === 'roster' && <AccountsPage />}
+      {key === 'topics' && <TopicsPage />}
+      {key === 'generate' && (
+        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
+          <p className="text-2xl mb-2">✦</p>
+          <p className="text-sm font-semibold text-stone-700 mb-1">Content Engine</p>
+          <p className="text-sm text-stone-400">
+            Auto-topic → auto-generate → antrian posting per influencer — coming soon.
+          </p>
+        </div>
+      )}
+    </TabLayout>
   )
 }

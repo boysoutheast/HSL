@@ -1,5 +1,11 @@
-import Link from 'next/link'
 import TabLayout from '@/components/TabLayout'
+import MetaConnectionsPage from '../meta-connections/page'
+import AgentsPage from '../agents/page'
+import WorkersPage from '../workers/page'
+import DeadLettersPage from '../admin/dead-letters/page'
+import ObservabilityPage from '../observability/page'
+import AdminUsersPage from '../admin-users/page'
+import DocsPage from '../docs/page'
 
 const tabs = [
   { id: 'connections', label: 'Connections', href: '/system?tab=connections' },
@@ -9,36 +15,45 @@ const tabs = [
   { id: 'docs', label: 'Docs', href: '/system?tab=docs' },
 ]
 
-export default async function SystemPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { tab } = await searchParams
+const workerSubs = [
+  { id: 'tasks', label: 'Workers & Tasks' },
+  { id: 'dead-letters', label: 'Dead Letters' },
+  { id: 'observability', label: 'Observability' },
+]
+
+export default async function SystemPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; sub?: string }>
+}) {
+  const { tab, sub } = await searchParams
   const key = tab || 'connections'
-  const map: Record<string, { label: string; hrefs: Array<{ label: string; href: string }> }> = {
-    connections: { label: 'Connections', hrefs: [{ label: 'Meta Connections', href: '/meta-connections' }] },
-    agents: { label: 'Agents', hrefs: [{ label: 'Agents', href: '/agents' }] },
-    workers: { label: 'Workers', hrefs: [{ label: 'Workers', href: '/workers' }, { label: 'Dead Letters', href: '/admin/dead-letters' }, { label: 'Observability', href: '/observability' }] },
-    users: { label: 'Users', hrefs: [{ label: 'Admin Users', href: '/admin-users' }] },
-    docs: { label: 'Docs', hrefs: [{ label: 'Docs', href: '/docs' }] },
-  }
-  const panel = map[key] || map.connections
+  const workerSub = sub || 'tasks'
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-900">System</h1>
-        <p className="text-sm text-stone-500 mt-1">Connections, workers, users, docs.</p>
-      </div>
-      <TabLayout tabs={tabs}>
-        <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold text-stone-900">{panel.label}</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {panel.hrefs.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-700 hover:bg-white hover:border-violet-200">
-                {link.label}
-              </Link>
+    <TabLayout tabs={tabs}>
+      {key === 'connections' && <MetaConnectionsPage />}
+      {key === 'agents' && <AgentsPage />}
+      {key === 'workers' && (
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {workerSubs.map((s) => (
+              <a
+                key={s.id}
+                href={`/system?tab=workers&sub=${s.id}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${workerSub === s.id ? 'bg-violet-100 text-violet-700' : 'bg-white text-stone-500 border border-stone-200 hover:bg-stone-50'}`}
+              >
+                {s.label}
+              </a>
             ))}
           </div>
+          {workerSub === 'tasks' && <WorkersPage />}
+          {workerSub === 'dead-letters' && <DeadLettersPage />}
+          {workerSub === 'observability' && <ObservabilityPage />}
         </div>
-      </TabLayout>
-    </div>
+      )}
+      {key === 'users' && <AdminUsersPage />}
+      {key === 'docs' && <DocsPage />}
+    </TabLayout>
   )
 }
