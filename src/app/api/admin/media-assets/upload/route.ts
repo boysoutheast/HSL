@@ -49,27 +49,42 @@ export async function POST(req: NextRequest) {
 
   const ext = (file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')).toLowerCase()
   const key = `media/${uuidv4()}.${ext}`
-  const buffer = Buffer.from(await file.arrayBuffer())
-  const checksum = crypto.createHash('sha256').update(buffer).digest('hex')
-  const publicUrl = await uploadFile(key, buffer, file.type)
 
-  const asset = await prisma.mediaAsset.create({
-    data: {
-      userId: auth.id,
-      label,
-      type: isVideo ? 'VIDEO' : 'IMAGE',
-      source: 'USER_UPLOAD',
-      storageProvider: 'railway_volume',
-      storagePath: key,
-      publicUrl,
-      fileUrl: publicUrl,
-      mimeType: file.type,
-      fileSizeBytes: file.size,
-      checksum,
-      status: 'READY',
-      moderationStatus: 'APPROVED',
-    },
-  })
+  let buffer: Buffer
+  let checksum: string
+  let publicUrl: string
+  try {
+    buffer = Buffer.from(await file.arrayBuffer())
+    checksum = crypto.createHash('sha256').update(buffer).digest('hex')
+    publicUrl = await uploadFile(key, buffer, file.type)
+  } catch (err) {
+    console.error('[upload] storage error:', err)
+    return NextResponse.json({ error: 'Gagal menyimpan file ke storage' }, { status: 500 })
+  }
+
+  let asset
+  try {
+    asset = await prisma.mediaAsset.create({
+      data: {
+        userId: auth.id,
+        label,
+        type: isVideo ? 'VIDEO' : 'IMAGE',
+        source: 'USER_UPLOAD',
+        storageProvider: 'railway_volume',
+        storagePath: key,
+        publicUrl,
+        fileUrl: publicUrl,
+        mimeType: file.type,
+        fileSizeBytes: file.size,
+        checksum,
+        status: 'READY',
+        moderationStatus: 'APPROVED',
+      },
+    })
+  } catch (err) {
+    console.error('[upload] prisma error:', err)
+    return NextResponse.json({ error: 'Gagal menyimpan metadata asset' }, { status: 500 })
+  }
 
   return NextResponse.json({ asset }, { status: 201 })
 }
