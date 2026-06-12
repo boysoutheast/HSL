@@ -1,30 +1,35 @@
-import TabLayout from '@/components/TabLayout'
+import ClientTabs from '@/components/ClientTabs'
 import InfluencerRoster from '@/components/InfluencerRoster'
 import TopicsPage from '../topics/page'
 
 const tabs = [
-  { id: 'roster', label: 'Roster', href: '/influencer?tab=roster' },
-  { id: 'topics', label: 'Semua Topik', href: '/influencer?tab=topics' },
-  { id: 'generate', label: 'Content Engine', href: '/influencer?tab=generate' },
+  { id: 'roster', label: 'Roster' },
+  { id: 'topics', label: 'Semua Topik' },
+  { id: 'generate', label: 'Content Engine' },
 ]
 
 export default async function InfluencerPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams
-  const key = tab || 'roster'
+  const key = tab && tabs.some(t => t.id === tab) ? tab : 'roster'
 
   return (
-    <TabLayout tabs={tabs}>
-      {key === 'roster' && <InfluencerRoster />}
-      {key === 'topics' && <TopicsPage />}
-      {key === 'generate' && (
-        <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
-          <p className="text-2xl mb-2">✦</p>
-          <p className="text-sm font-semibold text-stone-700 mb-1">Content Engine</p>
-          <p className="text-sm text-stone-400">
-            Auto-topic → auto-generate → antrian posting per influencer — coming soon.
-          </p>
-        </div>
-      )}
-    </TabLayout>
+    <ClientTabs
+      tabs={tabs}
+      initial={key}
+      basePath="/influencer"
+      panels={{
+        roster: <InfluencerRoster />,
+        topics: <TopicsPage />,
+        generate: (
+          <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center">
+            <p className="text-2xl mb-2">✦</p>
+            <p className="text-sm font-semibold text-stone-700 mb-1">Content Engine</p>
+            <p className="text-sm text-stone-400">
+              Auto-topic → auto-generate → antrian posting per influencer — coming soon.
+            </p>
+          </div>
+        ),
+      }}
+    />
   )
 }
