@@ -280,6 +280,8 @@ export default function NewTestLaunchPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<Page | null>(null)
   const [availablePages, setAvailablePages] = useState<Page[]>([])
+  const [mediaAssets, setMediaAssets] = useState<Array<{id: string; publicUrl: string | null; fileUrl: string | null; thumbnailUrl: string | null; type: string; label: string | null}>>([])
+  const [showPicker, setShowPicker] = useState<Map<string,boolean>>(new Map())
 
   const stepIndex = (STEPS as readonly string[]).indexOf(currentStep)
 
@@ -362,6 +364,20 @@ export default function NewTestLaunchPage() {
       }
     } catch { setBidStrategies([]) }
   }, [])
+
+  const fetchMediaAssets = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/media-assets?status=READY', { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        setMediaAssets(data.assets ?? [])
+      }
+    } catch {
+      setMediaAssets([])
+    }
+  }, [])
+
+  useEffect(() => { fetchMediaAssets() }, [fetchMediaAssets])
 
   // Handlers
   const handleMetaConnectionChange = (id: string) => {
@@ -1212,10 +1228,52 @@ export default function NewTestLaunchPage() {
                         ))}
                       </div>
 
-                      {/* Image URL */}
+                      {/* Media URL with picker */}
                       <div>
-                        <label className={labelCls}>Media URL <span className="text-red-500">*</span></label>
-                        <input type="url" value={creative.imageUrl} onChange={(e) => updateCreativeField(adset.id, creative.id, 'imageUrl', e.target.value)} className={inputCls} placeholder="https://..." />
+                        <div className="flex items-center justify-between gap-3">
+                          <label className={labelCls}>Media <span className="text-red-500">*</span></label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const key = adset.id + '__' + creative.id
+                              const next = !(showPicker.get(key) ?? false)
+                              setShowPicker(new Map(showPicker.set(key, next)))
+                            }}
+                            className="text-xs text-violet-700 hover:underline"
+                          >
+                            {(showPicker.get(adset.id + '__' + creative.id) ?? false) ? 'Input URL manual' : 'Pilih dari Media Library'}
+                          </button>
+                        </div>
+
+                        {showPicker.get(adset.id + '__' + creative.id) ? (
+                          <div className="border border-stone-200 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            {mediaAssets.length === 0 ? (
+                              <p className="text-xs text-stone-500">Tidak ada asset siap pakai di Media Library</p>
+                            ) : (
+                              <div className="grid grid-cols-4 gap-2">
+                                {mediaAssets.filter((a) => a.type === 'IMAGE').map((asset) => (
+                                  <button
+                                    key={asset.id}
+                                    type="button"
+                                    title={asset.label ?? asset.fileUrl ?? undefined}
+                                    onClick={() => updateCreativeField(adset.id, creative.id, 'imageUrl', asset.fileUrl || asset.publicUrl || '')}
+                                    className={`aspect-square rounded-lg border-2 overflow-hidden hover:border-violet-500 transition-all ${
+                                      creative.imageUrl === (asset.fileUrl || asset.publicUrl) ? 'border-violet-500 ring-2 ring-violet-300' : 'border-stone-200'
+                                    }`}
+                                  >
+                                    {asset.thumbnailUrl || asset.publicUrl ? (
+                                      <img src={asset.thumbnailUrl || asset.publicUrl || undefined} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full bg-stone-100 flex items-center justify-center text-stone-400 text-xs">IMG</div>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <input type="url" value={creative.imageUrl} onChange={(e) => updateCreativeField(adset.id, creative.id, 'imageUrl', e.target.value)} className={inputCls} placeholder="https://..." />
+                        )}
                       </div>
 
                       {/* Link URL */}
