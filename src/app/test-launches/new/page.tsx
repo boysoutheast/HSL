@@ -1349,12 +1349,65 @@ export default function NewTestLaunchPage() {
                         </div>
                       </div>
 
-                      {creative.format === 'carousel' && (
-                        <div>
-                          <label className={labelCls}>Carousel Cards (JSON array)</label>
-                          <textarea value={creative.childAttachmentsJson} onChange={(e) => updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', e.target.value)} rows={4} className={`${inputCls} resize-none font-mono text-xs`} placeholder='[{"mediaUrl":"https://...","headline":"Card 1","linkUrl":"https://..."}]' />
+                      {creative.format === 'carousel' && (() => {
+                        const cards: Array<{mediaUrl: string; headline: string; linkUrl: string}> = (() => {
+                          try { const p = JSON.parse(creative.childAttachmentsJson || '[]'); return Array.isArray(p) ? p : [] }
+                          catch { return [] }
+                        })()
+                        return (
+                        <div className="space-y-3 border border-stone-200 rounded-lg p-4 bg-white">
+                          <div className="flex items-center justify-between">
+                            <label className={labelCls}>Carousel Cards <span className="text-red-500">*</span></label>
+                            <button
+                              type="button"
+                              disabled={cards.length >= 10}
+                              onClick={() => {
+                                const next = [...cards, { mediaUrl: '', headline: '', linkUrl: '' }]
+                                updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', JSON.stringify(next))
+                              }}
+                              className="text-xs text-violet-700 hover:underline disabled:text-stone-400 disabled:cursor-not-allowed"
+                            >+ Card</button>
+                          </div>
+
+                          {cards.length === 0 && <p className="text-xs text-stone-400">Belum ada card. Klik "+ Card" untuk memulai. Minimum 2 card untuk carousel.</p>}
+                          {cards.map((card, ci) => (
+                            <div key={ci} className="border border-stone-200 rounded-lg p-3 space-y-2 bg-stone-50">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-stone-500 uppercase">Card #{ci + 1}</span>
+                                <button type="button" onClick={() => {
+                                  const next = cards.filter((_, i) => i !== ci)
+                                  updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', JSON.stringify(next))
+                                }} className="text-xs text-red-500 hover:underline">Hapus</button>
+                              </div>
+                              <div>
+                                <label className={labelCls}>Media URL <span className="text-red-500">*</span></label>
+                                <input type="url" value={card.mediaUrl} onChange={(e) => {
+                                  const next = cards.map((c, i) => i === ci ? { ...c, mediaUrl: e.target.value } : c)
+                                  updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', JSON.stringify(next))
+                                }} className={inputCls} placeholder="https://..." />
+                              </div>
+                              <div>
+                                <label className={labelCls}>Headline</label>
+                                <input type="text" value={card.headline} onChange={(e) => {
+                                  const next = cards.map((c, i) => i === ci ? { ...c, headline: e.target.value } : c)
+                                  updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', JSON.stringify(next))
+                                }} className={inputCls} placeholder="Judul card..." maxLength={255} />
+                              </div>
+                              <div>
+                                <label className={labelCls}>Link URL</label>
+                                <input type="url" value={card.linkUrl} onChange={(e) => {
+                                  const next = cards.map((c, i) => i === ci ? { ...c, linkUrl: e.target.value } : c)
+                                  updateCreativeField(adset.id, creative.id, 'childAttachmentsJson', JSON.stringify(next))
+                                }} className={inputCls} placeholder="https://..." />
+                              </div>
+                            </div>
+                          ))}
+                          {cards.length >= 2 && cards.length <= 10 && (
+                            <p className="text-xs text-stone-500">{cards.length} card — cukup untuk carousel.</p>
+                          )}
                         </div>
-                      )}
+                        )
+                      })()}
                     </div>
                   ))}
                 </div>
