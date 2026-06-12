@@ -67,6 +67,8 @@ interface AdsetDraft {
   name: string
   dailyBudget: string          // ABO only
   bidStrategy: string           // JSON, ABO only, null = inherit
+  bidAmount: string
+  roasAverageFloor: string
   pixelId: string
   customEventType: string
   // Audience
@@ -81,6 +83,7 @@ interface AdsetDraft {
   placementMode: 'automatic' | 'manual'
   placements: string[]
   // Targeting extras
+  includedCustomAudienceIds: string
   excludedCustomAudienceIds: string
   interests: Array<{id: string; name: string}>
   devicePlatform: 'all' | 'mobile' | 'desktop'
@@ -207,6 +210,8 @@ function emptyAdset(name: string, idx: number): AdsetDraft {
     name: name || `Adset ${idx + 1}`,
     dailyBudget: '',
     bidStrategy: '',
+    bidAmount: '',
+    roasAverageFloor: '',
     pixelId: '',
     customEventType: 'PURCHASE',
     ageMin: 25,
@@ -217,6 +222,7 @@ function emptyAdset(name: string, idx: number): AdsetDraft {
     endTime: '',
     placementMode: 'automatic',
     placements: [],
+    includedCustomAudienceIds: '',
     excludedCustomAudienceIds: '',
     interests: [],
     devicePlatform: 'all',
@@ -496,10 +502,13 @@ export default function NewTestLaunchPage() {
         const hasManual = adset.placementMode === 'manual' && adset.placements.length > 0
         const tgt: Record<string, unknown> = {}
 
-        if (adset.interests.length > 0 || adset.excludedCustomAudienceIds || adset.devicePlatform !== 'all') {
+        if (adset.interests.length > 0 || adset.includedCustomAudienceIds || adset.excludedCustomAudienceIds || adset.devicePlatform !== 'all') {
           const targeting: Record<string, unknown> = {}
           if (adset.interests.length > 0) {
             targeting.flexibleSpec = [{ interests: adset.interests.map((it) => ({ id: it.id, name: it.name })) }]
+          }
+          if (adset.includedCustomAudienceIds?.trim()) {
+            targeting.customAudienceIds = adset.includedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)
           }
           if (adset.excludedCustomAudienceIds?.trim()) {
             targeting.excludedCustomAudienceIds = adset.excludedCustomAudienceIds.split(',').map((s) => s.trim()).filter(Boolean)
@@ -511,11 +520,23 @@ export default function NewTestLaunchPage() {
         }
 
         const evt = adset.customEventType || (form.objective === 'OUTCOME_LEADS' ? 'LEAD' : form.objective === 'OUTCOME_SALES' ? 'PURCHASE' : undefined)
+        const parsedBidStrategy = form.budgetMode === 'ABO' && adset.bidStrategy
+          ? (() => {
+              const parsed = JSON.parse(adset.bidStrategy) as Record<string, unknown>
+              if ((parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') && adset.bidAmount) {
+                parsed.bidAmount = Number(adset.bidAmount)
+              }
+              if (parsed.strategy === 'MIN_ROAS' && adset.roasAverageFloor) {
+                parsed.roasAverageFloor = Number(adset.roasAverageFloor)
+              }
+              return parsed
+            })()
+          : undefined
 
         return {
           name: adset.name,
           dailyBudget: form.budgetMode === 'ABO' ? Number(adset.dailyBudget) : undefined,
-          ...(form.budgetMode === 'ABO' && adset.bidStrategy ? { bidStrategy: JSON.parse(adset.bidStrategy) } : {}),
+          ...(form.budgetMode === 'ABO' && parsedBidStrategy ? { bidStrategy: parsedBidStrategy } : {}),
           pixelId: adset.pixelId || undefined,
           customEventType: evt || undefined,
           startTime: adset.scheduleMode === 'scheduled' && adset.startTime ? adset.startTime : null,
@@ -577,6 +598,15 @@ export default function NewTestLaunchPage() {
       if (!a.name.trim()) { setSaveError(`Ad Set #${i + 1}: nama harus diisi.`); return false }
       if (form.budgetMode === 'ABO' && (!a.dailyBudget || Number(a.dailyBudget) <= 0)) {
         setSaveError(`Ad Set "${a.name}": budget harus lebih dari 0.`); return false
+      }
+      if (a.bidStrategy) {
+        const parsed = safeParseJson<Record<string, unknown>>(a.bidStrategy, {})
+        if ((parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') && (!a.bidAmount || Number(a.bidAmount) <= 0)) {
+          setSaveError(`Ad Set "${a.name}": bid amount wajib untuk ${String(parsed.strategy)}.`); return false
+        }
+        if (parsed.strategy === 'MIN_ROAS' && (!a.roasAverageFloor || Number(a.roasAverageFloor) <= 0)) {
+          setSaveError(`Ad Set "${a.name}": ROAS floor wajib untuk MIN_ROAS.`); return false
+        }
       }
       if (form.objective === 'OUTCOME_SALES' && !a.pixelId) {
         setSaveError(`Ad Set "${a.name}": pixel wajib untuk Sales objective.`); return false
@@ -818,6 +848,28 @@ export default function NewTestLaunchPage() {
                                   <option key={bs.value} value={JSON.stringify({ strategy: bs.value })}>{bs.label}</option>
                                 ))}
                               </select>
+                              {adset.bidStrategy && (() => {
+                                const parsed = safeParseJson<Record<string, unknown>>(adset.bidStrategy, {})
+                                if (parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') {
+                                  return (
+                                    <div className="mt-2">
+                                      <label className={labelCls}>Bid Amount</label>
+                                      <input type="number" value={adset.bidAmount} onChange={(e) => updateAdsetField(adset.id, 'bidAmount', e.target.value)} min="1" step="1" className={inputCls} placeholder="20000" />
+                                      <p className="text-xs text-stone-500 mt-1">Isi angka target bid sesuai currency account.</p>
+                                    </div>
+                                  )
+                                }
+                                if (parsed.strategy === 'MIN_ROAS') {
+                                  return (
+                                    <div className="mt-2">
+                                      <label className={labelCls}>ROAS Average Floor</label>
+                                      <input type="number" value={adset.roasAverageFloor} onChange={(e) => updateAdsetField(adset.id, 'roasAverageFloor', e.target.value)} min="1" step="1" className={inputCls} placeholder="10000" />
+                                      <p className="text-xs text-stone-500 mt-1">Meta pakai integer. Contoh: 10000 = ROAS 1.0.</p>
+                                    </div>
+                                  )
+                                }
+                                return null
+                              })()}
                             </div>
                           )}
                         </div>
@@ -944,10 +996,15 @@ export default function NewTestLaunchPage() {
                         </div>
                       </div>
 
-                      {/* Excluded CAs */}
-                      <div>
-                        <label className={labelCls}>Excluded Custom Audience IDs (koma, pisah)</label>
-                        <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelCls}>Included Custom Audience IDs (koma, pisah)</label>
+                          <input type="text" value={adset.includedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'includedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                        </div>
+                        <div>
+                          <label className={labelCls}>Excluded Custom Audience IDs (koma, pisah)</label>
+                          <input type="text" value={adset.excludedCustomAudienceIds} onChange={(e) => updateAdsetField(adset.id, 'excludedCustomAudienceIds', e.target.value)} className={inputCls} placeholder="123456789,987654321" />
+                        </div>
                       </div>
 
                       {/* Interests */}
