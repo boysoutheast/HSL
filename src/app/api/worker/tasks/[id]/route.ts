@@ -23,6 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     status?: 'completed' | 'failed' | 'processing'
     lastError?: string
     resultJson?: string
+    workerId?: string
   }
 
   try {
@@ -62,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     attempts: newAttempts,
     completedAt: body.status === 'completed' ? now : task.completedAt,
     startedAt: body.status === 'processing' ? now : task.startedAt,
+    workerId: body.status === 'processing' && body.workerId ? body.workerId : task.workerId,
   }
 
   if (body.resultJson !== undefined) {
