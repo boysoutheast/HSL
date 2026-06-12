@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Sidebar from './Sidebar'
+import CommandPalette from './CommandPalette'
 
 interface CurrentUser {
   id: string
@@ -39,6 +40,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen bg-[#f8f7f6] dark:bg-stone-950">
       <Sidebar user={currentUser} onLogout={handleLogout} />
+      <CommandPalette />
       <main className="flex-1 min-w-0 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-6">
           {children}
