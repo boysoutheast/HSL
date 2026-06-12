@@ -507,6 +507,8 @@ model TestLaunch {
   pixelId         String?  @map("pixel_id") // Meta pixel ID for conversion tracking
   // ── Bid Strategy ── {strategy: HIGHEST_VOLUME|COST_CAP|BID_CAP|MIN_ROAS, amount?}
   bidStrategyJson String?  @map("bid_strategy_json")
+  // ── Budget Mode ──
+  budgetMode      String   @default("CBO") @map("budget_mode") // CBO | ABO
   // status lifecycle: draft → pending_approval → approved/rejected → executing → completed/failed
   status          String   @default("draft")
   errorMessage    String?  @map("error_message")
@@ -516,6 +518,7 @@ model TestLaunch {
   user             AdminUser            @relation(fields: [userId], references: [id])
   metaAccount      MetaAccount          @relation(fields: [metaAccountId], references: [id])
   creatives        TestLaunchCreative[]
+  adsets           TestLaunchAdset[]
   approvalRequest  ApprovalRequest?
   workerTasks      WorkerTask[]
   campaignSessions CampaignSession[]
@@ -525,9 +528,29 @@ model TestLaunch {
   @@map("test_launches")
 }
 
+model TestLaunchAdset {
+  id              String   @id @default(cuid())
+  testLaunchId    String   @map("test_launch_id")
+  name            String
+  dailyBudget     Decimal? @map("daily_budget") @db.Decimal(12, 2)
+  bidStrategyJson String?  @map("bid_strategy_json")
+  audienceJson    String?  @map("audience_json")
+  sortOrder       Int      @default(0) @map("sort_order")
+  status          String   @default("pending")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  testLaunch TestLaunch           @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
+  creatives  TestLaunchCreative[]
+
+  @@index([testLaunchId])
+  @@map("test_launch_adsets")
+}
+
 model TestLaunchCreative {
   id           String   @id @default(cuid())
   testLaunchId String   @map("test_launch_id")
+  adsetId      String?  @map("adset_id")
   creativeUrl  String?  @map("creative_url") // uploaded image/video URL
   captionText  String?  @map("caption_text")
   hookText     String?  @map("hook_text")
@@ -541,9 +564,11 @@ model TestLaunchCreative {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  testLaunch TestLaunch @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
+  testLaunch TestLaunch      @relation(fields: [testLaunchId], references: [id], onDelete: Cascade)
+  adset      TestLaunchAdset? @relation(fields: [adsetId], references: [id], onDelete: SetNull)
 
   @@index([testLaunchId])
+  @@index([adsetId])
   @@map("test_launch_creatives")
 }
 
