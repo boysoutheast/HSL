@@ -22,8 +22,42 @@ export async function GET(req: NextRequest) {
   const limit           = Math.min(parseInt(searchParams.get('limit')  ?? '100'), 200)
   const offset          = parseInt(searchParams.get('offset') ?? '0')
 
-  // If a specific productId/topicId filter is requested, use it directly
+  const assignments = await prisma.assignment.findMany({
+    where: { hermesAgentId: agent.id, status: 'active' },
+  })
+
+  const directCepIds = assignments
+    .filter(a => a.assignableType === 'cep')
+    .map(a => a.assignableId)
+
+  const assignedProductIds = assignments
+    .filter(a => a.assignableType === 'product')
+    .map(a => a.assignableId)
+
+  const directTopicIds = assignments
+    .filter(a => a.assignableType === 'topic')
+    .map(a => a.assignableId)
+
+  const characterIds = assignments
+    .filter(a => a.assignableType === 'character')
+    .map(a => a.assignableId)
+
+  let characterTopicIds: string[] = []
+  if (characterIds.length > 0) {
+    const topics = await prisma.topic.findMany({
+      where: { characterId: { in: characterIds }, status: 'active' },
+      select: { id: true },
+    })
+    characterTopicIds = topics.map(t => t.id)
+  }
+
+  const assignedTopicIds = Array.from(new Set([...directTopicIds, ...characterTopicIds]))
+
   if (filterProductId) {
+    if (!assignedProductIds.includes(filterProductId)) {
+      return NextResponse.json({ error: 'Forbidden: productId is out of scope for this agent' }, { status: 403 })
+    }
+
     const [ceps, total] = await Promise.all([
       prisma.cep.findMany({
         where: { status: 'active', productId: filterProductId },
@@ -44,6 +78,10 @@ export async function GET(req: NextRequest) {
   }
 
   if (filterTopicId) {
+    if (!assignedTopicIds.includes(filterTopicId)) {
+      return NextResponse.json({ error: 'Forbidden: topicId is out of scope for this agent' }, { status: 403 })
+    }
+
     const [ceps, total] = await Promise.all([
       prisma.cep.findMany({
         where: { status: 'active', topicId: filterTopicId },
@@ -63,43 +101,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ceps, total, limit, offset })
   }
 
-  // No specific filter — build from agent's assignments
-  const assignments = await prisma.assignment.findMany({
-    where: { hermesAgentId: agent.id, status: 'active' },
-  })
-
-  // Direct CEP assignments
-  const directCepIds = assignments
-    .filter(a => a.assignableType === 'cep')
-    .map(a => a.assignableId)
-
-  // Product assignments → CEPs by productId
-  const productIds = assignments
-    .filter(a => a.assignableType === 'product')
-    .map(a => a.assignableId)
-
-  // Topic assignments (direct)
-  const directTopicIds = assignments
-    .filter(a => a.assignableType === 'topic')
-    .map(a => a.assignableId)
-
-  // Character assignments → resolve their active topics
-  const characterIds = assignments
-    .filter(a => a.assignableType === 'character')
-    .map(a => a.assignableId)
-
-  let characterTopicIds: string[] = []
-  if (characterIds.length > 0) {
-    const topics = await prisma.topic.findMany({
-      where: { characterId: { in: characterIds }, status: 'active' },
-      select: { id: true },
-    })
-    characterTopicIds = topics.map(t => t.id)
-  }
-
-  const topicIds = [...new Set([...directTopicIds, ...characterTopicIds])]
-
-  if (directCepIds.length === 0 && productIds.length === 0 && topicIds.length === 0) {
+  if (directCepIds.length === 0 && assignedProductIds.length === 0 && assignedTopicIds.length === 0) {
     return NextResponse.json({ ceps: [], total: 0, limit, offset })
   }
 
@@ -107,8 +109,8 @@ export async function GET(req: NextRequest) {
     status: 'active',
     OR: [
       ...(directCepIds.length > 0 ? [{ id: { in: directCepIds } }] : []),
-      ...(productIds.length > 0   ? [{ productId: { in: productIds } }] : []),
-      ...(topicIds.length > 0     ? [{ topicId: { in: topicIds } }] : []),
+      ...(assignedProductIds.length > 0 ? [{ productId: { in: assignedProductIds } }] : []),
+      ...(assignedTopicIds.length > 0 ? [{ topicId: { in: assignedTopicIds } }] : []),
     ],
   }
 
