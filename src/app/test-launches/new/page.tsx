@@ -707,6 +707,12 @@ export default function NewTestLaunchPage() {
         if (!c.linkUrl?.trim()) { setSaveError(`Ad Set "${a.name}": linkUrl wajib di setiap creative.`); return false }
         if (c.primaryText?.length > 125) { setSaveError(`Ad Set "${a.name}": primaryText maksimal 125 karakter.`); return false }
         if (c.headline?.length > 255) { setSaveError(`Ad Set "${a.name}": headline maksimal 255 karakter.`); return false }
+        if (c.description?.length > 255) { setSaveError(`Ad Set "${a.name}": description maksimal 255 karakter.`); return false }
+        if (c.format === 'carousel') {
+          const cards = safeParseJson<Array<{ mediaUrl?: string; headline?: string; linkUrl?: string }>>(c.childAttachmentsJson, [])
+          if (cards.length < 2) { setSaveError(`Ad Set "${a.name}": carousel minimal 2 card.`); return false }
+          if (cards.length > 10) { setSaveError(`Ad Set "${a.name}": carousel maksimal 10 card.`); return false }
+        }
       }
     }
     return true
@@ -1317,23 +1323,44 @@ export default function NewTestLaunchPage() {
                         <input type="url" value={creative.linkUrl} onChange={(e) => updateCreativeField(adset.id, creative.id, 'linkUrl', e.target.value)} className={inputCls} placeholder="https://..." />
                       </div>
 
-                      {/* Text fields */}
+                      {/* Text fields with live char counters */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className={labelCls}>Primary Text {creative.primaryText.length > 0 && <span className="text-stone-400 font-normal">({creative.primaryText.length}/125)</span>}</label>
-                          <textarea value={creative.primaryText} onChange={(e) => updateCreativeField(adset.id, creative.id, 'primaryText', e.target.value)} rows={2} maxLength={125} className={`${inputCls} resize-none`} placeholder="Primary text..." />
-                          {creative.primaryText.length > 125 && <p className="text-xs text-red-500 mt-0.5">Maksimal 125 karakter</p>}
+                          <div className="flex items-center justify-between">
+                            <label className={labelCls}>Primary Text <span className="text-red-500">*</span></label>
+                            <span className={`text-xs font-mono ${
+                              creative.primaryText.length > 125 ? 'text-red-600 font-bold' :
+                              creative.primaryText.length > 112 ? 'text-amber-600' : 'text-stone-400'
+                            }`}>{creative.primaryText.length}/125</span>
+                          </div>
+                          <textarea value={creative.primaryText} onChange={(e) => updateCreativeField(adset.id, creative.id, 'primaryText', e.target.value)} rows={2} className={`${inputCls} resize-none ${creative.primaryText.length > 125 ? 'border-red-400 ring-red-300' : ''}`} placeholder="Primary text..." />
+                          {creative.primaryText.length > 125 && <p className="text-xs text-red-500 mt-0.5">Maksimal 125 karakter. Iklan akan ditolak Meta.</p>}
                         </div>
                         <div>
-                          <label className={labelCls}>Headline {creative.headline.length > 0 && <span className="text-stone-400 font-normal">({creative.headline.length}/255)</span>}</label>
-                          <input type="text" value={creative.headline} onChange={(e) => updateCreativeField(adset.id, creative.id, 'headline', e.target.value)} maxLength={255} className={inputCls} placeholder="Headline..." />
-                          {creative.headline.length > 255 && <p className="text-xs text-red-500 mt-0.5">Maksimal 255 karakter</p>}
+                          <div className="flex items-center justify-between">
+                            <label className={labelCls}>Headline {creative.headline.length > 0}</label>
+                            <span className={`text-xs font-mono ${
+                              creative.headline.length > 255 ? 'text-red-600 font-bold' :
+                              creative.headline.length > 230 ? 'text-amber-600' : 'text-stone-400'
+                            }`}>{creative.headline.length}/255</span>
+                          </div>
+                          <input type="text" value={creative.headline} onChange={(e) => updateCreativeField(adset.id, creative.id, 'headline', e.target.value)} className={`${inputCls} ${creative.headline.length > 255 ? 'border-red-400 ring-red-300' : ''}`} placeholder="Headline..." />
+                          {creative.headline.length > 255 && <p className="text-xs text-red-500 mt-0.5">Maksimal 255 karakter. Iklan akan ditolak Meta.</p>}
+                          <p className="text-xs text-stone-400 mt-0.5">Optimal ≤40 karakter — lebih dari ini kepotong di feed</p>
                         </div>
                       </div>
 
                       <div>
-                        <label className={labelCls}>Description (opsional)</label>
-                        <textarea value={creative.description} onChange={(e) => updateCreativeField(adset.id, creative.id, 'description', e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="Description..." />
+                        <div className="flex items-center justify-between">
+                          <label className={labelCls}>Description (opsional)</label>
+                          <span className={`text-xs font-mono ${
+                            creative.description.length > 255 ? 'text-red-600 font-bold' :
+                            creative.description.length > 230 ? 'text-amber-600' : 'text-stone-400'
+                          }`}>{creative.description.length}/255</span>
+                        </div>
+                        <textarea value={creative.description} onChange={(e) => updateCreativeField(adset.id, creative.id, 'description', e.target.value)} rows={2} className={`${inputCls} resize-none ${creative.description.length > 255 ? 'border-red-400 ring-red-300' : ''}`} placeholder="Description..." />
+                        {creative.description.length > 255 && <p className="text-xs text-red-500 mt-0.5">Maksimal 255 karakter</p>}
+                        <p className="text-xs text-stone-400 mt-0.5">Optimal ≤30 karakter — lebih dari ini kepotong di feed</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
