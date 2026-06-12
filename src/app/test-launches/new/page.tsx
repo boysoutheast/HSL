@@ -202,6 +202,14 @@ function parseCommaIds(value: string): string[] {
   return value.split(',').map((s) => s.trim()).filter(Boolean)
 }
 
+function formatAudienceSize(value?: number | null): string {
+  if (!value || value <= 0) return '—'
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1).replace('.', ',')} m`
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace('.', ',')} jt`
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace('.', ',')} rb`
+  return value.toLocaleString('id-ID')
+}
+
 function emptyCreative(): CreativeDraft {
   return {
     id: crypto.randomUUID(),
@@ -1583,9 +1591,9 @@ function InterestSearch({
   onAdd,
   onRemove,
 }: {
-  value: Array<{id: string; name: string}>
+  value: Array<{id: string; name: string; audienceSizeLowerBound?: number}>
   metaConnectionId: string
-  onAdd: (interest: {id: string; name: string}) => void
+  onAdd: (interest: {id: string; name: string; audienceSizeLowerBound?: number}) => void
   onRemove: (interestId: string) => void
 }) {
   const [query, setQuery] = useState('')
@@ -1620,10 +1628,14 @@ function InterestSearch({
   }, [query, metaConnectionId])
 
   const already = new Set(value.map((i) => i.id))
+  const combinedEstimate = value.reduce((sum, interest) => sum + (interest.audienceSizeLowerBound || 0), 0)
 
   return (
-    <div>
-      <label className={labelCls}>Detailed Targeting — Interests</label>
+    <div className="space-y-3 w-full">
+      <div>
+        <label className={labelCls}>Detailed Targeting — Interests</label>
+        <p className="text-xs text-stone-500">Cari interest, pilih dari list, lalu review estimasi kasar audience size di bawah.</p>
+      </div>
       <input
         type="text"
         value={query}
@@ -1634,28 +1646,35 @@ function InterestSearch({
       {searching && <p className="text-xs text-stone-400 mt-1">Mencari...</p>}
       {error && <p className="text-xs text-amber-600 mt-1">{error}</p>}
       {results.length > 0 && (
-        <div className="mt-1 border border-stone-200 rounded-lg max-h-32 overflow-y-auto">
-          {results.filter((r) => !already.has(r.id)).slice(0, 10).map((r) => (
+        <div className="mt-1 border border-stone-200 rounded-lg max-h-48 overflow-y-auto w-full">
+          {results.filter((r) => !already.has(r.id)).slice(0, 12).map((r) => (
             <button
               key={r.id}
               type="button"
-              onClick={() => { onAdd(r); setQuery(''); setResults([]) }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-violet-50 border-b border-stone-100 last:border-0"
+              onClick={() => { onAdd({ id: r.id, name: r.name, audienceSizeLowerBound: r.audience_size_lower_bound }); setQuery(''); setResults([]) }}
+              className="w-full flex items-center justify-between gap-3 text-left px-3 py-2 text-sm hover:bg-violet-50 border-b border-stone-100 last:border-0"
             >
-              <span className="font-medium">{r.name}</span>
-              {r.audience_size_lower_bound && <span className="text-xs text-stone-400 ml-2">(~{(r.audience_size_lower_bound / 1000).toFixed(0)}K)</span>}
+              <span className="font-medium text-stone-800">{r.name}</span>
+              <span className="text-xs text-stone-400 whitespace-nowrap">~{formatAudienceSize(r.audience_size_lower_bound)}</span>
             </button>
           ))}
         </div>
       )}
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {value.map((interest) => (
-            <span key={interest.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full">
-              {interest.name}
-              <button type="button" onClick={() => onRemove(interest.id)} className="text-violet-400 hover:text-violet-700">&times;</button>
-            </span>
-          ))}
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {value.map((interest) => (
+              <span key={interest.id} className="inline-flex items-center gap-1 px-2 py-1 bg-violet-100 text-violet-700 text-xs rounded-full">
+                {interest.name}
+                <span className="text-violet-500">~{formatAudienceSize(interest.audienceSizeLowerBound)}</span>
+                <button type="button" onClick={() => onRemove(interest.id)} className="text-violet-400 hover:text-violet-700">&times;</button>
+              </span>
+            ))}
+          </div>
+          <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-600">
+            <span className="font-semibold text-stone-800">Estimasi gabungan: ~{formatAudienceSize(combinedEstimate)}</span>
+            <span className="ml-2">estimasi kasar, bukan reach Meta</span>
+          </div>
         </div>
       )}
     </div>
