@@ -53,11 +53,10 @@ interface Creative {
   callToAction: string
 }
 
-interface ResolvedLocation {
-  key: string
+interface AdsetDraft {
+  id: string
   name: string
-  type: string
-  region?: string
+  dailyBudget: string
 }
 
 interface FormData {
@@ -67,8 +66,7 @@ interface FormData {
   objective: string
   dailyBudget: string
   currency: string
-  bidStrategy: string
-  bidAmount: string
+  destinationUrl: string
   launchMode: string
   sourceAdsetId: string
   notes: string
@@ -81,11 +79,10 @@ interface FormData {
   ageMin: number
   ageMax: number
   gender: 'all' | 'male' | 'female'
-  geoMode: 'indonesia' | 'ai'
-  aiQuery: string
-  aiLocations: ResolvedLocation[]
-  customAudienceIds: string[]
-  // Step 5
+  // Step 5 (ABO) or Step 4 (CBO)
+  budgetMode: 'CBO' | 'ABO'
+  adsets: AdsetDraft[]
+  // Step 5 / 6
   creatives: Creative[]
   pixelId: string
 }
@@ -103,6 +100,11 @@ const LAUNCH_MODE_OPTIONS = [
   { value: 'duplicate_winner', label: 'Duplikat Winner' },
 ]
 
+const BUDGET_MODE_OPTIONS = [
+  { value: 'CBO', label: 'CBO — Budget Campaign' },
+  { value: 'ABO', label: 'ABO — Budget per Ad Set' },
+]
+
 const CTA_OPTIONS = [
   { value: 'LEARN_MORE', label: 'Learn More' },
   { value: 'SHOP_NOW', label: 'Shop Now' },
@@ -117,30 +119,13 @@ const PIXEL_OPTIONS = [
 ]
 
 const PLACEMENT_OPTIONS = [
-  // Facebook
-  { value: 'facebook_feed', label: 'Facebook Feed', group: 'Facebook' },
-  { value: 'facebook_stories', label: 'Facebook Stories', group: 'Facebook' },
-  { value: 'facebook_reels', label: 'Facebook Reels', group: 'Facebook' },
-  { value: 'facebook_video_feeds', label: 'Facebook Video Feeds', group: 'Facebook' },
-  { value: 'facebook_marketplace', label: 'Facebook Marketplace', group: 'Facebook' },
-  { value: 'facebook_search', label: 'Facebook Search Results', group: 'Facebook' },
-  { value: 'facebook_right_hand_column', label: 'Facebook Right Column', group: 'Facebook' },
-  // Instagram
-  { value: 'instagram_feed', label: 'Instagram Feed', group: 'Instagram' },
-  { value: 'instagram_stories', label: 'Instagram Stories', group: 'Instagram' },
-  { value: 'instagram_reels', label: 'Instagram Reels', group: 'Instagram' },
-  { value: 'instagram_explore', label: 'Instagram Explore', group: 'Instagram' },
-  { value: 'instagram_explore_home', label: 'Instagram Explore Home', group: 'Instagram' },
-  { value: 'instagram_search', label: 'Instagram Search Results', group: 'Instagram' },
-  { value: 'instagram_profile_feed', label: 'Instagram Profile Feed', group: 'Instagram' },
-  // Messenger
-  { value: 'messenger_inbox', label: 'Messenger Inbox', group: 'Messenger' },
-  { value: 'messenger_stories', label: 'Messenger Stories', group: 'Messenger' },
-  // Audience Network
-  { value: 'audience_network_classic', label: 'Audience Network Native/Banner', group: 'Audience Network' },
-  { value: 'audience_network_rewarded_video', label: 'Audience Network Rewarded Video', group: 'Audience Network' },
+  { value: 'facebook_feed', label: 'Facebook Feed' },
+  { value: 'facebook_stories', label: 'Facebook Stories' },
+  { value: 'instagram_feed', label: 'Instagram Feed' },
+  { value: 'instagram_stories', label: 'Instagram Stories' },
+  { value: 'instagram_reels', label: 'Instagram Reels' },
+  { value: 'instagram_explore', label: 'Instagram Explore' },
 ]
-
 
 const GENDER_OPTIONS = [
   { value: 'all', label: 'Semua' },
@@ -148,8 +133,9 @@ const GENDER_OPTIONS = [
   { value: 'female', label: 'Perempuan' },
 ]
 
-const STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
-type Step = typeof STEPS[number]
+const CBO_STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Pixel', 'Creatives'] as const
+const ABO_STEPS = ['Basic Config', 'Page & Instagram', 'Placement', 'Audience', 'Ad Sets', 'Pixel', 'Creatives'] as const
+type Step = string
 
 const inputCls = 'w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500'
 const labelCls = 'block text-sm font-medium text-stone-700 mb-1'
@@ -159,9 +145,17 @@ function emptyCreative(): Creative {
   return { id: crypto.randomUUID(), imageUrl: '', primaryText: '', headline: '', caption: '', callToAction: 'LEARN_MORE' }
 }
 
+function emptyAdset(): AdsetDraft {
+  return { id: crypto.randomUUID(), name: '', dailyBudget: '' }
+}
+
 function formatDate(d: string | null) {
   if (!d) return '—'
   return new Date(d).toLocaleString('id-ID', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function getSteps(budgetMode: string): readonly string[] {
+  return budgetMode === 'ABO' ? ABO_STEPS : CBO_STEPS
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -174,64 +168,6 @@ export default function NewTestLaunchPage() {
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
   const [pages, setPages] = useState<Page[]>([])
   const [loadingDeps, setLoadingDeps] = useState(true)
-  const [customAudiences, setCustomAudiences] = useState<Array<{ id: string; name: string; type: string; metaAudienceId: string | null; status: string }>>([])
-  const [mediaAssets, setMediaAssets] = useState<Array<{ id: string; label: string | null; type: string; publicUrl: string | null; fileUrl: string | null; thumbnailUrl: string | null }>>([])
-  const [showMediaPicker, setShowMediaPicker] = useState<string | null>(null) // creative id yang lagi milih media
-  const [resolving, setResolving] = useState(false)
-  const [resolveError, setResolveError] = useState<string | null>(null)
-  const [unresolvedNames, setUnresolvedNames] = useState<string[]>([])
-
-  // Bid strategy options — refresh tiap ad account dipilih (permission beda-beda)
-  interface BidOption {
-    value: string
-    label: string
-    description: string
-    requiresAmount: boolean
-    amountLabel?: string
-    available: boolean
-  }
-  const [bidOptions, setBidOptions] = useState<BidOption[]>([])
-  const [capsLoading, setCapsLoading] = useState(false)
-  const [capsError, setCapsError] = useState<string | null>(null)
-
-  const handleResolveLocations = async () => {
-    if (!form.aiQuery.trim()) return
-    setResolving(true)
-    setResolveError(null)
-    setUnresolvedNames([])
-    try {
-      const res = await fetch('/api/admin/meta-tools/resolve-locations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ query: form.aiQuery.trim(), metaAccountId: form.metaConnectionId || undefined }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Resolve gagal')
-      // Merge dengan yang sudah ada, dedup by type:key
-      setForm((f) => {
-        const seen = new Set(f.aiLocations.map((l) => `${l.type}:${l.key}`))
-        const fresh = (data.resolved as ResolvedLocation[]).filter((l) => !seen.has(`${l.type}:${l.key}`))
-        return { ...f, aiLocations: [...f.aiLocations, ...fresh] }
-      })
-      setUnresolvedNames(data.unresolved ?? [])
-    } catch (err) {
-      setResolveError(err instanceof Error ? err.message : 'Resolve gagal')
-    } finally {
-      setResolving(false)
-    }
-  }
-
-  useEffect(() => {
-    fetch('/api/admin/meta-audiences', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : { audiences: [] })
-      .then(d => setCustomAudiences((d.audiences ?? []).filter((a: { status: string }) => a.status === 'READY')))
-      .catch(() => {})
-    fetch('/api/admin/media-assets?status=READY', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : { assets: [] })
-      .then(d => setMediaAssets(d.assets ?? d.mediaAssets ?? []))
-      .catch(() => {})
-  }, [])
 
   // ── Form ─────────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState<Step>('Basic Config')
@@ -242,8 +178,7 @@ export default function NewTestLaunchPage() {
     objective: 'OUTCOME_LEADS',
     dailyBudget: '',
     currency: 'IDR',
-    bidStrategy: 'HIGHEST_VOLUME',
-    bidAmount: '',
+    destinationUrl: '',
     launchMode: 'new_test',
     sourceAdsetId: '',
     notes: '',
@@ -253,37 +188,20 @@ export default function NewTestLaunchPage() {
     ageMin: 25,
     ageMax: 45,
     gender: 'all',
-    geoMode: 'indonesia',
-    aiQuery: '',
-    aiLocations: [],
-    customAudienceIds: [],
+    budgetMode: 'CBO',
+    adsets: [emptyAdset()],
     creatives: [emptyCreative()],
     pixelId: '',
   })
-
-  // Refresh opsi bid strategy tiap ad account dipilih (permission per akun beda)
-  useEffect(() => {
-    if (!form.metaAdAccountId) { setBidOptions([]); return }
-    setCapsLoading(true)
-    setCapsError(null)
-    fetch(`/api/admin/meta-tools/adaccount-capabilities?adAccountId=${form.metaAdAccountId}`, { credentials: 'include' })
-      .then(async (r) => {
-        const d = await r.json()
-        if (!r.ok) throw new Error(d.error ?? 'Gagal cek capabilities')
-        setBidOptions(d.bidStrategies ?? [])
-      })
-      .catch((err) => {
-        setCapsError(err instanceof Error ? err.message : 'Gagal cek capabilities')
-        setBidOptions([])
-      })
-      .finally(() => setCapsLoading(false))
-  }, [form.metaAdAccountId])
 
   // ── UI State ─────────────────────────────────────────────────────────────
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [selectedPage, setSelectedPage] = useState<Page | null>(null)
   const [selectedPixel, setSelectedPixel] = useState<{id: string; name: string} | null>(null)
+
+  const steps = getSteps(form.budgetMode)
+  const stepIndex = steps.indexOf(currentStep)
 
   // ── Fetch Meta Connections on mount ─────────────────────────────────────
   const fetchMetaConnections = useCallback(async () => {
@@ -375,19 +293,51 @@ export default function NewTestLaunchPage() {
     }))
   }
 
+  const addAdset = () => {
+    setForm((f) => ({ ...f, adsets: [...f.adsets, emptyAdset()] }))
+  }
+
+  const removeAdset = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.length > 1 ? f.adsets.filter((a) => a.id !== id) : f.adsets,
+    }))
+  }
+
+  const updateAdset = (id: string, field: keyof AdsetDraft, value: string) => {
+    setForm((f) => ({
+      ...f,
+      adsets: f.adsets.map((a) => (a.id === id ? { ...a, [field]: value } : a)),
+    }))
+  }
+
+  const handleBudgetModeChange = (mode: 'CBO' | 'ABO') => {
+    // Reset step to Basic Config when switching modes to avoid invalid step
+    setCurrentStep('Basic Config')
+    setForm((f) => ({
+      ...f,
+      budgetMode: mode,
+      dailyBudget: mode === 'CBO' ? f.dailyBudget : '',
+      adsets: mode === 'ABO' ? f.adsets : [emptyAdset()],
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name.trim()) { setSaveError('Nama campaign harus diisi.'); return }
-    if (form.geoMode === 'ai' && form.aiLocations.length === 0) {
-      setSaveError('Mode AI dipilih tapi belum ada lokasi ter-resolve. Resolve dulu di step Audience.'); return
-    }
-    const bidNeedsAmount = bidOptions.find((o) => o.value === form.bidStrategy)?.requiresAmount
-    if (bidNeedsAmount && (!form.bidAmount || Number(form.bidAmount) <= 0)) {
-      setSaveError(`Bid strategy ${form.bidStrategy} butuh nilai target. Isi di step Basic Config.`); return
-    }
+    if (!form.name.trim()) { setSaveError('Nama launch harus diisi.'); return }
     if (!form.metaConnectionId) { setSaveError('Pilih Meta Connection.'); return }
     if (!form.metaAdAccountId) { setSaveError('Pilih Ad Account.'); return }
-    if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
+
+    if (form.budgetMode === 'CBO') {
+      if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { setSaveError('Daily Budget harus lebih dari 0.'); return }
+    } else {
+      for (let i = 0; i < form.adsets.length; i++) {
+        const a = form.adsets[i]
+        if (!a.name.trim()) { setSaveError(`Ad Set #${i + 1}: nama harus diisi.`); return }
+        if (!a.dailyBudget || Number(a.dailyBudget) <= 0) { setSaveError(`Ad Set "${a.name}": budget harus lebih dari 0.`); return }
+      }
+    }
+
     if (form.creatives.length === 0 || !form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())) {
       setSaveError('Minimal 1 creative dengan image URL atau primary text.'); return
     }
@@ -402,16 +352,7 @@ export default function NewTestLaunchPage() {
       ageMin: form.ageMin,
       ageMax: form.ageMax,
       gender: form.gender,
-      // geoMode 'indonesia' → country ID; 'ai' → keys canonical dari Meta adgeolocation
-      locations: form.geoMode === 'indonesia'
-        ? [{ type: 'country', key: 'ID' }]
-        : form.aiLocations.map((l) => ({ type: l.type, key: l.key, name: l.name })),
-      customAudiences: form.customAudienceIds
-        .map((id) => {
-          const aud = customAudiences.find((a) => a.id === id)
-          return aud ? { id: aud.id, metaAudienceId: aud.metaAudienceId, name: aud.name } : null
-        })
-        .filter(Boolean),
+      locations: [{ type: 'country', key: 'ID' }],
     })
 
     const placementsJson = form.placementMode === 'manual' ? JSON.stringify(form.placements) : undefined
@@ -420,41 +361,65 @@ export default function NewTestLaunchPage() {
     const selectedAdAccount = adAccounts.find((a) => a.id === form.metaAdAccountId)
 
     try {
+      const body: Record<string, unknown> = {
+        budgetMode: form.budgetMode,
+        metaAccountId: form.metaConnectionId,
+        metaAdAccountId: form.metaAdAccountId,
+        name: form.name.trim(),
+        objective: form.objective,
+        currency: form.currency,
+        destinationUrl: form.destinationUrl.trim() || undefined,
+        launchMode: form.launchMode,
+        sourceAdsetId: form.launchMode === 'duplicate_winner' ? form.sourceAdsetId.trim() || undefined : undefined,
+        notes: form.notes.trim() || undefined,
+        pageId: selectedPage?.pageId || undefined,
+        igAccountId: selectedPage?.igBusinessAccountId || undefined,
+        pixelId: form.pixelId || undefined,
+        placementMode: form.placementMode,
+        placementsJson: placementsJson !== undefined ? placementsJson : undefined,
+        audienceJson,
+      }
+
+      if (form.budgetMode === 'CBO') {
+        body.dailyBudget = Number(form.dailyBudget)
+        body.creatives = form.creatives
+          .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+          .map((c, i) => ({
+            creativeUrl: c.imageUrl.trim() || undefined,
+            primaryText: c.primaryText.trim() || undefined,
+            headline: c.headline.trim() || undefined,
+            captionText: c.caption.trim() || undefined,
+            callToAction: c.callToAction || undefined,
+            sortOrder: i,
+          }))
+      } else {
+        // ABO: group creatives by adset
+        const adsetsBody: Array<Record<string, unknown>> = []
+        for (let i = 0; i < form.adsets.length; i++) {
+          const a = form.adsets[i]
+          adsetsBody.push({
+            name: a.name.trim(),
+            dailyBudget: Number(a.dailyBudget),
+            creatives: form.creatives
+              .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
+              .map((c, ci) => ({
+                creativeUrl: c.imageUrl.trim() || undefined,
+                primaryText: c.primaryText.trim() || undefined,
+                headline: c.headline.trim() || undefined,
+                captionText: c.caption.trim() || undefined,
+                callToAction: c.callToAction || undefined,
+                sortOrder: ci,
+              })),
+          })
+        }
+        body.adsets = adsetsBody
+      }
+
       const res = await fetch('/api/admin/test-launches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          metaAccountId: form.metaConnectionId,
-          metaAdAccountId: form.metaAdAccountId, // internal UUID
-          name: form.name.trim(),
-          objective: form.objective,
-          dailyBudget: Number(form.dailyBudget),
-          currency: form.currency,
-          bidStrategy: {
-            strategy: form.bidStrategy,
-            ...(form.bidAmount ? { amount: Number(form.bidAmount) } : {}),
-          },
-          launchMode: form.launchMode,
-          sourceAdsetId: form.launchMode === 'duplicate_winner' ? form.sourceAdsetId.trim() || undefined : undefined,
-          notes: form.notes.trim() || undefined,
-          pageId: selectedPage?.pageId || undefined,
-          igAccountId: selectedPage?.igBusinessAccountId || undefined,
-          pixelId: form.pixelId || undefined,
-          placementMode: form.placementMode,
-          placementsJson: placementsJson !== undefined ? placementsJson : undefined,
-          audienceJson,
-          creatives: form.creatives
-            .filter((c) => c.imageUrl.trim() || c.primaryText.trim())
-            .map((c, i) => ({
-              creativeUrl: c.imageUrl.trim() || undefined,
-              primaryText: c.primaryText.trim() || undefined,
-              headline: c.headline.trim() || undefined,
-              captionText: c.caption.trim() || undefined,
-              callToAction: c.callToAction || undefined,
-              sortOrder: i,
-            })),
-        }),
+        body: JSON.stringify(body),
       })
 
       const text = await res.text()
@@ -470,11 +435,22 @@ export default function NewTestLaunchPage() {
     }
   }
 
-  const stepIndex = STEPS.indexOf(currentStep)
+  const canAdvanceFromStep1 = () => {
+    if (!form.metaConnectionId) return false
+    if (!form.name.trim()) return false
+    if (form.budgetMode === 'CBO') return !!form.dailyBudget && Number(form.dailyBudget) > 0
+    return true
+  }
 
-  const canAdvanceFromStep1 = form.metaConnectionId && form.name.trim() && form.dailyBudget && Number(form.dailyBudget) > 0
   const canAdvanceFromStep2 = !!selectedPage
+
+  const canAdvanceFromAdSets = form.budgetMode !== 'ABO' || form.adsets.every((a) => a.name.trim() && a.dailyBudget && Number(a.dailyBudget) > 0)
+
   const hasValidCreative = form.creatives.some((c) => c.imageUrl.trim() || c.primaryText.trim())
+
+  const adsetTotalBudget = form.budgetMode === 'ABO'
+    ? form.adsets.reduce((sum, a) => sum + (Number(a.dailyBudget) || 0), 0)
+    : 0
 
   if (loadingDeps) {
     return <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Memuat...</div>
@@ -494,12 +470,11 @@ export default function NewTestLaunchPage() {
       {/* Step Indicator */}
       <div className="mb-6">
         <div className="flex items-center gap-1">
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div key={step} className="flex items-center gap-1 flex-1">
               <button
                 type="button"
                 onClick={() => {
-                  // Can navigate to previous steps freely, or step 2+ if prerequisites met
                   if (i === 0) setCurrentStep(step)
                   else if (i <= stepIndex) setCurrentStep(step)
                 }}
@@ -516,7 +491,7 @@ export default function NewTestLaunchPage() {
                 </span>
                 <span className="hidden sm:inline">{step}</span>
               </button>
-              {i < STEPS.length - 1 && <div className="w-2" />}
+              {i < steps.length - 1 && <div className="w-2" />}
             </div>
           ))}
         </div>
@@ -529,7 +504,7 @@ export default function NewTestLaunchPage() {
           <div className="space-y-5">
             <PageInfo
               purpose="Informasi dasar test launch. Meta Connection menentukan akun Meta Ads yang akan digunakan."
-              inputs={['Nama campaign', 'Meta Connection', 'Ad Account', 'Objective', 'Daily Budget', 'Launch Mode', 'Catatan']}
+              inputs={['Nama launch', 'Meta Connection', 'Ad Account', 'Objective', 'Daily Budget', 'Launch Mode', 'Catatan']}
               wiring={[
                 { label: '→ Ad Accounts', desc: 'diambil dari Meta Connection yang dipilih' },
                 { label: '→ Step 2', desc: 'pilih Facebook Page & Instagram' },
@@ -541,7 +516,7 @@ export default function NewTestLaunchPage() {
 
               {/* Name */}
               <div>
-                <label className={labelCls}>Nama Campaign <span className="text-red-500">*</span></label>
+                <label className={labelCls}>Nama Launch <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={form.name}
@@ -550,7 +525,33 @@ export default function NewTestLaunchPage() {
                   className={inputCls}
                   placeholder="Summer Sale Campaign Q3"
                 />
-                <p className="text-xs text-stone-400 mt-1">Nama ini dipakai langsung sebagai nama campaign di Meta Ads Manager.</p>
+              </div>
+
+              {/* Budget Mode */}
+              <div>
+                <label className={labelCls}>Budget Mode</label>
+                <div className="flex gap-3">
+                  {BUDGET_MODE_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors text-sm ${
+                        form.budgetMode === opt.value
+                          ? 'border-violet-500 bg-violet-50 text-violet-700'
+                          : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="budgetMode"
+                        value={opt.value}
+                        checked={form.budgetMode === opt.value}
+                        onChange={() => handleBudgetModeChange(opt.value as 'CBO' | 'ABO')}
+                        className="sr-only"
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Meta Connection */}
@@ -623,75 +624,43 @@ export default function NewTestLaunchPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>
-                    Daily Budget (IDR) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={form.dailyBudget}
-                    onChange={(e) => setForm((f) => ({ ...f, dailyBudget: e.target.value }))}
-                    required
-                    min="1000"
-                    step="1000"
-                    className={inputCls}
-                    placeholder="50000"
-                  />
+                  {form.budgetMode === 'CBO' ? (
+                    <>
+                      <label className={labelCls}>
+                        Daily Budget (IDR) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={form.dailyBudget}
+                        onChange={(e) => setForm((f) => ({ ...f, dailyBudget: e.target.value }))}
+                        required
+                        min="1000"
+                        step="1000"
+                        className={inputCls}
+                        placeholder="50000"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className={labelCls}>Daily Budget (IDR)</label>
+                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>
+                        Budget diisi per ad set
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Bid Strategy — opsi di-fetch dari permission ad account */}
+              {/* Destination URL */}
               <div>
-                <label className={labelCls}>Bid Strategy</label>
-                {!form.metaAdAccountId ? (
-                  <p className="text-xs text-stone-400 px-1">Pilih Ad Account dulu — opsi bid menyesuaikan permission akun.</p>
-                ) : capsLoading ? (
-                  <p className="text-xs text-stone-400 px-1">Cek permission akun ke Meta...</p>
-                ) : capsError ? (
-                  <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
-                    ⚠️ {capsError} — pakai Highest Volume (default).
-                  </div>
-                ) : (
-                  <div className="space-y-2 mt-1">
-                    {bidOptions.map((opt) => (
-                      <label
-                        key={opt.value}
-                        className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
-                          !opt.available
-                            ? 'border-stone-100 bg-stone-50 opacity-50 cursor-not-allowed'
-                            : form.bidStrategy === opt.value
-                            ? 'border-violet-500 bg-violet-50'
-                            : 'border-stone-200 hover:bg-stone-50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="bidStrategy"
-                          value={opt.value}
-                          checked={form.bidStrategy === opt.value}
-                          disabled={!opt.available}
-                          onChange={() => setForm((f) => ({ ...f, bidStrategy: opt.value, bidAmount: '' }))}
-                          className="mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-stone-800">{opt.label}</p>
-                          <p className="text-xs text-stone-500">{opt.description}</p>
-                          {opt.requiresAmount && form.bidStrategy === opt.value && opt.available && (
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={form.bidAmount}
-                              onChange={(e) => setForm((f) => ({ ...f, bidAmount: e.target.value }))}
-                              onClick={(e) => e.preventDefault()}
-                              placeholder={opt.amountLabel}
-                              className={`${inputCls} mt-2 max-w-xs`}
-                            />
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
+                <label className={labelCls}>Destination URL</label>
+                <input
+                  type="url"
+                  value={form.destinationUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, destinationUrl: e.target.value }))}
+                  className={inputCls}
+                  placeholder="https://..."
+                />
               </div>
 
               {/* Launch Mode */}
@@ -760,8 +729,10 @@ export default function NewTestLaunchPage() {
                 type="button"
                 onClick={() => {
                   if (!form.metaConnectionId) { alert('Pilih Meta Connection terlebih dahulu.'); return }
-                  if (!form.name.trim()) { alert('Nama campaign harus diisi.'); return }
-                  if (!form.dailyBudget || Number(form.dailyBudget) <= 0) { alert('Daily Budget harus lebih dari 0.'); return }
+                  if (!form.name.trim()) { alert('Nama launch harus diisi.'); return }
+                  if (form.budgetMode === 'CBO' && (!form.dailyBudget || Number(form.dailyBudget) <= 0)) {
+                    alert('Daily Budget harus lebih dari 0.'); return
+                  }
                   handleStep2Continue()
                 }}
                 className="btn-primary"
@@ -1073,155 +1044,18 @@ export default function NewTestLaunchPage() {
                 </div>
               </div>
 
-              {/* Location — Indonesia atau AI resolver */}
+              {/* Location */}
               <div>
-                <label className={labelCls}>Location <span className="text-red-500">*</span></label>
-                <div className="grid grid-cols-2 gap-3 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, geoMode: 'indonesia' }))}
-                    className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                      form.geoMode === 'indonesia'
-                        ? 'border-violet-500 bg-violet-50'
-                        : 'border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <p className="font-semibold text-stone-800 text-sm">🇮🇩 Indonesia</p>
-                    <p className="text-xs text-stone-500 mt-0.5">Seluruh Indonesia (country-level)</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, geoMode: 'ai' }))}
-                    className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                      form.geoMode === 'ai'
-                        ? 'border-violet-500 bg-violet-50'
-                        : 'border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <p className="font-semibold text-stone-800 text-sm">✨ Use AI</p>
-                    <p className="text-xs text-stone-500 mt-0.5">Sebut kota/provinsi/daerah bebas — AI yang setup</p>
-                  </button>
+                <label className={labelCls}>Location</label>
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-stone-50 rounded-lg border border-stone-200 text-sm">
+                  <svg className="w-4 h-4 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  <span className="text-stone-700">Indonesia</span>
+                  <span className="text-xs text-stone-400 ml-auto">Country · ID</span>
                 </div>
-
-                {form.geoMode === 'ai' && (
-                  <div className="mt-3 space-y-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={form.aiQuery}
-                        onChange={(e) => setForm((f) => ({ ...f, aiQuery: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleResolveLocations() } }}
-                        placeholder="contoh: seluruh jawa, medan, padang, palembang"
-                        className={inputCls}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleResolveLocations}
-                        disabled={resolving || !form.aiQuery.trim()}
-                        className="btn-primary shrink-0"
-                      >
-                        {resolving ? 'AI bekerja...' : '✨ Resolve'}
-                      </button>
-                    </div>
-                    <p className="text-xs text-stone-400">
-                      AI mengubah teks jadi daftar lokasi, lalu tiap lokasi divalidasi ke database resmi Meta —
-                      yang masuk targeting dijamin match dengan Ads Manager.
-                    </p>
-
-                    {resolveError && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2">
-                        ⚠️ {resolveError}
-                      </div>
-                    )}
-                    {unresolvedNames.length > 0 && (
-                      <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
-                        Tidak ketemu di Meta: {unresolvedNames.join(', ')}
-                      </div>
-                    )}
-
-                    {form.aiLocations.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-semibold text-stone-500">
-                            {form.aiLocations.length} lokasi terverifikasi Meta ✅
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => setForm((f) => ({ ...f, aiLocations: [] }))}
-                            className="text-xs text-stone-400 hover:text-red-500"
-                          >
-                            Hapus semua
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-2 bg-stone-50 rounded-lg border border-stone-200">
-                          {form.aiLocations.map((loc) => (
-                            <span
-                              key={`${loc.type}:${loc.key}`}
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-stone-200 rounded-lg text-xs"
-                            >
-                              <span className="text-[9px] font-bold uppercase text-violet-500">{loc.type === 'region' ? 'PROV' : 'KOTA'}</span>
-                              <span className="text-stone-700">{loc.name}</span>
-                              {loc.region && loc.type === 'city' && (
-                                <span className="text-stone-400">· {loc.region}</span>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => setForm((f) => ({
-                                  ...f,
-                                  aiLocations: f.aiLocations.filter((l) => !(l.key === loc.key && l.type === loc.type)),
-                                }))}
-                                className="text-stone-300 hover:text-red-500 ml-0.5"
-                              >
-                                ✕
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {form.aiLocations.length === 0 && (
-                      <p className="text-xs text-red-500">Belum ada lokasi — ketik daerah lalu klik Resolve.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Custom Audiences */}
-              <div>
-                <label className={labelCls}>Custom Audiences (opsional)</label>
-                {customAudiences.length === 0 ? (
-                  <p className="text-xs text-stone-400 px-1">
-                    Belum ada custom audience yang READY. Buat dulu di menu Audiences — atau lanjut tanpa custom audience (broad targeting).
-                  </p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {customAudiences.map((aud) => {
-                      const selected = form.customAudienceIds.includes(aud.id)
-                      return (
-                        <label
-                          key={aud.id}
-                          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
-                            selected ? 'border-violet-500 bg-violet-50' : 'border-stone-200 hover:bg-stone-50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => setForm((f) => ({
-                              ...f,
-                              customAudienceIds: selected
-                                ? f.customAudienceIds.filter((id) => id !== aud.id)
-                                : [...f.customAudienceIds, aud.id],
-                            }))}
-                            className="rounded"
-                          />
-                          <span className="font-medium text-stone-700">{aud.name}</span>
-                          <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded ml-auto">{aud.type}</span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                )}
+                <p className="text-xs text-stone-400 mt-1">Location tingkat negara saja untuk saat ini.</p>
               </div>
 
               {/* Summary */}
@@ -1230,10 +1064,7 @@ export default function NewTestLaunchPage() {
                 <p className="text-stone-800">
                   Umur <strong>{form.ageMin}–{form.ageMax}</strong> ·
                   Gender <strong>{GENDER_OPTIONS.find((g) => g.value === form.gender)?.label}</strong> ·
-                  Lokasi <strong>{form.geoMode === 'indonesia' ? 'Indonesia' : `${form.aiLocations.length} lokasi (AI)`}</strong>
-                  {form.customAudienceIds.length > 0 && (
-                    <> · Custom Audience <strong>{form.customAudienceIds.length}</strong></>
-                  )}
+                  Lokasi <strong>Indonesia</strong>
                 </p>
               </div>
             </div>
@@ -1245,10 +1076,115 @@ export default function NewTestLaunchPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const next = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
+                  const next = form.budgetMode === 'ABO' ? 'Ad Sets' : form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
                   setCurrentStep(next)
                 }}
                 className="btn-primary"
+              >
+                {form.budgetMode === 'ABO' ? 'Lanjut ke Ad Sets →' : form.objective === 'OUTCOME_SALES' ? 'Lanjut ke Pixel →' : 'Lanjut ke Creatives →'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 5: Ad Sets (ABO only) ────────────────────────────────── */}
+        {currentStep === 'Ad Sets' && (
+          <div className="space-y-5">
+            <PageInfo
+              purpose="Buat ad set dengan budget masing-masing. Minimal 1 ad set. Setiap ad set bisa punya nama dan budget sendiri."
+              inputs={['Nama Ad Set', 'Daily Budget']}
+              wiring={[
+                { label: '→ Ad Set Cards', desc: 'tambah/edit ad set' },
+                { label: '→ Step 6', desc: 'tambahkan creatives untuk iklan' },
+              ]}
+            />
+
+            <div className={sectionCls}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Ad Sets</h2>
+                <button
+                  type="button"
+                  onClick={addAdset}
+                  className="btn-primary btn-sm"
+                >
+                  + Tambah Ad Set
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {form.adsets.map((adset, idx) => (
+                  <div key={adset.id} className="border border-stone-200 rounded-lg p-4 space-y-3 bg-stone-50">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-stone-500 uppercase">Ad Set #{idx + 1}</p>
+                      {form.adsets.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAdset(adset.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        >
+                          Hapus
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Nama Ad Set</label>
+                      <input
+                        type="text"
+                        value={adset.name}
+                        onChange={(e) => updateAdset(adset.id, 'name', e.target.value)}
+                        className={inputCls}
+                        placeholder="Ad Set Jawa, Ad Set Sumatera..."
+                      />
+                    </div>
+
+                    {/* Daily Budget */}
+                    <div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Daily Budget (IDR)</label>
+                      <input
+                        type="number"
+                        value={adset.dailyBudget}
+                        onChange={(e) => updateAdset(adset.id, 'dailyBudget', e.target.value)}
+                        min="1000"
+                        step="1000"
+                        className={inputCls}
+                        placeholder="30000"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Budget */}
+              <div className="bg-violet-50 rounded-lg p-4 text-sm">
+                <p className="text-xs font-semibold text-violet-600 uppercase mb-1">Total Budget</p>
+                <p className="text-lg font-bold text-violet-700">Rp{adsetTotalBudget.toLocaleString('id-ID')} /hari</p>
+                {form.adsets.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">Minimal 1 ad set diperlukan.</p>
+                )}
+              </div>
+
+              {form.adsets.some((a) => !a.name.trim() || !a.dailyBudget || Number(a.dailyBudget) <= 0) && (
+                <p className="text-xs text-amber-600">Lengkapi semua ad set (nama + budget {'>'} 0).</p>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-3 pb-6">
+              <button type="button" onClick={() => setCurrentStep('Audience')} className="btn-ghost">
+                ← Kembali
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!canAdvanceFromAdSets) {
+                    alert('Lengkapi semua ad set (nama + budget > 0).')
+                    return
+                  }
+                  const next = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Creatives'
+                  setCurrentStep(next)
+                }}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {form.objective === 'OUTCOME_SALES' ? 'Lanjut ke Pixel →' : 'Lanjut ke Creatives →'}
               </button>
@@ -1256,7 +1192,7 @@ export default function NewTestLaunchPage() {
           </div>
         )}
 
-        {/* ── STEP 4: Pixel (OUTCOME_SALES only) ───────────────────────────── */}
+        {/* ── STEP Pixel ────────────────────────────────────────────────── */}
         {currentStep === 'Pixel' && (
           <div className="space-y-5">
             <PageInfo
@@ -1312,7 +1248,10 @@ export default function NewTestLaunchPage() {
             </div>
 
             <div className="flex justify-between gap-3 pb-6">
-              <button type="button" onClick={() => setCurrentStep('Audience')} className="btn-ghost">
+              <button type="button" onClick={() => {
+                const prev = form.budgetMode === 'ABO' ? 'Ad Sets' : 'Audience'
+                setCurrentStep(prev)
+              }} className="btn-ghost">
                 ← Kembali
               </button>
               <button
@@ -1330,7 +1269,7 @@ export default function NewTestLaunchPage() {
           </div>
         )}
 
-        {/* ── STEP 5: Creatives ─────────────────────────────────────────── */}
+        {/* ── STEP Creatives ─────────────────────────────────────────────── */}
         {currentStep === 'Creatives' && (
           <div className="space-y-5">
             <PageInfo
@@ -1374,108 +1313,41 @@ export default function NewTestLaunchPage() {
                       )}
                     </div>
 
-                    {/* Image/Video — dari Media Library atau URL */}
+                    {/* Image URL */}
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-medium text-stone-600">Media (Image/Video URL)</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowMediaPicker(showMediaPicker === creative.id ? null : creative.id)}
-                          className="text-xs text-violet-600 hover:underline font-medium"
-                        >
-                          {showMediaPicker === creative.id ? 'Tutup library' : '📁 Pilih dari Media Library'}
-                        </button>
-                      </div>
+                      <label className="block text-xs font-medium text-stone-600 mb-1">Image URL</label>
                       <input
                         type="url"
                         value={creative.imageUrl}
                         onChange={(e) => updateCreative(creative.id, 'imageUrl', e.target.value)}
                         className={inputCls}
-                        placeholder="https://... atau pilih dari library"
+                        placeholder="https://..."
                       />
-                      {showMediaPicker === creative.id && (
-                        <div className="mt-2 border border-stone-200 rounded-lg p-3 bg-white max-h-64 overflow-y-auto">
-                          {mediaAssets.length === 0 ? (
-                            <p className="text-xs text-stone-400 text-center py-4">
-                              Media library kosong. Upload dulu di menu Media Library.
-                            </p>
-                          ) : (
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                              {mediaAssets.map((asset) => {
-                                const url = asset.publicUrl ?? asset.fileUrl
-                                if (!url) return null
-                                const isSelected = creative.imageUrl === url
-                                return (
-                                  <button
-                                    key={asset.id}
-                                    type="button"
-                                    onClick={() => {
-                                      updateCreative(creative.id, 'imageUrl', url)
-                                      setShowMediaPicker(null)
-                                    }}
-                                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                                      isSelected ? 'border-violet-500 ring-2 ring-violet-300' : 'border-stone-200 hover:border-violet-300'
-                                    }`}
-                                    title={asset.label ?? asset.type}
-                                  >
-                                    {asset.type === 'VIDEO' ? (
-                                      <div className="w-full h-full bg-stone-100 flex flex-col items-center justify-center">
-                                        {asset.thumbnailUrl ? (
-                                          // eslint-disable-next-line @next/next/no-img-element
-                                          <img src={asset.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                                        ) : (
-                                          <span className="text-lg">🎬</span>
-                                        )}
-                                        <span className="absolute bottom-0.5 right-0.5 text-[8px] bg-black/60 text-white px-1 rounded">VID</span>
-                                      </div>
-                                    ) : (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={url} alt={asset.label ?? ''} className="w-full h-full object-cover" />
-                                    )}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
 
-                    {/* Primary Text — max 125 char */}
+                    {/* Primary Text */}
                     <div>
                       <label className="block text-xs font-medium text-stone-600 mb-1">Primary Text (Ad Body)</label>
-                      <div className="relative">
-                        <textarea
-                          value={creative.primaryText}
-                          onChange={(e) => {
-                            if (e.target.value.length <= 125) updateCreative(creative.id, 'primaryText', e.target.value)
-                          }}
-                          rows={3}
-                          maxLength={125}
-                          className={`${inputCls} resize-none`}
-                          placeholder="Isi deskripsi utama iklan..."
-                        />
-                        <span className="absolute bottom-2 right-2 text-[10px] text-stone-400">{creative.primaryText.length}/125</span>
-                      </div>
+                      <textarea
+                        value={creative.primaryText}
+                        onChange={(e) => updateCreative(creative.id, 'primaryText', e.target.value)}
+                        rows={3}
+                        className={`${inputCls} resize-none`}
+                        placeholder="Isi deskripsi utama iklan..."
+                      />
                     </div>
 
-                    {/* Headline — max 255 char & CTA */}
+                    {/* Headline & CTA */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-stone-600 mb-1">Headline</label>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            value={creative.headline}
-                            onChange={(e) => {
-                              if (e.target.value.length <= 255) updateCreative(creative.id, 'headline', e.target.value)
-                            }}
-                            maxLength={255}
-                            className={inputCls + ' pr-14'}
-                            placeholder="Judul iklan..."
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-stone-400">{creative.headline.length}/255</span>
-                        </div>
+                        <input
+                          type="text"
+                          value={creative.headline}
+                          onChange={(e) => updateCreative(creative.id, 'headline', e.target.value)}
+                          className={inputCls}
+                          placeholder="Judul iklan..."
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-stone-600 mb-1">Call to Action</label>
@@ -1527,8 +1399,14 @@ export default function NewTestLaunchPage() {
                 <p className="font-medium text-stone-900">{form.name || '—'}</p>
                 <p className="text-stone-500">Objective</p>
                 <p className="text-stone-900">{OBJECTIVE_OPTIONS.find((o) => o.value === form.objective)?.label}</p>
+                <p className="text-stone-500">Budget Mode</p>
+                <p className="text-stone-900">{form.budgetMode === 'ABO' ? 'ABO' : 'CBO'}</p>
                 <p className="text-stone-500">Daily Budget</p>
-                <p className="text-stone-900">Rp{Number(form.dailyBudget).toLocaleString('id-ID') || '—'}</p>
+                <p className="text-stone-900">
+                  {form.budgetMode === 'CBO'
+                    ? `Rp${Number(form.dailyBudget).toLocaleString('id-ID') || '—'}`
+                    : `Rp${adsetTotalBudget.toLocaleString('id-ID')} (${form.adsets.length} ad set${form.adsets.length > 1 ? 's' : ''})`}
+                </p>
                 <p className="text-stone-500">Launch Mode</p>
                 <p className="text-stone-900">{LAUNCH_MODE_OPTIONS.find((l) => l.value === form.launchMode)?.label}</p>
                 <p className="text-stone-500">Placement</p>
@@ -1542,7 +1420,7 @@ export default function NewTestLaunchPage() {
 
             <div className="flex justify-between gap-3 pb-6">
               <button type="button" onClick={() => {
-                const prev = form.objective === 'OUTCOME_SALES' ? 'Pixel' : 'Audience'
+                const prev = form.objective === 'OUTCOME_SALES' ? 'Pixel' : form.budgetMode === 'ABO' ? 'Ad Sets' : 'Audience'
                 setCurrentStep(prev)
               }} className="btn-ghost">
                 ← Kembali
