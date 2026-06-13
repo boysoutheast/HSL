@@ -25,6 +25,7 @@ export const dynamic = 'force-dynamic'
  * The key is returned ONCE in plaintext. Only a hash is stored.
  * If the user already has an active agent, returns the existing agent info
  * (without re-showing the key).
+ * Balance is read from AdminUser.creditBalance (single source of truth).
  */
 export async function POST(req: NextRequest) {
   const sessionUser = await getSessionUser(req)
@@ -35,12 +36,22 @@ export async function POST(req: NextRequest) {
   // Check if user already has an API key
   const existing = await prisma.hermesAgent.findFirst({
     where: { ownerUserId: sessionUser.id, status: 'active' },
-    select: { id: true, name: true, creditBalance: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      createdAt: true,
+      ownerUser: { select: { creditBalance: true } },
+    },
   })
 
   if (existing) {
     return NextResponse.json({
-      agent: existing,
+      agent: {
+        id: existing.id,
+        name: existing.name,
+        creditBalance: existing.ownerUser?.creditBalance ?? 0,
+        createdAt: existing.createdAt,
+      },
       message: 'API key already exists. Cannot re-show key for security.',
     })
   }
@@ -51,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.adminUser.findUnique({
     where: { id: sessionUser.id },
-    select: { name: true, email: true },
+    select: { name: true, email: true, creditBalance: true },
   })
 
   const agent = await prisma.hermesAgent.create({
@@ -61,7 +72,6 @@ export async function POST(req: NextRequest) {
       ownerUserId: sessionUser.id,
       status: 'active',
       isWorker: false,
-      creditBalance: 0,
     },
   })
 
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
       agent: {
         id: agent.id,
         name: agent.name,
-        creditBalance: agent.creditBalance,
+        creditBalance: user?.creditBalance ?? 0,
         createdAt: agent.createdAt,
       },
       apiKey: rawKey,
@@ -82,7 +92,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * GET /api/admin/profile/api-key
- * Return current agent info (no secret key).
+ * Return current agent info + credit balance from AdminUser.
  */
 export async function GET(req: NextRequest) {
   const sessionUser = await getSessionUser(req)
@@ -95,9 +105,9 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       name: true,
-      creditBalance: true,
       createdAt: true,
       status: true,
+      ownerUser: { select: { creditBalance: true } },
     },
   })
 
@@ -105,5 +115,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ agent: null })
   }
 
-  return NextResponse.json({ agent })
+  return NextResponse.json({
+    agent: {
+      id: agent.id,
+      name: agent.name,
+      creditBalance: agent.ownerUser?.creditBalance ?? 0,
+      createdAt: agent.createdAt,
+      status: agent.status,
+    },
+  })
 }

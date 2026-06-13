@@ -1,21 +1,28 @@
 /**
- * HSL Credit Engine
- * Atomic credit operations for Hermes agent billing.
+ * HSL Credit Engine v2
+ * Atomic credit operations for customer billing.
  *
- * Constants:
+ * CONSTANTS:
  *   VIDEO_10S_COST = 1300 credits per 10s video generation
+ *   TRIAL_GRANT    = 1300  credits on new signup
  *
- * Operations:
- *   debitCredits(userId, amount, reason, refId?) — atomic check-and-debit
- *   refundCredits(generatedMediaId) — idempotent refund on generation failure
- *   grantCredits(userId, amount, reason) — admin grant (positive amount)
- *   getBalance(userId) — current credit balance
- *   getTransactionHistory(userId, limit?, offset?) — paginated transaction log
+ * BALANCE HOLDER:
+ *   AdminUser.creditBalance (single source of truth).
+ *   agent.ownerUserId maps agent → user; balance always on user.
+ *   User can generate even without an agent (studio UI fixed).
+ *
+ * CONCURRENCY:
+ *   Debit uses atomic conditional decrement:
+ *     updateMany where { id, creditBalance >= amount } data { decrement }
+ *     if result.count !== 1 → throw InsufficientCreditsError
+ *   No read-then-write gap. No CAS that silently fails.
+ *   Transaction order: decrement FIRST, then create CreditTransaction.
  */
 
 import { prisma } from '@/lib/prisma'
 
 export const VIDEO_10S_COST = 1300
+export const TRIAL_GRANT = 1300
 
 export class InsufficientCreditsError extends Error {
   balance: number
@@ -30,16 +37,16 @@ export class InsufficientCreditsError extends Error {
 }
 
 /**
- * Debit credits from a user's balance.
- * Atomic: reads current balance, verifies sufficiency, updates within same DB transaction.
+ * Debit credits from a user's AdminUser.creditBalance.
  *
- * @param userId — AdminUser id
- * @param amount — positive integer to debit (e.g. VIDEO_10S_COST)
- * @param reason — "video_generation" etc
- * @param refId — optional generatedMediaId for traceability
- * @param idempotencyKey — unique key to prevent double-debit
- * @returns { balanceAfter, transactionId }
- * @throws InsufficientCreditsError if balance < amount
+ * CONCURRENCY-SAFE: single atomic UPDATE with WHERE creditBalance >= amount.
+ * Count check prevents silent CAS failure (double-spend).
+ *
+ * @param userId   — AdminUser id
+ * @param amount   — positive integer (e.g. VIDEO_10S_COST)
+ * @param reason   — "video_generation" etc
+ * @param refId    — optional generatedMediaId for traceability
+ * @param idempotencyKey — unique key to prevent double-debit across retries
  */
 export async function debitCredits(
   userId: string,
@@ -48,9 +55,9 @@ export async function debitCredits(
   refId?: string,
   idempotencyKey?: string,
 ): Promise<{ balanceAfter: number; transactionId: string }> {
-  const key = idempotencyKey ?? `debit_${userId}_${refId ?? Date.now()}`
+  const key = idempotencyKey ?? `debit_${userId}_${refId ?? crypto.randomUUID()}`
 
-  // Check idempotency first — if transaction already exists, return existing result
+  // Check idempotency first
   const existing = await prisma.creditTransaction.findUnique({
     where: { idempotencyKey: key },
   })
@@ -58,55 +65,53 @@ export async function debitCredits(
     return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
   }
 
-  // Atomic debit within a safe aggregate
-  const agent = await prisma.hermesAgent.findFirst({
-    where: { ownerUserId: userId, status: 'active' },
-    select: { id: true, creditBalance: true },
+  // Atomic conditional decrement — single SQL UPDATE, no read-then-write
+  const result = await prisma.adminUser.updateMany({
+    where: { id: userId, creditBalance: { gte: amount } },
+    data: { creditBalance: { decrement: amount } },
   })
 
-  if (!agent) {
-    // User may not have an agent yet — use raw AdminUser balance fallback?
-    // For debit, we require an active agent with creditBalance.
-    throw new Error(`No active HermesAgent found for userId ${userId}`)
+  if (result.count !== 1) {
+    // Balance insufficient — fetch current for error detail
+    const user = await prisma.adminUser.findUnique({
+      where: { id: userId },
+      select: { creditBalance: true },
+    })
+    throw new InsufficientCreditsError(user?.creditBalance ?? 0, amount)
   }
 
-  const currentBalance = agent.creditBalance
-  if (currentBalance < amount) {
-    throw new InsufficientCreditsError(currentBalance, amount)
-  }
+  // Read the new balance AFTER the atomic decrement
+  const updated = await prisma.adminUser.findUnique({
+    where: { id: userId },
+    select: { creditBalance: true },
+  })
 
-  const balanceAfter = currentBalance - amount
+  const balanceAfter = updated?.creditBalance ?? 0
 
-  // Atomic: update balance + create transaction in one shot
-  // Using interactive transaction for atomicity
-  const [transaction] = await prisma.$transaction([
-    prisma.creditTransaction.create({
-      data: {
-        userId,
-        amount: -amount,
-        reason,
-        refId: refId ?? null,
-        refType: refId ? 'generated_media' : null,
-        balanceAfter,
-        idempotencyKey: key,
-      },
-    }),
-    prisma.hermesAgent.updateMany({
-      where: { ownerUserId: userId, status: 'active', creditBalance: currentBalance },
-      data: { creditBalance: balanceAfter },
-    }),
-  ])
+  // Create transaction record — distinct from the decrement for audit clarity
+  const transaction = await prisma.creditTransaction.create({
+    data: {
+      userId,
+      amount: -amount,
+      reason,
+      refId: refId ?? null,
+      refType: refId ? 'generated_media' : null,
+      balanceAfter,
+      idempotencyKey: key,
+    },
+  })
 
   return { balanceAfter, transactionId: transaction.id }
 }
 
 /**
  * Refund credits for a failed generation.
- * Idempotent: checks GeneratedMedia.refundedAt before refunding.
- * Only processes if refundedAt is null.
+ * IDEMPOTENT: checks GeneratedMedia.refundedAt + CreditTransaction idempotencyKey.
+ *
+ * CONCURRENCY-SAFE: atomic increment (no read-then-write), count check.
+ * Order: increment FIRST, then mark refundedAt + create txn.
  *
  * @param generatedMediaId — id of the GeneratedMedia row
- * @returns { refunded: boolean, balanceAfter?, transactionId? }
  */
 export async function refundCredits(generatedMediaId: string): Promise<{
   refunded: boolean
@@ -120,7 +125,6 @@ export async function refundCredits(generatedMediaId: string): Promise<{
       userId: true,
       creditsCost: true,
       refundedAt: true,
-      status: true,
     },
   })
 
@@ -128,28 +132,47 @@ export async function refundCredits(generatedMediaId: string): Promise<{
     return { refunded: false }
   }
 
-  // Already refunded — idempotent
+  // Already refunded
   if (media.refundedAt) {
     return { refunded: false }
   }
 
+  // Idempotency check via CreditTransaction
   const idempotencyKey = `refund_${generatedMediaId}`
-  const existing = await prisma.creditTransaction.findUnique({
+  const existingTxn = await prisma.creditTransaction.findUnique({
     where: { idempotencyKey },
   })
-  if (existing) {
-    return { refunded: true, balanceAfter: existing.balanceAfter, transactionId: existing.id }
+  if (existingTxn) {
+    return {
+      refunded: true,
+      balanceAfter: existingTxn.balanceAfter,
+      transactionId: existingTxn.id,
+    }
   }
 
-  const agent = await prisma.hermesAgent.findFirst({
-    where: { ownerUserId: media.userId, status: 'active' },
-    select: { creditBalance: true },
+  // Atomic increment — unconditional, count check for sanity
+  const result = await prisma.adminUser.updateMany({
+    where: { id: media.userId },
+    data: { creditBalance: { increment: media.creditsCost } },
   })
 
-  const currentBalance = agent?.creditBalance ?? 0
-  const balanceAfter = currentBalance + media.creditsCost
+  if (result.count !== 1) {
+    // User deleted? Still mark refunded to prevent infinite retries
+    await prisma.generatedMedia.update({
+      where: { id: generatedMediaId },
+      data: { refundedAt: new Date() },
+    })
+    return { refunded: false }
+  }
 
-  const [transaction] = await prisma.$transaction([
+  const updated = await prisma.adminUser.findUnique({
+    where: { id: media.userId },
+    select: { creditBalance: true },
+  })
+  const balanceAfter = updated?.creditBalance ?? 0
+
+  // Mark refunded + create transaction (no $transaction needed — increment is already done)
+  const [transaction] = await Promise.all([
     prisma.creditTransaction.create({
       data: {
         userId: media.userId,
@@ -165,27 +188,20 @@ export async function refundCredits(generatedMediaId: string): Promise<{
       where: { id: generatedMediaId },
       data: { refundedAt: new Date() },
     }),
-    ...(agent
-      ? [
-          prisma.hermesAgent.updateMany({
-            where: { ownerUserId: media.userId, status: 'active' },
-            data: { creditBalance: balanceAfter },
-          }),
-        ]
-      : []),
   ])
 
   return { refunded: true, balanceAfter, transactionId: transaction.id }
 }
 
 /**
- * Grant credits to a user (admin action or trial signup).
+ * Grant credits to a user (admin or trial signup).
+ *
+ * CONCURRENCY-SAFE: atomic increment.
  *
  * @param userId — AdminUser id
- * @param amount — positive integer (e.g. 1300 for trial)
+ * @param amount — positive integer (e.g. TRIAL_GRANT)
  * @param reason — "trial_grant" | "admin_grant"
  * @param idempotencyKey — optional unique key
- * @returns { balanceAfter, transactionId }
  */
 export async function grantCredits(
   userId: string,
@@ -193,54 +209,55 @@ export async function grantCredits(
   reason: string,
   idempotencyKey?: string,
 ): Promise<{ balanceAfter: number; transactionId: string }> {
-  const key = idempotencyKey ?? `grant_${userId}_${Date.now()}`
+  const key = idempotencyKey ?? `grant_${userId}_${crypto.randomUUID()}`
 
+  // Idempotency check
   const existing = await prisma.creditTransaction.findUnique({
-    where: { idempotencyKey },
+    where: { idempotencyKey: key },
   })
   if (existing) {
     return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
   }
 
-  const agent = await prisma.hermesAgent.findFirst({
-    where: { ownerUserId: userId, status: 'active' },
-    select: { id: true, creditBalance: true },
+  // Atomic increment
+  const result = await prisma.adminUser.updateMany({
+    where: { id: userId },
+    data: { creditBalance: { increment: amount } },
   })
 
-  if (!agent) {
-    throw new Error(`No active HermesAgent found for userId ${userId}`)
+  if (result.count !== 1) {
+    throw new Error(`AdminUser ${userId} not found`)
   }
 
-  const balanceAfter = agent.creditBalance + amount
+  const updated = await prisma.adminUser.findUnique({
+    where: { id: userId },
+    select: { creditBalance: true },
+  })
+  const balanceAfter = updated?.creditBalance ?? amount
 
-  const [transaction] = await prisma.$transaction([
-    prisma.creditTransaction.create({
-      data: {
-        userId,
-        amount,
-        reason,
-        balanceAfter,
-        idempotencyKey: key,
-      },
-    }),
-    prisma.hermesAgent.updateMany({
-      where: { ownerUserId: userId, status: 'active' },
-      data: { creditBalance: balanceAfter },
-    }),
-  ])
+  const transaction = await prisma.creditTransaction.create({
+    data: {
+      userId,
+      amount,
+      reason,
+      balanceAfter,
+      idempotencyKey: key,
+    },
+  })
 
   return { balanceAfter, transactionId: transaction.id }
 }
 
 /**
  * Get current credit balance for a user.
+ * Reads from AdminUser.creditBalance.
  */
 export async function getBalance(userId: string): Promise<number> {
-  const agent = await prisma.hermesAgent.findFirst({
-    where: { ownerUserId: userId, status: 'active' },
+  const user = await prisma.adminUser.findUnique({
+    where: { id: userId },
     select: { creditBalance: true },
   })
-  return agent?.creditBalance ?? 0
+  return user?.creditBalance ?? 0
 }
 
 /**
