@@ -1352,3 +1352,35 @@ model CreditTransaction {
   @@map("credit_transactions")
 }
 
+model ConversationThread {
+  id                String   @id @default(cuid())
+  subjectType       String   @map("subject_type")
+  subjectId         String?  @map("subject_id")
+  status            String   @default("open") @map("status")
+  autoContinueCount Int      @default(0) @map("auto_continue_count")
+  maxAutoContinue   Int      @default(5) @map("max_auto_continue")
+  telegramChatId    String?  @map("telegram_chat_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  messages ThreadMessage[]
+
+  @@map("conversation_threads")
+}
+
+model ThreadMessage {
+  id           String   @id @default(cuid())
+  threadId     String   @map("thread_id")
+  role         String   @map("role")
+  kind         String   @default("text") @map("kind")
+  content      String   @map("content")
+  metadataJson String?  @map("metadata_json")
+  eventId      String?  @unique @map("event_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  thread ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("thread_messages")
+}
+
