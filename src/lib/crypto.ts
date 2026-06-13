@@ -1,7 +1,13 @@
 import crypto from 'crypto'
 
 const ALGO = 'aes-256-gcm'
-const RAW_KEY = process.env.ENCRYPTION_KEY ?? 'hsl-dev-key-not-for-production-change-me'
+const DEV_FALLBACK_KEY = 'hsl-dev-key-not-for-production-change-me'
+const RAW_KEY = process.env.ENCRYPTION_KEY ?? DEV_FALLBACK_KEY
+
+if (process.env.NODE_ENV === 'production' && RAW_KEY === DEV_FALLBACK_KEY) {
+  throw new Error('ENCRYPTION_KEY wajib diset di production. Refusing to use insecure dev fallback key.')
+}
+
 const KEY = crypto.createHash('sha256').update(RAW_KEY).digest()
 
 export function encode(plaintext: string): string {

@@ -414,6 +414,7 @@ model MetaAccount {
   testLaunches TestLaunch[]
 
   @@index([userId])
+  @@index([userId, status])
   @@map("meta_accounts")
 }
 
