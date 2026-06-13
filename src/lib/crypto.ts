@@ -2,18 +2,23 @@ import crypto from 'crypto'
 
 const ALGO = 'aes-256-gcm'
 const DEV_FALLBACK_KEY = 'hsl-dev-key-not-for-production-change-me'
-const RAW_KEY = process.env.ENCRYPTION_KEY ?? DEV_FALLBACK_KEY
 
-if (process.env.NODE_ENV === 'production' && RAW_KEY === DEV_FALLBACK_KEY) {
-  throw new Error('ENCRYPTION_KEY wajib diset di production. Refusing to use insecure dev fallback key.')
+// Lazy guard: throw only when crypto is ACTUALLY used without a real key in
+// production — NOT at module import. Module-level throw broke `next build`
+// page-data collection and would crash every crypto-importing route at boot.
+// Build/import stays safe; the fail-loud fires at the real encrypt/decrypt call.
+function getKey(): Buffer {
+  const raw = process.env.ENCRYPTION_KEY ?? DEV_FALLBACK_KEY
+  if (process.env.NODE_ENV === 'production' && raw === DEV_FALLBACK_KEY) {
+    throw new Error('ENCRYPTION_KEY wajib diset di production. Refusing to use insecure dev fallback key.')
+  }
+  return crypto.createHash('sha256').update(raw).digest()
 }
-
-const KEY = crypto.createHash('sha256').update(RAW_KEY).digest()
 
 export function encode(plaintext: string): string {
   if (!plaintext) return ''
   const iv = crypto.randomBytes(12)
-  const cipher = crypto.createCipheriv(ALGO, KEY, iv)
+  const cipher = crypto.createCipheriv(ALGO, getKey(), iv)
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
   const tag = cipher.getAuthTag()
   return Buffer.concat([iv, tag, encrypted]).toString('base64')
@@ -25,7 +30,7 @@ export function decode(encoded: string): string {
   const iv = raw.subarray(0, 12)
   const tag = raw.subarray(12, 28)
   const encrypted = raw.subarray(28)
-  const decipher = crypto.createDecipheriv(ALGO, KEY, iv)
+  const decipher = crypto.createDecipheriv(ALGO, getKey(), iv)
   decipher.setAuthTag(tag)
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8')
 }
