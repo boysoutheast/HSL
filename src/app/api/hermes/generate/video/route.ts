@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
-import { debitCredits, InsufficientCreditsError, VIDEO_10S_COST } from '@/lib/credits'
+import { debitCredits, InsufficientCreditsError, getGenerationCost } from '@/lib/credits'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/hermes/generate/video — submit a video generation job
-// Body: { prompt*, photoReferenceIds[1-5], instagramAccountId? }
-// Charges credits from agent.ownerUserId. Returns 402 if insufficient.
+// Body: { prompt*, orientation?, resolution?, durationSeconds?, photoReferenceIds[0-5], instagramAccountId? }
+// Valid orientations: portrait, landscape, square, vertical, wide
+// Valid resolutions: SD, HD
+// Valid durations: 6, 10
+// Cost computed server-side — client cannot override.
+// Returns 402 if insufficient credits.
 export async function POST(req: NextRequest) {
   const token = extractBearerToken(req.headers.get('authorization'))
   if (!token) {
@@ -24,8 +28,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No billing owner for this agent' }, { status: 403 })
   }
 
+  const VALID_ORIENTATIONS = ['portrait', 'landscape', 'square', 'vertical', 'wide']
+  const VALID_RESOLUTIONS = ['SD', 'HD']
+  const VALID_DURATIONS = [6, 10]
+
   let body: {
     prompt: string
+    orientation?: string
+    resolution?: string
+    durationSeconds?: number
     photoReferenceIds?: string[]
     instagramAccountId?: string
   }
@@ -39,6 +50,13 @@ export async function POST(req: NextRequest) {
   if (!body.prompt?.trim()) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   }
+
+  const orientation = VALID_ORIENTATIONS.includes(body.orientation ?? '') ? body.orientation! : 'portrait'
+  const resolution = VALID_RESOLUTIONS.includes(body.resolution ?? '') ? body.resolution! : 'SD'
+  const durationSeconds = VALID_DURATIONS.includes(body.durationSeconds ?? 0) ? body.durationSeconds! : 10
+
+  // Cost computed server-side — client-supplied values ignored
+  const creditsCost = getGenerationCost(resolution, durationSeconds)
 
   const photoRefIds = Array.isArray(body.photoReferenceIds)
     ? body.photoReferenceIds.slice(0, 5)
@@ -86,7 +104,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await debitCredits(
       agent.ownerUserId,
-      VIDEO_10S_COST,
+      creditsCost,
       'video_generation',
       generatedMediaId,
       `gen_${generatedMediaId}`,
@@ -110,7 +128,10 @@ export async function POST(req: NextRequest) {
       prompt: body.prompt.trim(),
       instagramAccountId: body.instagramAccountId ?? null,
       mediaType: 'VIDEO',
-      creditsCost: VIDEO_10S_COST,
+      creditsCost,
+      orientation,
+      resolution,
+      durationSeconds,
       status: 'queued',
     },
   })
@@ -134,6 +155,9 @@ export async function POST(req: NextRequest) {
       payloadJson: JSON.stringify({
         generatedMediaId,
         prompt: body.prompt.trim(),
+        orientation,
+        resolution,
+        durationSeconds,
         photoReferenceIds: photoRefIds,
         instagramAccountId: body.instagramAccountId ?? null,
         userId: agent.ownerUserId,
@@ -154,7 +178,7 @@ export async function POST(req: NextRequest) {
     {
       id: generatedMediaId,
       status: 'queued',
-      creditsCost: VIDEO_10S_COST,
+      creditsCost,
       balanceRemaining: balanceAfter,
     },
     { status: 201 },

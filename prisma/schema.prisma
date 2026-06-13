@@ -1306,6 +1306,8 @@ model GeneratedMedia {
   videoUrl           String?   @map("video_url")
   thumbnailUrl       String?   @map("thumbnail_url")
   durationSeconds    Int       @default(10) @map("duration_seconds")
+  orientation        String    @default("portrait") @map("orientation")
+  resolution         String    @default("SD") @map("resolution")
   refundedAt         DateTime? @map("refunded_at")
   rawWebhookJson     String?   @map("raw_webhook_json")
   rawHistoryJson     String?   @map("raw_history_json")

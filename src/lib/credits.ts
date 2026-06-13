@@ -20,8 +20,19 @@
 
 import { prisma } from '@/lib/prisma'
 
-export const VIDEO_10S_COST = 1300
+export const VIDEO_10S_COST = 1300  // legacy — replaced by getGenerationCost()
 export const TRIAL_GRANT = 1300
+
+// Cost matrix — server-side only, client cannot override
+export const SD_6S_COST = 1000
+export const SD_10S_COST = 1300
+export const HD_MULTIPLIER = 2
+
+export function getGenerationCost(resolution: string, durationSeconds: number): number {
+  const baseCost = durationSeconds <= 6 ? SD_6S_COST : SD_10S_COST
+  const multiplier = resolution === 'HD' ? HD_MULTIPLIER : 1
+  return baseCost * multiplier
+}
 
 export class InsufficientCreditsError extends Error {
   balance: number
