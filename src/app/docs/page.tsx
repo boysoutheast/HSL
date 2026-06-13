@@ -1,32 +1,238 @@
 'use client'
 
-import { useState } from 'react'
-
-const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
-
-type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'video' | 'capi' | 'admin'
-
-function Code({ children }: { children: string }) {
+export default function DocsPage() {
   return (
-    <pre className="bg-stone-900 text-stone-100 text-xs rounded-xl p-4 overflow-x-auto whitespace-pre-wrap leading-relaxed">
-      {children}
-    </pre>
-  )
-}
+    <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, sans-serif', lineHeight: 1.7, color: '#1a1a1a' }}>
+      <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>HSL Media API</h1>
+      <p style={{ color: '#666', marginBottom: 40 }}>
+        Generate video content programmatically. Simple REST API with credit-based billing.
+      </p>
 
-function Endpoint({ method, path, desc }: { method: string; path: string; desc: string }) {
-  const colors: Record<string, string> = {
-    GET: 'bg-emerald-100 text-emerald-700',
-    POST: 'bg-blue-100 text-blue-700',
-    PATCH: 'bg-amber-100 text-amber-700',
-    DELETE: 'bg-red-100 text-red-700',
-  }
-  return (
-    <div className="flex items-start gap-2 py-1.5">
-      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${colors[method] ?? 'bg-stone-100'}`}>{method}</span>
-      <div className="min-w-0">
-        <code className="text-xs font-mono text-stone-800 break-all">{path}</code>
-        <p className="text-xs text-stone-500">{desc}</p>
+      {/* Authentication */}
+      <Section title="Authentication">
+        <p>All API requests require an API key passed as a Bearer token:</p>
+        <CodeBlock>{`Authorization: Bearer hs_your_api_key_here`}</CodeBlock>
+        <p>
+          Generate your API key from the <a href="/studio" style={{ color: '#2563eb' }}>Studio</a> page or Settings → Profile.
+          Keys are shown <strong>once</strong> — store them securely.
+        </p>
+      </Section>
+
+      {/* Video Generation */}
+      <Section title="Video Generation">
+        <Endpoint method="POST" path="/api/hermes/generate/video" />
+
+        <p style={{ marginTop: 12 }}>Submit a video generation job. Credits are debited immediately.</p>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Request Body</h4>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Field</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Type</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Required</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>prompt</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>string</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>✓</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Description of the video to generate</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>photoReferenceIds</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>string[]</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}></td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Up to 5 reference photo IDs</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>instagramAccountId</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>string</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}></td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Target Instagram account</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Example Request</h4>
+        <CodeBlock>{`curl -X POST https://api.example.com/api/hermes/generate/video \\
+  -H "Authorization: Bearer hs_your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"prompt": "A skincare product showcase with smooth transitions"}'`}</CodeBlock>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Response (201 Created)</h4>
+        <CodeBlock lang="json">{`{
+  "id": "clx123abc",
+  "status": "queued",
+  "creditsCost": 1300,
+  "balanceRemaining": 8700
+}`}</CodeBlock>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Error Responses</h4>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Status</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>401</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Missing or invalid API key</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>402</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Insufficient credits — returns <code>balance</code> and <code>required</code></td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>403</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>No billing owner or resource not in scope</td>
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Check Status */}
+      <Section title="Check Generation Status">
+        <Endpoint method="GET" path="/api/hermes/generated-media/:id" />
+
+        <p style={{ marginTop: 12 }}>Poll the status and result of a video generation job.</p>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Response (200 OK)</h4>
+        <CodeBlock lang="json">{`{
+  "id": "clx123abc",
+  "status": "completed",
+  "prompt": "A skincare product showcase...",
+  "mediaType": "VIDEO",
+  "creditsCost": 1300,
+  "videoUrl": "https://cdn.example.com/media/clx123abc.mp4",
+  "thumbnailUrl": "https://cdn.example.com/media/clx123abc.jpg",
+  "durationSeconds": 10,
+  "errorMessage": null,
+  "refundedAt": null,
+  "createdAt": "2026-06-13T10:30:00.000Z",
+  "completedAt": "2026-06-13T10:31:15.000Z",
+  "inputs": []
+}`}</CodeBlock>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Status Values</h4>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>queued</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Waiting for a worker to pick up</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>processing</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Worker is generating</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>completed</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Generation succeeded — videoUrl is available</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>failed</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Generation failed — credits refunded (refundedAt is set)</td>
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Credits */}
+      <Section title="Credits & Billing">
+        <Endpoint method="GET" path="/api/hermes/credits" />
+
+        <p style={{ marginTop: 12 }}>
+          Check your credit balance and transaction history.
+          Video generation costs <strong>1,300 credits</strong> per 10-second video.
+        </p>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Response (200 OK)</h4>
+        <CodeBlock lang="json">{`{
+  "balance": 8700,
+  "transactions": [
+    {
+      "id": "ctx456def",
+      "amount": -1300,
+      "reason": "video_generation",
+      "refId": "clx123abc",
+      "refType": "generated_media",
+      "balanceAfter": 8700,
+      "createdAt": "2026-06-13T10:30:00.000Z"
+    }
+  ],
+  "total": 12,
+  "limit": 20,
+  "offset": 0
+}`}</CodeBlock>
+
+        <h4 style={{ fontSize: 14, fontWeight: 600, margin: '16px 0 8px' }}>Query Parameters</h4>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Parameter</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Default</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Max</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>limit</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>20</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>100</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Transactions per page</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>offset</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>0</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>-</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Pagination offset</td>
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Image Generation (Coming Soon) */}
+      <Section title="Image Generation">
+        <Endpoint method="POST" path="/api/hermes/generate/image" />
+
+        <div style={{ marginTop: 12, padding: '12px 16px', background: '#fef3c7', borderRadius: 8, border: '1px solid #fcd34d' }}>
+          <strong>Coming Soon · 501</strong><br />
+          Image generation is planned but not yet available. Use <code>mediaType</code> filtering on the credits endpoint to prepare.
+        </div>
+      </Section>
+
+      {/* Rate Limits */}
+      <Section title="Rate Limits">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e5e5e5' }}>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Tier</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Requests</th>
+              <th style={{ textAlign: 'left', padding: '8px 12px' }}>Window</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Free</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>30</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>per minute</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>Generate</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>5</td>
+              <td style={{ padding: '8px 12px', fontSize: 12 }}>per minute</td>
+            </tr>
+          </tbody>
+        </table>
+      </Section>
+
+      <div style={{ marginTop: 60, paddingTop: 20, borderTop: '1px solid #e5e5e5', fontSize: 12, color: '#999' }}>
+        Questions? Contact support or visit the <a href="/studio" style={{ color: '#2563eb' }}>Studio</a>.
       </div>
     </div>
   )
@@ -34,351 +240,49 @@ function Endpoint({ method, path, desc }: { method: string; path: string; desc: 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
-      <h2 className="text-sm font-bold text-stone-900 mb-3">{title}</h2>
+    <section style={{ marginBottom: 40 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, paddingBottom: 8, borderBottom: '2px solid #e5e5e5' }}>
+        {title}
+      </h2>
       {children}
+    </section>
+  )
+}
+
+function Endpoint({ method, path }: { method: string; path: string }) {
+  const color = method === 'GET' ? '#16a34a' : method === 'POST' ? '#2563eb' : '#9333ea'
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+      <span style={{
+        padding: '2px 8px',
+        background: color,
+        color: '#fff',
+        borderRadius: 4,
+        fontSize: 11,
+        fontWeight: 700,
+        fontFamily: 'monospace',
+        textTransform: 'uppercase',
+      }}>
+        {method}
+      </span>
+      <code style={{ fontSize: 14, color: '#333' }}>{path}</code>
     </div>
   )
 }
 
-export default function DocsPage() {
-  const [tab, setTab] = useState<TabKey>('auth')
-
-  const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: 'auth', label: '🔑 Auth' },
-    { key: 'library', label: '📚 Library' },
-    { key: 'tasks', label: '⚡ Task Queue' },
-    { key: 'content', label: '🛍️ Content' },
-    { key: 'video', label: '🎬 Video Gen' },
-    { key: 'capi', label: '📡 CAPI' },
-    { key: 'admin', label: '🛠 Admin API' },
-  ]
-
+function CodeBlock({ children, lang }: { children: string; lang?: string }) {
   return (
-    <div className="min-h-screen bg-stone-50">
-      <div className="bg-white border-b border-stone-200 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm font-bold">H</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-stone-900">HSL API — Dokumentasi</h1>
-            <p className="text-xs text-stone-500">{BASE}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="flex flex-wrap gap-1 bg-white border border-stone-200 rounded-xl p-1 mb-6">
-          {tabs.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-1 min-w-[100px] py-2 text-sm font-medium rounded-lg transition-colors ${
-                tab === key ? 'bg-violet-600 text-white' : 'text-stone-600 hover:bg-stone-50'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── AUTH ── */}
-        {tab === 'auth' && (
-          <>
-            <Section title="Hermes Agent — Bearer Token">
-              <p className="text-sm text-stone-600 mb-3">
-                Semua endpoint <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> pakai
-                API key agent (dibuat admin di <strong>System → Agents</strong>). Kirim sebagai Bearer token.
-              </p>
-              <Code>{`curl -H "Authorization: Bearer hsl_xxxxxxxx" \\
-  ${BASE}/api/hermes/library`}</Code>
-              <p className="text-xs text-stone-500 mt-2">
-                Response selalu difilter berdasarkan assignment agent (akun, character, topic, product, CEP).
-              </p>
-            </Section>
-
-            <Section title="Admin Dashboard — Session Cookie">
-              <p className="text-sm text-stone-600 mb-2">
-                Login via email+password atau <strong>Sign in with Google</strong>. Session cookie 8 jam.
-              </p>
-              <Endpoint method="POST" path="/api/admin/auth/login" desc="Body: { email, password }" />
-              <Endpoint method="GET" path="/api/admin/auth/google" desc="Redirect ke Google OAuth (perlu GOOGLE_CLIENT_ID/SECRET)" />
-              <Endpoint method="POST" path="/api/admin/auth/logout" desc="Hapus session" />
-            </Section>
-
-            <Section title="Meta — Facebook Login for Business">
-              <p className="text-sm text-stone-600 mb-2">
-                Connect akun Meta tanpa paste token manual. Klik <strong>Connect with Facebook</strong> di
-                <strong>System → Connections</strong> → OAuth → token long-lived (60 hari) disimpan terenkripsi +
-                auto-sync Business, Ad Accounts, Pages, IG.
-              </p>
-              <Endpoint method="GET" path="/api/admin/meta-oauth/start" desc="Mulai OAuth flow (perlu META_APP_ID/SECRET, opsional META_LOGIN_CONFIG_ID)" />
-              <Endpoint method="GET" path="/api/admin/meta-oauth/callback" desc="Callback — jangan dipanggil manual" />
-            </Section>
-
-            <Section title="Cron — x-cron-secret">
-              <Code>{`curl -X POST -H "x-cron-secret: $CRON_SECRET" \\
-  ${BASE}/api/cron/media-rules`}</Code>
-              <div className="mt-2">
-                <Endpoint method="POST" path="/api/cron/posting-monitor" desc="Evaluasi posting monitor" />
-                <Endpoint method="POST" path="/api/cron/media-rules" desc="Evaluasi media auto top-up rules (jalankan tiap jam)" />
-                <Endpoint method="POST" path="/api/cron/fetch-metrics" desc="Tarik metrics" />
-                <Endpoint method="POST" path="/api/cron/cleanup-locks" desc="Bersihkan lock expired" />
-              </div>
-            </Section>
-          </>
-        )}
-
-        {/* ── LIBRARY ── */}
-        {tab === 'library' && (
-          <>
-            <Section title="GET /api/hermes/library">
-              <p className="text-sm text-stone-600 mb-3">
-                Satu endpoint untuk semua data assigned. <strong>Persona (character) sudah embedded langsung di setiap instagramAccount</strong> — tidak ada array <code className="text-xs bg-stone-100 px-1 rounded">characters[]</code> terpisah. Termasuk <code className="text-xs bg-stone-100 px-1 rounded">photoReferences[]</code> per akun.
-              </p>
-              <Code>{`{
-  "agent": { "id": "...", "name": "Worker A" },
-  "library": {
-    "instagramAccounts": [
-      {
-        "id": "acc_xxx",
-        "username": "budi_official",
-        "accountName": "Budi Official",
-        "gender": "F",
-        "status": "active",
-        "purpose": "cpas",
-        "characterDescription": "Ibu rumah tangga 30an, bercerita produk kecantikan",
-        "behavior": "Santai, hangat, relatable. Sesekali pakai bahasa Jawa.",
-        "speakingStyle": "Casual, sering pakai kata 'aku', kalimat pendek",
-        "expressionStyle": "Ekspresif, sering tersenyum, kontak mata ke kamera",
-        "movementStyle": "Gerakan natural, tidak kaku, kadang sambil masak",
-        "forbiddenRules": "Jangan sebut kompetitor. Jangan klaim medis.",
-        "photoCount": 3,
-        "photoReferences": [
-          {
-            "id": "...", "fileUrl": "https://ai.boytenggara.com/api/photos/serve/...",
-            "thumbnailUrl": "https://...", "label": "Foto referensi 1",
-            "category": "portrait", "status": "active"
-          }
-        ]
-      }
-    ],
-    "topics": [...],
-    "ceps": [...],
-    "products": [{
-      "id": "...", "name": "...",
-      "landingPages": [
-        { "url": "https://...", "variant": "A", "type": "shopee", "isDefault": true }
-      ]
-    }],
-    "mediaAssets": [
-      { "type": "VIDEO", "fileUrl": "https://...", "duration": 23.5, "aspectRatio": "9:16" }
-    ]
-  }
-}`}</Code>
-            </Section>
-
-            <Section title="Endpoint Library Lain">
-              <Endpoint method="GET" path="/api/hermes/ready-upload" desc="Akun berikutnya yang siap di-post (polling lama, masih jalan)" />
-              <Endpoint method="GET" path="/api/hermes/photos" desc="Foto referensi assigned" />
-              <Endpoint method="GET" path="/api/hermes/ceps" desc="CEP assigned" />
-            </Section>
-          </>
-        )}
-
-        {/* ── TASKS ── */}
-        {tab === 'tasks' && (
-          <>
-            <Section title="Task Queue — Generate Konten On-Demand">
-              <p className="text-sm text-stone-600 mb-3">
-                Media Rules / admin bikin task (GENERATE_VIDEO, GENERATE_PHOTO, CAPTION_ONLY, dll).
-                Worker claim → kerjakan → complete dengan hasil. Claim bersifat atomic — dua worker
-                tidak bisa dapat task yang sama.
-              </p>
-              <Endpoint method="GET" path="/api/hermes/tasks?types=GENERATE_VIDEO,GENERATE_PHOTO" desc="List task pending (max 10)" />
-              <Endpoint method="POST" path="/api/hermes/tasks" desc="Claim task. Body: { taskId?, types? } — kosongkan untuk auto-pick" />
-              <Endpoint method="POST" path="/api/hermes/tasks/[id]" desc="Update lifecycle. Body: { action: 'complete'|'fail', ... }" />
-            </Section>
-
-            <Section title="Contoh: Claim → Complete">
-              <Code>{`# 1. Claim
-curl -X POST -H "Authorization: Bearer hsl_xxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"types":["GENERATE_VIDEO"]}' \\
-  ${BASE}/api/hermes/tasks
-
-# → { "task": { "id": "task_123", "type": "GENERATE_VIDEO", "payload": {...} } }
-
-# 2. Selesai — daftarkan hasil video sebagai MediaAsset
-curl -X POST -H "Authorization: Bearer hsl_xxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "action": "complete",
-    "result": { "note": "video 23s, hook variant B" },
-    "mediaAsset": {
-      "fileUrl": "https://cdn.example.com/video.mp4",
-      "type": "VIDEO",
-      "mimeType": "video/mp4",
-      "fileSizeBytes": 1048576,
-      "duration": 23.5,
-      "aspectRatio": "9:16",
-      "label": "Auto top-up video"
-    }
-  }' \\
-  ${BASE}/api/hermes/tasks/task_123
-
-# Gagal? action: "fail" + error → auto-retry sampai maxAttempts, lalu dead letter.`}</Code>
-            </Section>
-          </>
-        )}
-
-        {/* ── CONTENT ── */}
-        {tab === 'content' && (
-          <>
-            <Section title="Submit Hasil Konten">
-              <Endpoint method="POST" path="/api/hermes/content-log" desc="Log hasil generate/post. Body: accountId, characterId?, topicId?, cepId?, contentType, caption, mediaUrl, postUrl..." />
-              <Endpoint method="POST" path="/api/hermes/cep-feedback" desc="Submit CEP baru untuk review admin. Body: { topicId, cepText, painPoint?, angle? }" />
-            </Section>
-            <Section title="Produk & Landing Pages">
-              <p className="text-sm text-stone-600 mb-2">
-                Produk di library response include <code className="text-xs bg-stone-100 px-1 rounded">landingPages[]</code> —
-                pakai LP dengan <code className="text-xs bg-stone-100 px-1 rounded">isDefault: true</code> untuk CTA,
-                atau variant lain kalau task payload menyebut variant tertentu (A/B testing).
-              </p>
-            </Section>
-          </>
-        )}
-
-        {/* ── VIDEO GEN ── */}
-        {tab === 'video' && (
-          <>
-            <Section title="Video Generation (GeminiGen / grok-video)">
-              <p className="text-sm text-stone-600 mb-3">
-                Generate video dari foto referensi via GeminiGen. Konstrain fixed:
-                model <code className="text-xs bg-stone-100 px-1 rounded">grok-video</code>,
-                durasi 10 detik, aspect ratio portrait. Hasil datang async lewat webhook,
-                lalu di-rehost ke storage HSL (<code className="text-xs bg-stone-100 px-1 rounded">/data/photos/generated/</code>).
-              </p>
-              <p className="text-sm text-stone-600 mb-2">Alur status:</p>
-              <Code>{`queued → processing → ready_for_rehost → completed
-                                  └→ failed (error di-surface, bukan silent)`}</Code>
-            </Section>
-
-            <Section title="Admin — Buat & Lihat Job">
-              <p className="text-xs text-stone-500 mb-3">UI: <strong>Media → Generate</strong> — form prompt + foto referensi (1-5) + IG account (opsional), job list dengan polling 12 detik, video preview + download.</p>
-              <Endpoint method="POST" path="/api/admin/generate/video" desc="Buat job. Body: { prompt*, instagramAccountId?, photoReferenceIds[] (1-5) }. Bikin generated_media + worker_task GENERATE_VIDEO. Return 201 { id, status, workerTaskId }" />
-              <Endpoint method="GET" path="/api/admin/generate/video" desc="List job. Query: ?status=&instagramAccountId=&limit=20&offset=0. Include inputs (photoReference fileUrl + label)" />
-              <Endpoint method="GET" path="/api/admin/generate/video/[id]" desc="Detail satu job + inputs" />
-            </Section>
-
-            <Section title="Hermes Agent — Ambil Hasil">
-              <Endpoint method="GET" path="/api/hermes/generated-media" desc="List video jadi (Bearer token). Query: ?status=completed&limit=20. Difilter assignment — agent cuma lihat media dari IG account yang di-assign ke dia." />
-              <p className="text-xs text-stone-500 mt-2">
-                Response item: <code className="text-xs bg-stone-100 px-1 rounded">id, status, videoUrl, thumbnailUrl, prompt, durationSeconds, instagramAccountId, completedAt, inputs[]</code>
-              </p>
-            </Section>
-
-            <Section title="Webhook — Penerima Hasil GeminiGen">
-              <Endpoint method="POST" path="/api/webhooks/geminigen" desc="Dipanggil GeminiGen saat video jadi. Auth: header x-geminigen-secret === GEMINIGEN_WEBHOOK_SECRET (mismatch/unset → 401). uuid tak dikenal → 200 (skip). status completed → bikin worker_task REHOST_VIDEO." />
-              <p className="text-xs text-stone-500 mt-2">
-                Set URL ini di GeminiGen dashboard:
-                <code className="text-xs bg-stone-100 px-1 rounded ml-1">{BASE}/api/webhooks/geminigen</code>
-              </p>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
-                ⚠️ Butuh 3 env di Railway: <code className="text-xs bg-white px-1 rounded">GEMINIGEN_API_KEY</code>,
-                <code className="text-xs bg-white px-1 rounded mx-1">GEMINIGEN_WEBHOOK_SECRET</code>,
-                <code className="text-xs bg-white px-1 rounded">GEMINIGEN_DASHBOARD_TOKEN</code> +
-                worker handler GENERATE_VIDEO/REHOST_VIDEO. Sebelum lengkap, job masuk antrian tapi belum jadi video.
-              </p>
-            </Section>
-          </>
-        )}
-
-        {/* ── CAPI ── */}
-        {tab === 'capi' && (
-          <>
-            <Section title="CAPI Proxy — Conversion Tracking Tanpa Expose Token">
-              <p className="text-sm text-stone-600 mb-3">
-                Endpoint publik. Admin buat config di dashboard (pixel ID + access token, disimpan
-                terenkripsi) → dapat <code className="text-xs bg-stone-100 px-1 rounded">configId</code>.
-                Landing page tinggal POST event ke sini, HSL forward ke Meta CAPI (v25.0).
-                Rate limit 120 req/menit. Event invalid di-skip, bukan reject semua.
-              </p>
-              <Endpoint method="POST" path="/api/capi/events" desc="Body: { configId, events: [...] } — max 100 event/request" />
-              <Code>{`curl -X POST -H "Content-Type: application/json" \\
-  -d '{
-    "configId": "clxxx...",
-    "events": [{
-      "event_name": "Purchase",
-      "action_source": "website",
-      "event_source_url": "https://lp.example.com/produk",
-      "user_data": { "em": ["<sha256 email>"] },
-      "custom_data": { "value": 150000, "currency": "IDR" }
-    }]
-  }' \\
-  ${BASE}/api/capi/events`}</Code>
-              <p className="text-xs text-stone-500 mt-2">
-                Kalau config terhubung ke Landing Page, conversion otomatis tercatat di LP stats.
-              </p>
-            </Section>
-          </>
-        )}
-
-        {/* ── ADMIN ── */}
-        {tab === 'admin' && (
-          <>
-            <Section title="Catatan">
-              <p className="text-sm text-stone-600">
-                Semua endpoint admin pakai session cookie (login dulu). Data difilter per ownership —
-                admin lihat semua, user lihat miliknya sendiri.
-              </p>
-            </Section>
-            <Section title="Landing Pages & Stats">
-              <Endpoint method="GET" path="/api/admin/products/[id]/landing-pages" desc="List LP per produk" />
-              <Endpoint method="POST" path="/api/admin/products/[id]/landing-pages" desc="Tambah LP variant" />
-              <Endpoint method="PATCH" path="/api/admin/landing-pages/[lpId]" desc="Update / set default / pause" />
-              <Endpoint method="GET" path="/api/admin/landing-pages/[lpId]/stats" desc="Stats + summary (clicks, conversions, CR, revenue)" />
-              <Endpoint method="POST" path="/api/admin/landing-pages/[lpId]/stats" desc="Record stat manual" />
-            </Section>
-            <Section title="Automation Rules">
-              <Endpoint method="GET" path="/api/admin/automation-rules" desc="List rules" />
-              <Endpoint method="POST" path="/api/admin/automation-rules" desc="Buat rule (custom condition tree + multi-action)" />
-              <Endpoint method="POST" path="/api/admin/automation-rules/dry-run" desc="Preview: entity mana yang match kondisi" />
-              <Endpoint method="GET" path="/api/admin/rule-templates" desc="Template builtin + custom" />
-              <Endpoint method="POST" path="/api/admin/rule-templates" desc="Save rule sebagai template" />
-            </Section>
-            <Section title="Media Rules (Auto Top-up)">
-              <Endpoint method="GET" path="/api/admin/media-rules" desc="List rules" />
-              <Endpoint method="POST" path="/api/admin/media-rules" desc="Buat rule (MIN_COUNT / MAX_AGE_DAYS / NO_WINNER)" />
-              <Endpoint method="PATCH" path="/api/admin/media-rules/[id]" desc="Update / pause" />
-            </Section>
-            <Section title="Meta — Audiences, Catalogs, Tools">
-              <Endpoint method="GET" path="/api/admin/meta-audiences" desc="List custom + lookalike audiences" />
-              <Endpoint method="POST" path="/api/admin/meta-audiences" desc="Buat audience (dispatch ke worker)" />
-              <Endpoint method="GET" path="/api/admin/meta-catalogs" desc="List catalogs (CPAS foundation)" />
-              <Endpoint method="POST" path="/api/admin/meta-catalogs/[id]" desc="Buat product set di catalog" />
-              <Endpoint method="GET" path="/api/admin/meta-tools/ad-preview?adId=..&format=INSTAGRAM_REELS" desc="Preview ad per placement" />
-              <Endpoint method="GET" path="/api/admin/meta-tools/ad-library?q=skincare&country=ID" desc="Cari ads kompetitor di Meta Ad Library" />
-              <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
-              <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
-            </Section>
-            <Section title="Instagram Accounts (+ Persona)">
-              <p className="text-sm text-stone-600 mb-2">
-                Persona/character fields langsung ada di akun — tidak perlu endpoint terpisah.
-              </p>
-              <Endpoint method="GET" path="/api/admin/accounts" desc="List akun IG. Query: ?status=active" />
-              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun. Body: { username*, accountName?, gender? ('M'|'F'), purpose?, notes?, characterDescription?, behavior?, speakingStyle?, expressionStyle?, movementStyle?, forbiddenRules? }" />
-              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + photoReferences + postingMonitor (semua persona fields included)" />
-              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update field apapun termasuk persona: characterDescription/behavior/speakingStyle/expressionStyle/movementStyle/forbiddenRules" />
-              <Endpoint method="DELETE" path="/api/admin/accounts/[id]" desc="Hapus akun + cascade topics/CEPs/contentLogs" />
-            </Section>
-            <Section title="Worker Tasks">
-              <Endpoint method="GET" path="/api/admin/worker-tasks?status=pending" desc="Monitor antrian task + counts per status" />
-            </Section>
-          </>
-        )}
-      </div>
-    </div>
+    <pre style={{
+      background: '#1a1a2e',
+      color: '#e0e0e0',
+      padding: '16px',
+      borderRadius: 8,
+      fontSize: 12,
+      lineHeight: 1.5,
+      overflowX: 'auto',
+      margin: '8px 0',
+    }}>
+      <code>{children}</code>
+    </pre>
   )
 }
