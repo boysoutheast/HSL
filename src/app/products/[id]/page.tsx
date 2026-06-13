@@ -77,7 +77,7 @@ export default function ProductDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-stone-500">Product not found.</p>
-        <Link href="/products" className="text-sm text-violet-600 hover:underline">Back to Products</Link>
+        <Link href="/media?tab=products" className="text-sm text-violet-600 hover:underline">Back to Products</Link>
       </div>
     )
   }
@@ -93,7 +93,7 @@ export default function ProductDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm">
-        <Link href="/products" className="text-stone-500 hover:text-stone-700">Products</Link>
+        <Link href="/media?tab=products" className="text-stone-500 hover:text-stone-700">Products</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium text-stone-900">{product.name}</span>
       </div>

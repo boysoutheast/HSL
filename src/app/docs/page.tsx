@@ -88,7 +88,7 @@ export default function DocsPage() {
             <Section title="Hermes Agent — Bearer Token">
               <p className="text-sm text-stone-600 mb-3">
                 Semua endpoint <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> pakai
-                API key agent (dibuat admin di halaman Agents). Kirim sebagai Bearer token.
+                API key agent (dibuat admin di <strong>System → Agents</strong>). Kirim sebagai Bearer token.
               </p>
               <Code>{`curl -H "Authorization: Bearer hsl_xxxxxxxx" \\
   ${BASE}/api/hermes/library`}</Code>
@@ -109,7 +109,7 @@ export default function DocsPage() {
             <Section title="Meta — Facebook Login for Business">
               <p className="text-sm text-stone-600 mb-2">
                 Connect akun Meta tanpa paste token manual. Klik <strong>Connect with Facebook</strong> di
-                halaman Meta Connections → OAuth → token long-lived (60 hari) disimpan terenkripsi +
+                <strong>System → Connections</strong> → OAuth → token long-lived (60 hari) disimpan terenkripsi +
                 auto-sync Business, Ad Accounts, Pages, IG.
               </p>
               <Endpoint method="GET" path="/api/admin/meta-oauth/start" desc="Mulai OAuth flow (perlu META_APP_ID/SECRET, opsional META_LOGIN_CONFIG_ID)" />

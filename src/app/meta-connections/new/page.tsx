@@ -109,7 +109,7 @@ export default function NewMetaConnectionPage() {
     <div className="max-w-2xl">
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/meta-connections" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/system?tab=connections" className="text-sm text-stone-500 hover:text-stone-700">
           Meta Akun
         </Link>
         <span className="text-gray-300">/</span>

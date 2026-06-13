@@ -455,7 +455,7 @@ function RuleBuilderInner() {
     <div className="max-w-3xl">
       {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-2 text-sm">
-        <Link href="/rules-editor" className="text-stone-500 hover:text-stone-700 dark:text-stone-400">Rules</Link>
+        <Link href="/ads?tab=rules" className="text-stone-500 hover:text-stone-700 dark:text-stone-400">Rules</Link>
         <span className="text-stone-300">/</span>
         <span className="font-medium text-stone-900 dark:text-stone-100">{editRuleId ? 'Edit Rule' : 'New Rule'}</span>
       </div>

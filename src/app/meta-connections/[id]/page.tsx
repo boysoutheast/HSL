@@ -153,7 +153,7 @@ export default function MetaConnectionDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-stone-500">Koneksi tidak ditemukan.</p>
-        <Link href="/meta-connections" className="text-sm text-violet-600 hover:underline">
+        <Link href="/system?tab=connections" className="text-sm text-violet-600 hover:underline">
           Kembali ke Meta Akun
         </Link>
       </div>
@@ -164,7 +164,7 @@ export default function MetaConnectionDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/meta-connections" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/system?tab=connections" className="text-sm text-stone-500 hover:text-stone-700">
           Meta Akun
         </Link>
         <span className="text-gray-300">/</span>

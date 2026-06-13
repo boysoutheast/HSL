@@ -1007,7 +1007,7 @@ export default function NewTestLaunchPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
-          <Link href="/test-launches" className="text-sm text-stone-400 hover:text-stone-600">← Test Launches</Link>
+          <Link href="/ads?tab=launch" className="text-sm text-stone-400 hover:text-stone-600">← Test Launches</Link>
         </div>
         <h1 className="text-2xl font-bold text-stone-900">New Test Launch</h1>
         <p className="text-sm text-stone-500 mt-0.5">4-step wizard: Campaign → Ad Sets → Ads → Review</p>
@@ -1184,7 +1184,7 @@ export default function NewTestLaunchPage() {
             )}
 
             <div className="flex justify-end gap-3 pb-6">
-              <Link href="/test-launches" className="btn-ghost">Batal</Link>
+              <Link href="/ads?tab=launch" className="btn-ghost">Batal</Link>
               <button type="button" onClick={() => setCurrentStep('Ad Sets')} className="btn-primary">
                 Lanjut ke Ad Sets →
               </button>
@@ -1866,7 +1866,7 @@ export default function NewTestLaunchPage() {
             <div className="flex justify-between gap-3 pb-6">
               <button type="button" onClick={() => setCurrentStep('Ads')} className="btn-ghost">← Kembali</button>
               <div className="flex gap-2">
-                <Link href="/test-launches" className="btn-ghost">Batal</Link>
+                <Link href="/ads?tab=launch" className="btn-ghost">Batal</Link>
                 <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
                   {saving ? 'Menyimpan...' : 'Submit Launch →'}
                 </button>

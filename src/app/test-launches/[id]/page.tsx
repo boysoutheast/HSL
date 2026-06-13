@@ -238,7 +238,7 @@ export default function TestLaunchDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-stone-500">Test Launch tidak ditemukan.</p>
-        <Link href="/test-launches" className="text-sm text-violet-600 hover:underline">← Kembali ke Test Launches</Link>
+        <Link href="/ads?tab=launch" className="text-sm text-violet-600 hover:underline">← Kembali ke Test Launches</Link>
       </div>
     )
   }
@@ -255,7 +255,7 @@ export default function TestLaunchDetailPage() {
 
       {/* ── Breadcrumb ──────────────────────────────────────────────────── */}
       <div className="mb-6 flex items-center gap-2">
-        <Link href="/test-launches" className="text-sm text-stone-500 hover:text-stone-700">Test Launches</Link>
+        <Link href="/ads?tab=launch" className="text-sm text-stone-500 hover:text-stone-700">Test Launches</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium text-stone-900">{testLaunch.name}</span>
       </div>
@@ -648,7 +648,7 @@ export default function TestLaunchDetailPage() {
 
       {/* ── Back Link ──────────────────────────────────────────────────── */}
       <div className="mt-8 pt-4 border-t border-stone-200">
-        <Link href="/test-launches" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/ads?tab=launch" className="text-sm text-stone-500 hover:text-stone-700">
           ← Kembali ke Test Launches
         </Link>
       </div>

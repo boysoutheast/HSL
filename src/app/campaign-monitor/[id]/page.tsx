@@ -260,7 +260,7 @@ export default function CampaignDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-stone-400 text-sm gap-2">
         <p>Campaign not found.</p>
-        <Link href="/campaign-monitor" className="btn-ghost btn-sm">← Back</Link>
+        <Link href="/ads?tab=monitor" className="btn-ghost btn-sm">← Back</Link>
       </div>
     )
   }
@@ -273,7 +273,7 @@ export default function CampaignDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Link href="/campaign-monitor" className="text-stone-400 hover:text-stone-600 text-sm">← Campaign Monitor</Link>
+          <Link href="/ads?tab=monitor" className="text-stone-400 hover:text-stone-600 text-sm">← Campaign Monitor</Link>
           <div>
             <h1 className="text-2xl font-bold text-stone-900">{session.name}</h1>
             <p className="text-sm text-stone-500 mt-0.5">
