@@ -102,6 +102,25 @@ Verify: task user A diproses pakai token A; task ad account yang bukan milik use
 2. Empty state seluruh app sadar "belum connect Meta" → arahkan ke connect dulu.
 3. Quota/plan (kalau ada model bisnis): batasi jumlah ad account / launch per user — TANDAI sebagai hook, jangan implement tanpa keputusan owner.
 
+### F6b — Asset Manager pasca-connect (3 tab, kayak Birch)
+
+Setelah OAuth + sync (F2), user butuh layar kelola aset yang ke-connect. Referensi: Birch "Meta Ads" — 3 tab horizontal, tiap tab tabel aset + search + status.
+
+UI di `/system?tab=connections` (atau sub-halaman): header "X profil terhubung", 3 tab:
+- **Ad accounts** — nama + `act_ID` + currency + accountStatus (Active/Disabled badge)
+- **Facebook Pages** — nama + page ID + status
+- **Instagram accounts** — username + IG business ID + status
+
+Tiap tab: search by nama/ID, baca dari `meta_ad_accounts`/`meta_pages`/IG (yang udah di-sync F2, scoped userId). Tabel ringan, pagination/virtualize kalau >50 baris (akun ini punya 17 IG + 21 page — pasti banyak).
+
+**Aksi per baris — JANGAN bikin model "workspace" baru** (itu konsep Birch; kita nggak punya, dan bikin tabel baru = keputusan owner). Ekuivalen HSL pakai yang SUDAH ada:
+- Toggle **enable/disable** aset untuk dipakai HSL (kolom status existing / flag `isActive` — cek dulu, kalau perlu kolom baru itu migration additive + lapor).
+- **Assign ke Hermes Agent** via `Assignment` model existing (assignableType `instagram_account`/`ad_account`/dll) — dropdown "assign ke agent". Ini ekuivalen "link to workspace"-nya Birch.
+
+Default tampilan: read-only list dulu (lihat semua aset ke-sync). Aksi enable/assign boleh nyusul kalau bikin scope membengkak — tapi 3-tab viewer + search + status WAJIB ada.
+
+Acceptance F6b: 2 user beda → tiap user cuma lihat aset Meta-nya sendiri di 3 tab (ini juga test isolation F4); search jalan; status badge akurat vs DB.
+
 ---
 
 ## 9. Urutan Eksekusi
