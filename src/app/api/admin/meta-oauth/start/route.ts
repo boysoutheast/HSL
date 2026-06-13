@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
     )
   }
   const redirectUri = `${base}/api/admin/meta-oauth/callback`
-  const state = crypto.randomBytes(16).toString('hex')
+  const reconnectId = new URL(req.url).searchParams.get('reconnect')?.trim()
+  const rawState = crypto.randomBytes(16).toString('hex')
+  const state = reconnectId
+    ? JSON.stringify({ nonce: rawState, reconnect: reconnectId })
+    : rawState
   const configId = process.env.META_LOGIN_CONFIG_ID
 
   const url = new URL(`https://www.facebook.com/${META_API_VERSION}/dialog/oauth`)

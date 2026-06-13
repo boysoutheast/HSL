@@ -173,6 +173,11 @@ export default function MetaConnectionsPage() {
                   <Link href={`/meta-connections/${acc.id}`} className="btn-info btn-sm">
                     Detail →
                   </Link>
+                  {(acc.status === 'needs_reconnect' || acc.status === 'expired' || acc.status === 'revoked') && (
+                    <a href={`/api/admin/meta-oauth/start?reconnect=${acc.id}`} className="btn-primary btn-sm bg-amber-600 hover:bg-amber-700 border-amber-600">
+                      Hubungkan Ulang
+                    </a>
+                  )}
                   <button
                     onClick={() => setDeleteTarget(acc)}
                     className="btn-danger btn-sm"

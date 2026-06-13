@@ -78,7 +78,22 @@ export async function GET(req: NextRequest) {
   const cookieState = req.cookies.get('meta_oauth_state')?.value
 
   if (!code) return fail(searchParams.get('error_description') ?? 'Login Facebook dibatalkan')
-  if (!state || !cookieState || state !== cookieState) return fail('State mismatch — coba lagi')
+
+  // state bisa string biasa (nonce) atau JSON {nonce, reconnect}
+  let reconnectId: string | null = null
+  let stateNonce: string | null = null
+
+  if (state) {
+    try {
+      const parsed = JSON.parse(state)
+      stateNonce = parsed.nonce ?? state
+      reconnectId = parsed.reconnect ?? null
+    } catch {
+      stateNonce = state
+    }
+  }
+
+  if (!stateNonce || !cookieState || stateNonce !== cookieState) return fail('State mismatch — coba lagi')
 
   const redirectUri = `${base}/api/admin/meta-oauth/callback`
 
@@ -124,10 +139,15 @@ export async function GET(req: NextRequest) {
       .map((entry) => entry.permission as string)
     const missingRequiredScopes = REQUIRED_SCOPES.filter((scope) => !grantedScopes.includes(scope))
 
-    const existing = await prisma.metaAccount.findFirst({
-      where: { userId: auth.id, metaUserId: me.id },
-      select: { id: true },
-    })
+    const existing = reconnectId
+      ? await prisma.metaAccount.findFirst({
+          where: { id: reconnectId, userId: auth.id },
+          select: { id: true },
+        })
+      : await prisma.metaAccount.findFirst({
+          where: { userId: auth.id, metaUserId: me.id },
+          select: { id: true },
+        })
 
     const accountRecord = existing
       ? await prisma.metaAccount.update({

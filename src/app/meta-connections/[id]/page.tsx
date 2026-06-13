@@ -182,6 +182,14 @@ export default function MetaConnectionDetailPage() {
           </div>
           <div className="flex items-center gap-3">
             <MetaStatusBadge status={conn.status} />
+            {(conn.status === 'needs_reconnect' || conn.status === 'expired' || conn.status === 'revoked') && (
+              <a
+                href={`/api/admin/meta-oauth/start?reconnect=${conn.id}`}
+                className="btn-primary btn-sm bg-amber-600 hover:bg-amber-700 border-amber-600"
+              >
+                🔗 Hubungkan Ulang
+              </a>
+            )}
             <Link href="/meta-connections/new" className="btn-primary btn-sm">
               + Hubungkan Baru
             </Link>
