@@ -54,7 +54,8 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/worker/') ||
     pathname.startsWith('/api/internal/') ||
-    pathname.startsWith('/api/capi/')
+    pathname.startsWith('/api/capi/') ||
+    pathname.startsWith('/api/webhooks/')
   ) {
     return NextResponse.next()
   }

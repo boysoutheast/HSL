@@ -51,6 +51,7 @@ model InstagramAccount {
   performanceTrackers PerformanceTracker[]
   mediaAssets         MediaAsset[]
   photoReferences     PhotoReference[]
+  generatedMedia      GeneratedMedia[]
 
   @@map("instagram_accounts")
 }
@@ -99,7 +100,8 @@ model PhotoReference {
   character        Character?            @relation(fields: [characterId], references: [id])
   topic            Topic?                @relation(fields: [topicId], references: [id])
   product          Product?              @relation(fields: [productId], references: [id])
-  contentLogs      GeneratedContentLog[]
+  contentLogs         GeneratedContentLog[]
+  generatedMediaInputs GeneratedMediaInput[]
 
   @@map("photo_references")
 }
@@ -642,7 +644,8 @@ model WorkerTask {
   completedAt  DateTime? @map("completed_at")
 
   testLaunch TestLaunch?        @relation(fields: [testLaunchId], references: [id])
-  results    WorkerTaskResult[]
+  results        WorkerTaskResult[]
+  generatedMedia GeneratedMedia[]
 
   @@index([status, priority])
   @@index([testLaunchId])
@@ -1281,3 +1284,41 @@ model CapiEventConfig {
   @@index([pixelId])
   @@map("capi_event_configs")
 }
+
+model GeneratedMedia {
+  id                 String    @id @default(cuid())
+  source             String    @default("geminigen")
+  model              String    @default("grok-video")
+  externalJobId      String?   @unique @map("external_job_id")
+  status             String    @default("queued")
+  prompt             String
+  instagramAccountId String?   @map("instagram_account_id")
+  workerTaskId       String?   @map("worker_task_id")
+  videoUrl           String?   @map("video_url")
+  thumbnailUrl       String?   @map("thumbnail_url")
+  durationSeconds    Int       @default(10) @map("duration_seconds")
+  rawWebhookJson     String?   @map("raw_webhook_json")
+  rawHistoryJson     String?   @map("raw_history_json")
+  errorMessage       String?   @map("error_message")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  completedAt        DateTime? @map("completed_at")
+
+  instagramAccount InstagramAccount?   @relation(fields: [instagramAccountId], references: [id], onDelete: SetNull)
+  workerTask       WorkerTask?         @relation(fields: [workerTaskId], references: [id], onDelete: SetNull)
+  inputs           GeneratedMediaInput[]
+
+  @@map("generated_media")
+}
+
+model GeneratedMediaInput {
+  id               String @id @default(cuid())
+  generatedMediaId String @map("generated_media_id")
+  photoReferenceId String @map("photo_reference_id")
+  inputOrder       Int    @default(0) @map("input_order")
+
+  generatedMedia GeneratedMedia @relation(fields: [generatedMediaId], references: [id], onDelete: Cascade)
+  photoReference PhotoReference @relation(fields: [photoReferenceId], references: [id])
+
+  @@map("generated_media_inputs")
+}
+
