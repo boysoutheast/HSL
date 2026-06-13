@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, assertOwnsAdAccount } from '@/lib/auth'
 import { graphFetch, MetaGraphError } from '@/lib/meta-graph'
 import { decode } from '@/lib/crypto'
 
@@ -19,16 +19,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'adAccountId is required' }, { status: 400 })
   }
 
-  const adAccount = await prisma.metaAdAccount.findFirst({
-    where: {
-      id: adAccountId,
-      metaAccount: auth.role === 'admin' ? {} : { userId: auth.id },
-    },
-    include: {
-      metaAccount: { select: { longLivedTokenEncrypted: true } },
-    },
-  })
-  if (!adAccount) return NextResponse.json({ error: 'Ad account not found' }, { status: 404 })
+  const adAccount = await assertOwnsAdAccount(auth, adAccountId)
+  if (adAccount instanceof NextResponse) return adAccount
   if (!adAccount.metaAccount.longLivedTokenEncrypted) {
     return NextResponse.json({ error: 'Meta account token missing — reconnect' }, { status: 400 })
   }

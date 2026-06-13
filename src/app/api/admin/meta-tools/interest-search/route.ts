@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, assertOwnsConnection } from '@/lib/auth'
 import { graphFetch, MetaGraphError } from '@/lib/meta-graph'
 import { decode } from '@/lib/crypto'
 
@@ -22,15 +22,11 @@ export async function GET(req: NextRequest) {
   }
 
   // Ownership check
-  const metaAccount = await prisma.metaAccount.findFirst({
-    where: {
-      id: metaAccountId,
-      ...(auth.role === 'admin' ? {} : { userId: auth.id }),
-      longLivedTokenEncrypted: { not: null },
-    },
-    select: { longLivedTokenEncrypted: true },
-  })
-  if (!metaAccount) return NextResponse.json({ error: 'Meta account not found' }, { status: 404 })
+  const metaAccount = await assertOwnsConnection(auth, metaAccountId)
+  if (metaAccount instanceof NextResponse) return metaAccount
+  if (!metaAccount.longLivedTokenEncrypted) {
+    return NextResponse.json({ error: 'Meta account token missing — reconnect' }, { status: 400 })
+  }
 
   let token: string
   try {

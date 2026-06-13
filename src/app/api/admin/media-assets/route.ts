@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')
 
   const where: Record<string, unknown> = {
-    ...ownerFilter(auth),
+    ...ownerFilter(auth, 'userId'),
     ...(productId ? { productId } : {}),
     ...(status ? { status } : {}),
     ...(source ? { source } : {}),

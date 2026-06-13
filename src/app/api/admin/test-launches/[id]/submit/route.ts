@@ -11,8 +11,11 @@ export async function GET(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  const testLaunch = await prisma.testLaunch.findUnique({
-    where: { id: params.id },
+  const testLaunch = await prisma.testLaunch.findFirst({
+    where: {
+      id: params.id,
+      ...(auth.role === 'admin' ? {} : { userId: auth.id }),
+    },
     select: {
       id: true,
       status: true,

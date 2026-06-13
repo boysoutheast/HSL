@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const mediaAssetId = searchParams.get('mediaAssetId')
 
   const where: Record<string, unknown> = {
-    ...ownerFilter(auth),
+    ...ownerFilter(auth, 'userId'),
     ...(productId ? { productId } : {}),
     ...(status ? { status } : {}),
     ...(mediaAssetId ? { mediaAssetId } : {}),

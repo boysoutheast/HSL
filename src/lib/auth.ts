@@ -68,3 +68,51 @@ export function ownerFilter(
   if (user.role === 'admin') return {}
   return { [field]: user.id }
 }
+
+/**
+ * Assert that a MetaConnection (metaAccount) belongs to the authenticated user.
+ * Returns the connection or a 404 NextResponse.
+ */
+export async function assertOwnsConnection(
+  user: SessionUser,
+  connectionId: string,
+): Promise<NextResponse | { id: string; userId: string; longLivedTokenEncrypted: string | null; shortLivedTokenEncrypted: string | null }> {
+  if (user.role === 'admin') {
+    const conn = await prisma.metaAccount.findUnique({
+      where: { id: connectionId },
+      select: { id: true, userId: true, longLivedTokenEncrypted: true, shortLivedTokenEncrypted: true },
+    })
+    if (!conn) return NextResponse.json({ error: 'MetaConnection not found' }, { status: 404 })
+    return conn
+  }
+  const conn = await prisma.metaAccount.findFirst({
+    where: { id: connectionId, userId: user.id },
+    select: { id: true, userId: true, longLivedTokenEncrypted: true, shortLivedTokenEncrypted: true },
+  })
+  if (!conn) return NextResponse.json({ error: 'MetaConnection not found' }, { status: 404 })
+  return conn
+}
+
+/**
+ * Assert that a MetaAdAccount belongs to the authenticated user (via its parent MetaConnection).
+ * Returns the ad account or a 404 NextResponse.
+ */
+export async function assertOwnsAdAccount(
+  user: SessionUser,
+  adAccountId: string,
+): Promise<NextResponse | { id: string; adAccountId: string; metaAccountId: string; adAccountName: string | null; currency: string | null; metaAccount: { id: string; userId: string; longLivedTokenEncrypted: string | null; shortLivedTokenEncrypted: string | null } }> {
+  if (user.role === 'admin') {
+    const ad = await prisma.metaAdAccount.findUnique({
+      where: { id: adAccountId },
+      select: { id: true, adAccountId: true, adAccountName: true, currency: true, metaAccountId: true, metaAccount: { select: { id: true, userId: true, longLivedTokenEncrypted: true, shortLivedTokenEncrypted: true } } },
+    })
+    if (!ad) return NextResponse.json({ error: 'Ad account not found' }, { status: 404 })
+    return ad
+  }
+  const ad = await prisma.metaAdAccount.findFirst({
+    where: { id: adAccountId, metaAccount: { userId: user.id } },
+    select: { id: true, adAccountId: true, adAccountName: true, currency: true, metaAccountId: true, metaAccount: { select: { id: true, userId: true, longLivedTokenEncrypted: true, shortLivedTokenEncrypted: true } } },
+  })
+  if (!ad) return NextResponse.json({ error: 'Ad account not found' }, { status: 404 })
+  return ad
+}

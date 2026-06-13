@@ -29,7 +29,10 @@ export async function GET(
 
   const usedInCreatives = urlMatch.length > 0
     ? await prisma.testLaunchCreative.findMany({
-        where: { creativeUrl: { in: urlMatch } },
+        where: {
+          creativeUrl: { in: urlMatch },
+          testLaunch: auth.role === 'admin' ? {} : { userId: auth.id },
+        },
         select: {
           id: true,
           testLaunchId: true,
