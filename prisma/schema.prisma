@@ -8,18 +8,21 @@ datasource db {
 }
 
 model HermesAgent {
-  id         String   @id @default(cuid())
-  name       String
-  apiKeyHash String   @unique @map("api_key_hash")
-  status     String   @default("active")
-  isWorker   Boolean  @default(false) @map("is_worker")
-  notes      String?
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  name          String
+  apiKeyHash    String   @unique @map("api_key_hash")
+  status        String   @default("active")
+  isWorker      Boolean  @default(false) @map("is_worker")
+  ownerUserId   String?  @map("owner_user_id")
+  creditBalance Int      @default(0) @map("credit_balance")
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  assignments     Assignment[]
-  contentLogs     GeneratedContentLog[]
-  postingMonitors PostingMonitor[]
+  ownerUser        AdminUser?          @relation(fields: [ownerUserId], references: [id])
+  assignments      Assignment[]
+  contentLogs      GeneratedContentLog[]
+  postingMonitors  PostingMonitor[]
 
   @@map("hermes_agents")
 }
@@ -339,27 +342,30 @@ model AdminUser {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  sessions          Session[]
-  instagramAccounts InstagramAccount[]
-  products          Product[]
-  metaAccounts      MetaAccount[]
-  testLaunches      TestLaunch[]
-  approvalRequests  ApprovalRequest[]  @relation("ApprovalRequester")
-  approvalsReviewed ApprovalRequest[]  @relation("ApprovalReviewer")
-  mediaAssets       MediaAsset[]
-  creativeVariants  CreativeVariant[]
-  metaMediaBindings MetaMediaBinding[]
-  campaignSessions  CampaignSession[]
-  metaEntities      MetaEntity[]
-  metricSnapshots   MetricSnapshot[]
-  automationRules   AutomationRule[]
-  automationActions AutomationAction[]
-  workerLeases      WorkerLease[]
-  mediaLibraryRules MediaLibraryRule[]
-  ruleTemplates     RuleTemplate[]
-  metaAudiences     MetaAudience[]
-  metaCatalogs      MetaCatalog[]
-  capiEventConfigs  CapiEventConfig[]
+  sessions            Session[]
+  instagramAccounts   InstagramAccount[]
+  products            Product[]
+  metaAccounts        MetaAccount[]
+  testLaunches        TestLaunch[]
+  approvalRequests    ApprovalRequest[]  @relation("ApprovalRequester")
+  approvalsReviewed   ApprovalRequest[]  @relation("ApprovalReviewer")
+  mediaAssets         MediaAsset[]
+  creativeVariants    CreativeVariant[]
+  metaMediaBindings   MetaMediaBinding[]
+  campaignSessions    CampaignSession[]
+  metaEntities        MetaEntity[]
+  metricSnapshots     MetricSnapshot[]
+  automationRules     AutomationRule[]
+  automationActions   AutomationAction[]
+  workerLeases        WorkerLease[]
+  mediaLibraryRules   MediaLibraryRule[]
+  ruleTemplates       RuleTemplate[]
+  metaAudiences       MetaAudience[]
+  metaCatalogs        MetaCatalog[]
+  capiEventConfigs    CapiEventConfig[]
+  hermesAgents        HermesAgent[]
+  generatedMedia      GeneratedMedia[]
+  creditTransactions  CreditTransaction[]
 
   @@map("admin_users")
 }
@@ -1287,6 +1293,7 @@ model CapiEventConfig {
 
 model GeneratedMedia {
   id                 String    @id @default(cuid())
+  userId             String?   @map("user_id")
   source             String    @default("geminigen")
   model              String    @default("grok-video")
   externalJobId      String?   @unique @map("external_job_id")
@@ -1294,18 +1301,22 @@ model GeneratedMedia {
   prompt             String
   instagramAccountId String?   @map("instagram_account_id")
   workerTaskId       String?   @map("worker_task_id")
+  mediaType          String    @default("VIDEO") @map("media_type")
+  creditsCost        Int?      @map("credits_cost")
   videoUrl           String?   @map("video_url")
   thumbnailUrl       String?   @map("thumbnail_url")
   durationSeconds    Int       @default(10) @map("duration_seconds")
+  refundedAt         DateTime? @map("refunded_at")
   rawWebhookJson     String?   @map("raw_webhook_json")
   rawHistoryJson     String?   @map("raw_history_json")
   errorMessage       String?   @map("error_message")
   createdAt          DateTime  @default(now()) @map("created_at")
   completedAt        DateTime? @map("completed_at")
 
-  instagramAccount InstagramAccount?   @relation(fields: [instagramAccountId], references: [id], onDelete: SetNull)
-  workerTask       WorkerTask?         @relation(fields: [workerTaskId], references: [id], onDelete: SetNull)
-  inputs           GeneratedMediaInput[]
+  user              AdminUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  instagramAccount  InstagramAccount?    @relation(fields: [instagramAccountId], references: [id], onDelete: SetNull)
+  workerTask        WorkerTask?          @relation(fields: [workerTaskId], references: [id], onDelete: SetNull)
+  inputs            GeneratedMediaInput[]
 
   @@map("generated_media")
 }
@@ -1320,5 +1331,22 @@ model GeneratedMediaInput {
   photoReference PhotoReference @relation(fields: [photoReferenceId], references: [id])
 
   @@map("generated_media_inputs")
+}
+
+model CreditTransaction {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  amount           Int      // positive=grant/refund, negative=debit
+  reason           String   // "trial_grant" | "video_generation" | "refund" | "admin_grant"
+  refId            String?  @map("ref_id") // generatedMediaId or null
+  refType          String?  @map("ref_type") // "generated_media" or null
+  balanceAfter     Int      @map("balance_after")
+  idempotencyKey   String   @unique @map("idempotency_key")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
 }
 
