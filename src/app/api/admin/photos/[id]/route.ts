@@ -27,6 +27,20 @@ async function deletePhotoFile(fileUrl: string | null) {
   }
 }
 
+/** Ownership check helper: find photo scoped to user */
+async function findOwnedPhoto(photoId: string, userId: string) {
+  return prisma.photoReference.findFirst({
+    where: {
+      id: photoId,
+      OR: [
+        { instagramAccount: { createdByUserId: userId } },
+        { product: { createdByUserId: userId } },
+        { character: { instagramAccount: { createdByUserId: userId } } },
+      ],
+    },
+  })
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } },
@@ -45,6 +59,11 @@ export async function PATCH(
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  if (auth.role !== 'admin') {
+    const owned = await findOwnedPhoto(params.id, auth.id)
+    if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const photo = await prisma.photoReference.update({
@@ -66,6 +85,11 @@ export async function DELETE(
 ) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
+
+  if (auth.role !== 'admin') {
+    const owned = await findOwnedPhoto(params.id, auth.id)
+    if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const photo = await prisma.photoReference.findUnique({ where: { id: params.id } })
   if (!photo) {

@@ -29,8 +29,11 @@ export async function GET(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  const character = await prisma.character.findUnique({
-    where: { id: params.id },
+  const character = await prisma.character.findFirst({
+    where: {
+      id: params.id,
+      ...(auth.role === 'admin' ? {} : { instagramAccount: { createdByUserId: auth.id } }),
+    },
     include: {
       instagramAccount: true,
       photoReferences: { where: { status: 'active' } },
@@ -69,6 +72,15 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
+  // Ownership check
+  if (auth.role !== 'admin') {
+    const owned = await prisma.character.findFirst({
+      where: { id: params.id, instagramAccount: { createdByUserId: auth.id } },
+      select: { id: true },
+    })
+    if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const character = await prisma.character.update({
     where: { id: params.id },
     data: body,
@@ -83,6 +95,15 @@ export async function DELETE(
 ) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
+
+  // Ownership check
+  if (auth.role !== 'admin') {
+    const owned = await prisma.character.findFirst({
+      where: { id: params.id, instagramAccount: { createdByUserId: auth.id } },
+      select: { id: true },
+    })
+    if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const character = await prisma.character.findUnique({ where: { id: params.id } })
   if (!character) {
