@@ -413,6 +413,7 @@ model MetaAccount {
   pages        MetaPage[]
   testLaunches TestLaunch[]
 
+  @@unique([userId, metaUserId])
   @@index([userId])
   @@index([userId, status])
   @@map("meta_accounts")
