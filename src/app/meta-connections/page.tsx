@@ -173,6 +173,15 @@ export default function MetaConnectionsPage() {
                   <Link href={`/meta-connections/${acc.id}`} className="btn-info btn-sm">
                     Detail →
                   </Link>
+                  {acc.status !== 'connected' && (
+                    <a
+                      href={`/api/admin/meta-oauth/start?reconnect=${acc.id}`}
+                      className="btn-primary btn-sm"
+                      title="Hubungkan ulang koneksi Meta ini"
+                    >
+                      ↻ Hubungkan Ulang
+                    </a>
+                  )}
                   <button
                     onClick={() => setDeleteTarget(acc)}
                     className="btn-danger btn-sm"

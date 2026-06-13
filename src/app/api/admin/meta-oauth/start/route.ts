@@ -27,10 +27,14 @@ export async function GET(req: NextRequest) {
   const state = crypto.randomBytes(16).toString('hex')
   const configId = process.env.META_LOGIN_CONFIG_ID
 
+  // Preserve reconnect=connectionId through state for callback to detect
+  const reconnectId = req.nextUrl.searchParams.get('reconnect')?.trim() || ''
+  const statePayload = reconnectId ? `${state}:reconnect:${reconnectId}` : state
+
   const url = new URL(`https://www.facebook.com/${META_API_VERSION}/dialog/oauth`)
   url.searchParams.set('client_id', appId)
   url.searchParams.set('redirect_uri', redirectUri)
-  url.searchParams.set('state', state)
+  url.searchParams.set('state', statePayload)
   url.searchParams.set('response_type', 'code')
   if (configId) {
     // Facebook Login for Business — config "Business profile"
@@ -43,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   const res = NextResponse.redirect(url.toString())
-  res.cookies.set('meta_oauth_state', state, {
+  res.cookies.set('meta_oauth_state', statePayload, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

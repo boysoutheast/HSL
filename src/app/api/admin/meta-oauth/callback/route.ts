@@ -80,6 +80,10 @@ export async function GET(req: NextRequest) {
   if (!code) return fail(searchParams.get('error_description') ?? 'Login Facebook dibatalkan')
   if (!state || !cookieState || state !== cookieState) return fail('State mismatch — coba lagi')
 
+  // Parse reconnect marker: "hex:reconnect:connectionId"
+  const reconnectMatch = cookieState.match(/^[a-f0-9]+:reconnect:(.+)$/)
+  const reconnectConnectionId = reconnectMatch ? reconnectMatch[1] : null
+
   const redirectUri = `${base}/api/admin/meta-oauth/callback`
 
   let accountIdForFailure: string | null = null
@@ -124,10 +128,15 @@ export async function GET(req: NextRequest) {
       .map((entry) => entry.permission as string)
     const missingRequiredScopes = REQUIRED_SCOPES.filter((scope) => !grantedScopes.includes(scope))
 
-    const existing = await prisma.metaAccount.findFirst({
-      where: { userId: auth.id, metaUserId: me.id },
-      select: { id: true },
-    })
+    const existing = reconnectConnectionId
+      ? await prisma.metaAccount.findFirst({
+          where: { id: reconnectConnectionId, userId: auth.id },
+          select: { id: true },
+        })
+      : await prisma.metaAccount.findFirst({
+          where: { userId: auth.id, metaUserId: me.id },
+          select: { id: true },
+        })
 
     const accountRecord = existing
       ? await prisma.metaAccount.update({
