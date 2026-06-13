@@ -60,6 +60,7 @@ Rules engine lives in `src/lib/posting-monitor.ts`.
 - `GET /api/hermes/ready-upload` — next account ready to post
 - `POST /api/hermes/content-log` — submit generate/post result
 - `POST /api/hermes/cep-feedback` — submit new CEP for review
+- `GET /api/hermes/generated-media` — list completed generated media (worker fetch for CPAS integration)
 
 ## Admin Login
 - Default: `admin@hermes.local` / `hermes123`
