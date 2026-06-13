@@ -266,6 +266,7 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
             </Section>
 
             <Section title="Admin — Buat & Lihat Job">
+              <p className="text-xs text-stone-500 mb-3">UI: <strong>Media → Generate</strong> — form prompt + foto referensi (1-5) + IG account (opsional), job list dengan polling 12 detik, video preview + download.</p>
               <Endpoint method="POST" path="/api/admin/generate/video" desc="Buat job. Body: { prompt*, instagramAccountId?, photoReferenceIds[] (1-5) }. Bikin generated_media + worker_task GENERATE_VIDEO. Return 201 { id, status, workerTaskId }" />
               <Endpoint method="GET" path="/api/admin/generate/video" desc="List job. Query: ?status=&instagramAccountId=&limit=20&offset=0. Include inputs (photoReference fileUrl + label)" />
               <Endpoint method="GET" path="/api/admin/generate/video/[id]" desc="Detail satu job + inputs" />
