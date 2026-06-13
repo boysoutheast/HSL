@@ -347,7 +347,7 @@ export default function RulesEditorPage() {
           <p className="text-sm text-stone-500 mt-0.5">Create and manage automation rules for your campaigns.</p>
         </div>
         <Link
-          href="/rules-editor/builder"
+          href="/ads?tab=rules"
           className="btn-primary"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

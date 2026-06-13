@@ -21,7 +21,7 @@ export default function PerformancePage() {
         </ul>
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href="/logs?tab=performance" className="btn-primary">Buka Performance Logs</Link>
-          <Link href="/monitor" className="btn-ghost">Buka Monitor</Link>
+          <Link href="/ads?tab=monitor" className="btn-ghost">Buka Monitor</Link>
         </div>
       </div>
     </div>

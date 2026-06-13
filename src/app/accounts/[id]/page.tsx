@@ -205,7 +205,7 @@ export default function AccountDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-3">
         <p className="text-stone-500">Account not found.</p>
-        <Link href="/accounts" className="text-sm text-violet-600 hover:underline">Back to Accounts</Link>
+        <Link href="/influencer" className="text-sm text-violet-600 hover:underline">Kembali ke Influencer</Link>
       </div>
     )
   }
@@ -220,7 +220,7 @@ export default function AccountDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2">
-        <Link href="/accounts" className="text-sm text-stone-500 hover:text-stone-700">Accounts</Link>
+        <Link href="/influencer" className="text-sm text-stone-500 hover:text-stone-700">Influencer</Link>
         <span className="text-stone-300">/</span>
         <span className="text-sm font-medium text-stone-900">@{account.username}</span>
       </div>

@@ -105,7 +105,7 @@ export default function CharacterDetailPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm flex-wrap">
-        <Link href="/accounts" className="text-stone-500 hover:text-stone-700">Accounts</Link>
+        <Link href="/influencer" className="text-stone-500 hover:text-stone-700">Influencer</Link>
         <span className="text-gray-300">/</span>
         <Link href={`/accounts/${accountId}`} className="text-stone-500 hover:text-stone-700">
           @{character.instagramAccount.username}
