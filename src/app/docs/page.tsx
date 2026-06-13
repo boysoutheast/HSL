@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'capi' | 'admin'
+type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'video' | 'capi' | 'admin'
 
 function Code({ children }: { children: string }) {
   return (
@@ -49,6 +49,7 @@ export default function DocsPage() {
     { key: 'library', label: '📚 Library' },
     { key: 'tasks', label: '⚡ Task Queue' },
     { key: 'content', label: '🛍️ Content' },
+    { key: 'video', label: '🎬 Video Gen' },
     { key: 'capi', label: '📡 CAPI' },
     { key: 'admin', label: '🛠 Admin API' },
   ]
@@ -244,6 +245,50 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
                 Produk di library response include <code className="text-xs bg-stone-100 px-1 rounded">landingPages[]</code> —
                 pakai LP dengan <code className="text-xs bg-stone-100 px-1 rounded">isDefault: true</code> untuk CTA,
                 atau variant lain kalau task payload menyebut variant tertentu (A/B testing).
+              </p>
+            </Section>
+          </>
+        )}
+
+        {/* ── VIDEO GEN ── */}
+        {tab === 'video' && (
+          <>
+            <Section title="Video Generation (GeminiGen / grok-video)">
+              <p className="text-sm text-stone-600 mb-3">
+                Generate video dari foto referensi via GeminiGen. Konstrain fixed:
+                model <code className="text-xs bg-stone-100 px-1 rounded">grok-video</code>,
+                durasi 10 detik, aspect ratio portrait. Hasil datang async lewat webhook,
+                lalu di-rehost ke storage HSL (<code className="text-xs bg-stone-100 px-1 rounded">/data/photos/generated/</code>).
+              </p>
+              <p className="text-sm text-stone-600 mb-2">Alur status:</p>
+              <Code>{`queued → processing → ready_for_rehost → completed
+                                  └→ failed (error di-surface, bukan silent)`}</Code>
+            </Section>
+
+            <Section title="Admin — Buat & Lihat Job">
+              <Endpoint method="POST" path="/api/admin/generate/video" desc="Buat job. Body: { prompt*, instagramAccountId?, photoReferenceIds[] (1-5) }. Bikin generated_media + worker_task GENERATE_VIDEO. Return 201 { id, status, workerTaskId }" />
+              <Endpoint method="GET" path="/api/admin/generate/video" desc="List job. Query: ?status=&instagramAccountId=&limit=20&offset=0. Include inputs (photoReference fileUrl + label)" />
+              <Endpoint method="GET" path="/api/admin/generate/video/[id]" desc="Detail satu job + inputs" />
+            </Section>
+
+            <Section title="Hermes Agent — Ambil Hasil">
+              <Endpoint method="GET" path="/api/hermes/generated-media" desc="List video jadi (Bearer token). Query: ?status=completed&limit=20. Difilter assignment — agent cuma lihat media dari IG account yang di-assign ke dia." />
+              <p className="text-xs text-stone-500 mt-2">
+                Response item: <code className="text-xs bg-stone-100 px-1 rounded">id, status, videoUrl, thumbnailUrl, prompt, durationSeconds, instagramAccountId, completedAt, inputs[]</code>
+              </p>
+            </Section>
+
+            <Section title="Webhook — Penerima Hasil GeminiGen">
+              <Endpoint method="POST" path="/api/webhooks/geminigen" desc="Dipanggil GeminiGen saat video jadi. Auth: header x-geminigen-secret === GEMINIGEN_WEBHOOK_SECRET (mismatch/unset → 401). uuid tak dikenal → 200 (skip). status completed → bikin worker_task REHOST_VIDEO." />
+              <p className="text-xs text-stone-500 mt-2">
+                Set URL ini di GeminiGen dashboard:
+                <code className="text-xs bg-stone-100 px-1 rounded ml-1">{BASE}/api/webhooks/geminigen</code>
+              </p>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+                ⚠️ Butuh 3 env di Railway: <code className="text-xs bg-white px-1 rounded">GEMINIGEN_API_KEY</code>,
+                <code className="text-xs bg-white px-1 rounded mx-1">GEMINIGEN_WEBHOOK_SECRET</code>,
+                <code className="text-xs bg-white px-1 rounded">GEMINIGEN_DASHBOARD_TOKEN</code> +
+                worker handler GENERATE_VIDEO/REHOST_VIDEO. Sebelum lengkap, job masuk antrian tapi belum jadi video.
               </p>
             </Section>
           </>
