@@ -68,3 +68,53 @@ export function ownerFilter(
   if (user.role === 'admin') return {}
   return { [field]: user.id }
 }
+
+/** Verify user owns Meta connection before sensitive read/write. */
+export async function assertOwnsConnection(user: SessionUser, connectionId: string) {
+  const metaAccount = await prisma.metaAccount.findFirst({
+    where: {
+      id: connectionId,
+      ...(user.role === 'admin' ? {} : { userId: user.id }),
+    },
+    select: {
+      id: true,
+      userId: true,
+      longLivedTokenEncrypted: true,
+      shortLivedTokenEncrypted: true,
+    },
+  })
+
+  if (!metaAccount) {
+    return NextResponse.json({ error: 'Connection not found' }, { status: 404 })
+  }
+
+  return metaAccount
+}
+
+/** Verify user owns Meta ad account before Graph proxy calls. */
+export async function assertOwnsAdAccount(user: SessionUser, adAccountId: string) {
+  const adAccount = await prisma.metaAdAccount.findFirst({
+    where: {
+      id: adAccountId,
+      ...(user.role === 'admin' ? {} : { metaAccount: { userId: user.id } }),
+    },
+    select: {
+      id: true,
+      metaAccountId: true,
+      metaAccount: {
+        select: {
+          id: true,
+          userId: true,
+          longLivedTokenEncrypted: true,
+          shortLivedTokenEncrypted: true,
+        },
+      },
+    },
+  })
+
+  if (!adAccount) {
+    return NextResponse.json({ error: 'Ad account not found' }, { status: 404 })
+  }
+
+  return adAccount
+}

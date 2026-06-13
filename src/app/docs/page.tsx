@@ -253,12 +253,12 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
         {/* ── VIDEO GEN ── */}
         {tab === 'video' && (
           <>
-            <Section title="Video Generation (GeminiGen / grok-video)">
+            <Section title="Video Generation">
               <p className="text-sm text-stone-600 mb-3">
-                Generate video dari foto referensi via GeminiGen. Konstrain fixed:
-                model <code className="text-xs bg-stone-100 px-1 rounded">grok-video</code>,
-                durasi 10 detik, aspect ratio portrait. Hasil datang async lewat webhook,
-                lalu di-rehost ke storage HSL (<code className="text-xs bg-stone-100 px-1 rounded">/data/photos/generated/</code>).
+                Generate video dari prompt + foto referensi. Hasil datang async,
+                di-rehost ke storage HSL. Cek status via polling sampai
+                <code className="text-xs bg-stone-100 px-1 rounded">completed</code>,
+                lalu pakai <code className="text-xs bg-stone-100 px-1 rounded">videoUrl</code>.
               </p>
               <p className="text-sm text-stone-600 mb-2">Alur status:</p>
               <Code>{`queued → processing → ready_for_rehost → completed
@@ -279,19 +279,6 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
               </p>
             </Section>
 
-            <Section title="Webhook — Penerima Hasil GeminiGen">
-              <Endpoint method="POST" path="/api/webhooks/geminigen" desc="Dipanggil GeminiGen saat video jadi. Auth: header x-geminigen-secret === GEMINIGEN_WEBHOOK_SECRET (mismatch/unset → 401). uuid tak dikenal → 200 (skip). status completed → bikin worker_task REHOST_VIDEO." />
-              <p className="text-xs text-stone-500 mt-2">
-                Set URL ini di GeminiGen dashboard:
-                <code className="text-xs bg-stone-100 px-1 rounded ml-1">{BASE}/api/webhooks/geminigen</code>
-              </p>
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
-                ⚠️ Butuh 3 env di Railway: <code className="text-xs bg-white px-1 rounded">GEMINIGEN_API_KEY</code>,
-                <code className="text-xs bg-white px-1 rounded mx-1">GEMINIGEN_WEBHOOK_SECRET</code>,
-                <code className="text-xs bg-white px-1 rounded">GEMINIGEN_DASHBOARD_TOKEN</code> +
-                worker handler GENERATE_VIDEO/REHOST_VIDEO. Sebelum lengkap, job masuk antrian tapi belum jadi video.
-              </p>
-            </Section>
           </>
         )}
 
