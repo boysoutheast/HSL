@@ -169,6 +169,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'topicId or productId is required' }, { status: 400 })
   }
 
+  // Verify submitted topicId/productId is in agent's assignment scope
+  if (body.topicId) {
+    const topicAssignment = await prisma.assignment.findFirst({
+      where: { hermesAgentId: agent.id, assignableType: 'topic', assignableId: body.topicId, status: 'active' },
+    })
+    if (!topicAssignment) {
+      return NextResponse.json({ error: 'topicId is not in agent assignment scope' }, { status: 403 })
+    }
+  }
+  if (body.productId) {
+    const productAssignment = await prisma.assignment.findFirst({
+      where: { hermesAgentId: agent.id, assignableType: 'product', assignableId: body.productId, status: 'active' },
+    })
+    if (!productAssignment) {
+      return NextResponse.json({ error: 'productId is not in agent assignment scope' }, { status: 403 })
+    }
+  }
+
   const cep = await prisma.cep.create({
     data: {
       cepText: body.cepText.trim(),
