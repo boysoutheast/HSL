@@ -1294,8 +1294,8 @@ model CapiEventConfig {
 model GeneratedMedia {
   id                 String    @id @default(cuid())
   userId             String?   @map("user_id")
-  source             String    @default("geminigen")
-  model              String    @default("grok-video")
+  source             String    @default("hsl-v1")
+  model              String    @default("hsl-video-1")
   externalJobId      String?   @unique @map("external_job_id")
   status             String    @default("queued")
   prompt             String
