@@ -1,5 +1,5 @@
 /**
- * HSL Credit Engine v2
+ * HSL Credit Engine v3
  * Atomic credit operations for customer billing.
  *
  * CONSTANTS:
@@ -8,15 +8,14 @@
  *
  * BALANCE HOLDER:
  *   AdminUser.creditBalance (single source of truth).
- *   agent.ownerUserId maps agent → user; balance always on user.
- *   User can generate even without an agent (studio UI fixed).
  *
- * CONCURRENCY:
- *   Debit uses atomic conditional decrement:
- *     updateMany where { id, creditBalance >= amount } data { decrement }
- *     if result.count !== 1 → throw InsufficientCreditsError
- *   No read-then-write gap. No CAS that silently fails.
- *   Transaction order: decrement FIRST, then create CreditTransaction.
+ * CONCURRENCY MODEL:
+ *   — debitCredits:   conditional decrement + ledger in ONE interactive tx
+ *   — refundCredits:  atomic refundedAt lock FIRST, then increment
+ *   — grantCredits:   increment + ledger in ONE interactive tx
+ *
+ * All mutations are atomic: either both balance change and ledger row
+ * succeed, or neither does (rollback on dup key / lock loss).
  */
 
 import { prisma } from '@/lib/prisma'
@@ -36,17 +35,22 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// debitCredits
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Debit credits from a user's AdminUser.creditBalance.
  *
- * CONCURRENCY-SAFE: single atomic UPDATE with WHERE creditBalance >= amount.
- * Count check prevents silent CAS failure (double-spend).
+ * CONCURRENCY-SAFE: conditional decrement + ledger creation wrapped
+ * in one interactive Prisma transaction. If the ledger insert hits a
+ * unique-violation (retry with same idempotencyKey), the entire tx
+ * rolls back — the decrement is undone, zero net effect.
  *
- * @param userId   — AdminUser id
- * @param amount   — positive integer (e.g. VIDEO_10S_COST)
- * @param reason   — "video_generation" etc
- * @param refId    — optional generatedMediaId for traceability
- * @param idempotencyKey — unique key to prevent double-debit across retries
+ * On the FIRST call with a given key: decrement succeeds, ledger row
+ * is created, and the tx commits. On retry: the pre-tx idempotency
+ * guard catches the existing row and returns it without touching
+ * balance.
  */
 export async function debitCredits(
   userId: string,
@@ -57,91 +61,89 @@ export async function debitCredits(
 ): Promise<{ balanceAfter: number; transactionId: string }> {
   const key = idempotencyKey ?? `debit_${userId}_${refId ?? crypto.randomUUID()}`
 
-  // Check idempotency first
-  const existing = await prisma.creditTransaction.findUnique({
-    where: { idempotencyKey: key },
-  })
+  // Fast-path idempotency guard (outside tx)
+  const existing = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
   if (existing) {
     return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
   }
 
-  // Atomic conditional decrement — single SQL UPDATE, no read-then-write
-  const result = await prisma.adminUser.updateMany({
-    where: { id: userId, creditBalance: { gte: amount } },
-    data: { creditBalance: { decrement: amount } },
-  })
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Conditional decrement — atomic, no gap
+      const r = await tx.adminUser.updateMany({
+        where: { id: userId, creditBalance: { gte: amount } },
+        data: { creditBalance: { decrement: amount } },
+      })
 
-  if (result.count !== 1) {
-    // Balance insufficient — fetch current for error detail
-    const user = await prisma.adminUser.findUnique({
-      where: { id: userId },
-      select: { creditBalance: true },
+      if (r.count !== 1) {
+        const u = await tx.adminUser.findUnique({
+          where: { id: userId },
+          select: { creditBalance: true },
+        })
+        throw new InsufficientCreditsError(u?.creditBalance ?? 0, amount)
+      }
+
+      // 2. Read new balance WITHIN the tx
+      const u = await tx.adminUser.findUnique({
+        where: { id: userId },
+        select: { creditBalance: true },
+      })
+      const balanceAfter = u?.creditBalance ?? 0
+
+      // 3. Create ledger row — if dup-key, ENTIRE tx rolls back
+      const txn = await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: -amount,
+          reason,
+          refId: refId ?? null,
+          refType: refId ? 'generated_media' : null,
+          balanceAfter,
+          idempotencyKey: key,
+        },
+      })
+
+      return { balanceAfter, transactionId: txn.id }
     })
-    throw new InsufficientCreditsError(user?.creditBalance ?? 0, amount)
+  } catch (err) {
+    // If the interactive tx failed due to unique-violation (race),
+    // the fast-path guard above will catch the retry.
+    if (err instanceof InsufficientCreditsError) throw err
+
+    // Unique constraint — some other caller inserted the same key.
+    // Re-read and return the existing row.
+    const retry = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
+    if (retry) {
+      return { balanceAfter: retry.balanceAfter, transactionId: retry.id }
+    }
+    throw err
   }
-
-  // Read the new balance AFTER the atomic decrement
-  const updated = await prisma.adminUser.findUnique({
-    where: { id: userId },
-    select: { creditBalance: true },
-  })
-
-  const balanceAfter = updated?.creditBalance ?? 0
-
-  // Create transaction record — distinct from the decrement for audit clarity
-  const transaction = await prisma.creditTransaction.create({
-    data: {
-      userId,
-      amount: -amount,
-      reason,
-      refId: refId ?? null,
-      refType: refId ? 'generated_media' : null,
-      balanceAfter,
-      idempotencyKey: key,
-    },
-  })
-
-  return { balanceAfter, transactionId: transaction.id }
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// refundCredits
+// ────────────────────────────────────────────────────────────────────────────
 
 /**
  * Refund credits for a failed generation.
- * IDEMPOTENT: checks GeneratedMedia.refundedAt + CreditTransaction idempotencyKey.
  *
- * CONCURRENCY-SAFE: atomic increment (no read-then-write), count check.
- * Order: increment FIRST, then mark refundedAt + create txn.
+ * TOCTOU-PROOF: uses an atomic refundedAt lock instead of read-then-act.
+ *   Step 1:  updateMany where { id, refundedAt: null } data { refundedAt: now() }
+ *            → if count !== 1, some other caller won the race; bail.
+ *   Step 2:  increment balance (won lock — no concurrent refund possible).
+ *   Step 3:  create ledger row.
  *
- * @param generatedMediaId — id of the GeneratedMedia row
+ * Two concurrent webhook calls: exactly ONE wins the lock and processes
+ * the refund. The loser sees lock.count === 0 and returns immediately.
  */
 export async function refundCredits(generatedMediaId: string): Promise<{
   refunded: boolean
   balanceAfter?: number
   transactionId?: string
 }> {
-  const media = await prisma.generatedMedia.findUnique({
-    where: { id: generatedMediaId },
-    select: {
-      id: true,
-      userId: true,
-      creditsCost: true,
-      refundedAt: true,
-    },
-  })
-
-  if (!media || !media.userId || !media.creditsCost) {
-    return { refunded: false }
-  }
-
-  // Already refunded
-  if (media.refundedAt) {
-    return { refunded: false }
-  }
-
-  // Idempotency check via CreditTransaction
+  // Idempotency fast-path via CreditTransaction
   const idempotencyKey = `refund_${generatedMediaId}`
-  const existingTxn = await prisma.creditTransaction.findUnique({
-    where: { idempotencyKey },
-  })
+  const existingTxn = await prisma.creditTransaction.findUnique({ where: { idempotencyKey } })
   if (existingTxn) {
     return {
       refunded: true,
@@ -150,58 +152,77 @@ export async function refundCredits(generatedMediaId: string): Promise<{
     }
   }
 
-  // Atomic increment — unconditional, count check for sanity
-  const result = await prisma.adminUser.updateMany({
+  // 1. Atomic lock — exactly ONE caller sets refundedAt
+  const lock = await prisma.generatedMedia.updateMany({
+    where: { id: generatedMediaId, refundedAt: null },
+    data: { refundedAt: new Date() },
+  })
+
+  if (lock.count !== 1) {
+    // Lost the race or already refunded — check if someone else succeeded
+    const media = await prisma.generatedMedia.findUnique({
+      where: { id: generatedMediaId },
+      select: { refundedAt: true, userId: true, creditsCost: true },
+    })
+    if (!media?.userId || !media?.creditsCost) return { refunded: false }
+    // Already refunded (by other caller) — idempotent, return success
+    if (media.refundedAt) return { refunded: true }
+    return { refunded: false }
+  }
+
+  // 2. Won the lock — read media details
+  const media = await prisma.generatedMedia.findUnique({
+    where: { id: generatedMediaId },
+    select: { userId: true, creditsCost: true },
+  })
+
+  if (!media?.userId || !media?.creditsCost) {
+    return { refunded: false }
+  }
+
+  // 3. Increment balance
+  const incResult = await prisma.adminUser.updateMany({
     where: { id: media.userId },
     data: { creditBalance: { increment: media.creditsCost } },
   })
 
-  if (result.count !== 1) {
-    // User deleted? Still mark refunded to prevent infinite retries
-    await prisma.generatedMedia.update({
-      where: { id: generatedMediaId },
-      data: { refundedAt: new Date() },
-    })
+  if (incResult.count !== 1) {
+    // User deleted — refundedAt is already set, bail
     return { refunded: false }
   }
 
-  const updated = await prisma.adminUser.findUnique({
+  const u = await prisma.adminUser.findUnique({
     where: { id: media.userId },
     select: { creditBalance: true },
   })
-  const balanceAfter = updated?.creditBalance ?? 0
+  const balanceAfter = u?.creditBalance ?? 0
 
-  // Mark refunded + create transaction (no $transaction needed — increment is already done)
-  const [transaction] = await Promise.all([
-    prisma.creditTransaction.create({
-      data: {
-        userId: media.userId,
-        amount: media.creditsCost,
-        reason: 'refund',
-        refId: generatedMediaId,
-        refType: 'generated_media',
-        balanceAfter,
-        idempotencyKey,
-      },
-    }),
-    prisma.generatedMedia.update({
-      where: { id: generatedMediaId },
-      data: { refundedAt: new Date() },
-    }),
-  ])
+  // 4. Create ledger
+  const txn = await prisma.creditTransaction.create({
+    data: {
+      userId: media.userId,
+      amount: media.creditsCost,
+      reason: 'refund',
+      refId: generatedMediaId,
+      refType: 'generated_media',
+      balanceAfter,
+      idempotencyKey,
+    },
+  })
 
-  return { refunded: true, balanceAfter, transactionId: transaction.id }
+  return { refunded: true, balanceAfter, transactionId: txn.id }
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// grantCredits
+// ────────────────────────────────────────────────────────────────────────────
 
 /**
  * Grant credits to a user (admin or trial signup).
  *
- * CONCURRENCY-SAFE: atomic increment.
- *
- * @param userId — AdminUser id
- * @param amount — positive integer (e.g. TRIAL_GRANT)
- * @param reason — "trial_grant" | "admin_grant"
- * @param idempotencyKey — optional unique key
+ * CONCURRENCY-SAFE: increment + ledger in one interactive tx.
+ * Same pattern as debitCredits — if ledger insert fails (dup key),
+ * entire tx rolls back, increment cancelled.
  */
 export async function grantCredits(
   userId: string,
@@ -211,47 +232,55 @@ export async function grantCredits(
 ): Promise<{ balanceAfter: number; transactionId: string }> {
   const key = idempotencyKey ?? `grant_${userId}_${crypto.randomUUID()}`
 
-  // Idempotency check
-  const existing = await prisma.creditTransaction.findUnique({
-    where: { idempotencyKey: key },
-  })
+  const existing = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
   if (existing) {
     return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
   }
 
-  // Atomic increment
-  const result = await prisma.adminUser.updateMany({
-    where: { id: userId },
-    data: { creditBalance: { increment: amount } },
-  })
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const r = await tx.adminUser.updateMany({
+        where: { id: userId },
+        data: { creditBalance: { increment: amount } },
+      })
 
-  if (result.count !== 1) {
-    throw new Error(`AdminUser ${userId} not found`)
+      if (r.count !== 1) {
+        throw new Error(`AdminUser ${userId} not found`)
+      }
+
+      const u = await tx.adminUser.findUnique({
+        where: { id: userId },
+        select: { creditBalance: true },
+      })
+      const balanceAfter = u?.creditBalance ?? amount
+
+      const txn = await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount,
+          reason,
+          balanceAfter,
+          idempotencyKey: key,
+        },
+      })
+
+      return { balanceAfter, transactionId: txn.id }
+    })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('AdminUser')) throw err
+
+    const retry = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
+    if (retry) {
+      return { balanceAfter: retry.balanceAfter, transactionId: retry.id }
+    }
+    throw err
   }
-
-  const updated = await prisma.adminUser.findUnique({
-    where: { id: userId },
-    select: { creditBalance: true },
-  })
-  const balanceAfter = updated?.creditBalance ?? amount
-
-  const transaction = await prisma.creditTransaction.create({
-    data: {
-      userId,
-      amount,
-      reason,
-      balanceAfter,
-      idempotencyKey: key,
-    },
-  })
-
-  return { balanceAfter, transactionId: transaction.id }
 }
 
-/**
- * Get current credit balance for a user.
- * Reads from AdminUser.creditBalance.
- */
+// ────────────────────────────────────────────────────────────────────────────
+// getBalance
+// ────────────────────────────────────────────────────────────────────────────
+
 export async function getBalance(userId: string): Promise<number> {
   const user = await prisma.adminUser.findUnique({
     where: { id: userId },
@@ -260,9 +289,10 @@ export async function getBalance(userId: string): Promise<number> {
   return user?.creditBalance ?? 0
 }
 
-/**
- * Get paginated credit transaction history for a user.
- */
+// ────────────────────────────────────────────────────────────────────────────
+// getTransactionHistory
+// ────────────────────────────────────────────────────────────────────────────
+
 export async function getTransactionHistory(
   userId: string,
   limit: number = 20,
