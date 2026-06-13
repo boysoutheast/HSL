@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateApiKey, unauthorizedResponse } from '../../../_lib/api-key-auth'
+import { validateApiKey, unauthorizedResponse } from '../../_lib/api-key-auth'
 
 export const runtime = 'nodejs'
 
