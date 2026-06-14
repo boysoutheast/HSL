@@ -38,6 +38,7 @@ export async function PATCH(
     'thumbnailUrl',
     'errorMessage',
     'completedAt',
+    'rawWebhookJson',
   ])
 
   const data: Record<string, unknown> = {}

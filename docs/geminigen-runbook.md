@@ -48,8 +48,13 @@ GeminiGen (async processing ~2-5 menit)
   │
   ▼
 POST /api/webhooks/geminigen
-  ├── Verifikasi x-geminigen-secret
-  ├── status completed → bikin worker_task REHOST_VIDEO
+  ├── Secret check OPTIONAL — GeminiGen does not send x-geminigen-secret.
+  │     If both GEMINIGEN_WEBHOOK_SECRET and header present → verified.
+  │     If header absent → still processes (UUID-based auth).
+  ├── Extract UUID from payload.data.uuid
+  ├── Match UUID to generatedMedia.externalJobId
+  ├── Unknown UUID → 200 skip (not error)
+  ├── status completed (2) → bikin worker_task REHOST_VIDEO
   └── Return 200 OK
   │
   ▼
@@ -75,8 +80,9 @@ Hermes Worker (poll REHOST_VIDEO)
 - **Fix:** Pastikan webhook URL di GeminiGen dashboard benar + secret match
 
 ### Webhook 401 (secret mismatch)
-- **Penyebab:** `x-geminigen-secret` header tidak sama dengan `GEMINIGEN_WEBHOOK_SECRET`
-- **Fix:** Samakan nilai di Railway env dengan yang di-set di GeminiGen dashboard webhook settings
+- **Penyebab:** `GEMINIGEN_WEBHOOK_SECRET` di Railway tidak sama dengan yang diharapkan.
+- **Catatan:** Sejak 2026-06-14, secret webhook bersifat OPTIONAL. GeminiGen tidak mengirim header secret. Webhook handler HSL menerima callback tanpa header secret dan melakukan auth berbasis UUID.
+- **Fix:** Kalau ingin secret wajib, set `GEMINIGEN_WEBHOOK_SECRET` di Railway dan pastikan GeminiGen dashboard mengirim header `x-geminigen-secret` yang sama. Kalau tidak, kosongkan saja env-nya.
 
 ### Job status "failed"
 - **Cek:** Lihat `errorMessage` di generated_media row
@@ -90,6 +96,24 @@ Hermes Worker (poll REHOST_VIDEO)
 - **Penyebab:** REHOST_VIDEO gagal / videoUrl null
 - **Cek:** Lihat generated_media row — apakah videoUrl terisi?
 - **Fix:** Kalau null, cek worker task REHOST_VIDEO — apakah completed atau failed?
+
+### Job stuck "ready_for_rehost" (REHOST tidak jalan)
+- **Penyebab:** Worker tidak claim task REHOST_VIDEO / upload gagal
+- **Cek:** Lihat worker task REHOST_VIDEO — status + lastError
+- **Fix:** Cek storage `/data/photos/generated/` penuh? Worker running?
+
+### POLL_GEMINIGEN — polling fallback
+- Setelah GENERATE_VIDEO submit, worker auto-schedule POLL_GEMINIGEN task
+- Poll setiap ~60 detik via `GET /history/{jobId}` di GeminiGen API
+- Kalau webhook gak pernah datang, poll jadi fallback
+- Poll punya guard anti-double-REHOST: cek GM.status dulu — kalau udah `completed`/`ready_for_rehost`, skip
+- `maxAttempts=10` → ~10 menit total polling sebelum dead letter
+
+### Auto-Refund (worker failure)
+- Kalau GENERATE_VIDEO task gagal di worker → auto-call `POST /api/internal/generated-media/{id}/refund`
+- Refund idempotent — cek `refundedAt`, pakai `idempotencyKey`
+- Credit dikembalikan ke user balance dengan creditTransaction `reason=refund`
+- Kalau refund gagal → error logged ke stderr, task tetap marked failed
 
 ## Cek Manual (Admin)
 

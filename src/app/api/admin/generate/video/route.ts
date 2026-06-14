@@ -8,6 +8,10 @@ type CreateBody = {
   prompt?: string
   instagramAccountId?: string
   photoReferenceIds?: string[]
+  orientation?: string
+  resolution?: string
+  durationSeconds?: number
+  mediaType?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -26,6 +30,10 @@ export async function POST(req: NextRequest) {
     ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
     : []
   const instagramAccountId = body.instagramAccountId?.trim() || null
+  const orientation = body.orientation?.trim() || 'portrait'
+  const resolution = body.resolution === 'HD' ? 'HD' : 'SD'
+  const durationSeconds = body.durationSeconds === 6 ? 6 : 10
+  const mediaType = body.mediaType?.trim() || 'VIDEO'
 
   if (!prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -75,6 +83,10 @@ export async function POST(req: NextRequest) {
         prompt,
         instagramAccountId,
         status: 'queued',
+        orientation,
+        resolution,
+        durationSeconds,
+        mediaType,
       },
     })
 
@@ -94,6 +106,9 @@ export async function POST(req: NextRequest) {
           prompt,
           instagramAccountId,
           photoReferenceIds: orderedPhotoIds,
+          orientation,
+          resolution,
+          durationSeconds,
         }),
         status: 'pending',
         priority: 2,
