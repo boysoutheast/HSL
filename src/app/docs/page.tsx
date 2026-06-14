@@ -233,16 +233,21 @@ curl -H "x-api-key: hsk_xxx..." \\
     "prompt": "Demo skincare produk, gaya casual, pencahayaan natural",
     "orientation": "portrait",
     "resolution": "SD",
-    "durationSeconds": 10
+    "durationSeconds": 10,
+    "photoReferenceIds": ["photo_id_dari_library"]
   }' \\
   ${BASE}/api/gen/video
+
+# photoReferenceIds: ambil dari GET /api/hermes/library
+#   → instagramAccounts[].photoReferences[].id
+# HSL otomatis fetch foto dan kirim ke video engine sebagai character reference.
 
 # 201 Created:
 {
   "id": "gen_xxx",
-  "status": "queued",
+  "status": "processing",
   "creditsCost": 1300,
-  "balanceRemaining": 998700
+  "balanceAfter": 998700
 }
 
 # 402 — saldo kurang:
