@@ -55,7 +55,20 @@ export default function DocsPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-stone-50">
+      <div className="bg-white border-b border-stone-200 px-6 py-4">
+        <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-bold">H</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-stone-900">HSL API — Dokumentasi</h1>
+            <p className="text-xs text-stone-500">{BASE}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-6 py-8">
         <div className="flex flex-wrap gap-1 bg-white border border-stone-200 rounded-xl p-1 mb-6">
           {tabs.map(({ key, label }) => (
             <button
@@ -390,5 +403,6 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
           </>
         )}
       </div>
+    </div>
   )
 }

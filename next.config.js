@@ -19,7 +19,6 @@ module.exports = {
       { source: '/admin/dead-letters', destination: '/system?tab=workers', permanent: false },
       { source: '/observability', destination: '/system?tab=workers', permanent: false },
       { source: '/admin-users', destination: '/system?tab=users', permanent: false },
-      { source: '/docs', destination: '/system?tab=docs', permanent: false },
       { source: '/approval-requests', destination: '/ads?tab=actions', permanent: false },
       { source: '/launches', destination: '/ads?tab=launch', permanent: false },
     ]

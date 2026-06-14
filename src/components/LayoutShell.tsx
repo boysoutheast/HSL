@@ -12,7 +12,7 @@ interface CurrentUser {
   role: 'admin' | 'user'
 }
 
-const NO_SHELL_PATHS = ['/login', '/register']
+const NO_SHELL_PATHS = ['/login', '/register', '/docs']
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

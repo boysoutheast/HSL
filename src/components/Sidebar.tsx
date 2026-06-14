@@ -81,8 +81,17 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
           {visiblePillars.map(p => {
             const active = isActive(p.href)
             const badge = p.label === 'Ads' ? badges.ads : p.label === 'Influencer' ? badges.influencer : 0
+            const cls = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`
+            if (p.label === 'Docs') {
+              return (
+                <a key={p.href} href="/docs" target="_blank" rel="noopener noreferrer" className={cls}>
+                  {p.icon}
+                  <span className="flex-1">{p.label}</span>
+                </a>
+              )
+            }
             return (
-              <Link key={p.href} href={p.href} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`}>
+              <Link key={p.href} href={p.href} className={cls}>
                 {p.icon}
                 <span className="flex-1">{p.label}</span>
                 {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
@@ -111,8 +120,17 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         <div className="grid grid-cols-6">
           {visiblePillars.map((p) => {
             const active = isActive(p.href)
+            const cls = `flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? 'text-violet-700 font-semibold' : 'text-stone-500'}`
+            if (p.label === 'Docs') {
+              return (
+                <a key={p.href} href="/docs" target="_blank" rel="noopener noreferrer" className={cls}>
+                  {p.icon}
+                  <span>{p.label}</span>
+                </a>
+              )
+            }
             return (
-              <Link key={p.href} href={p.href} className={`flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? 'text-violet-700 font-semibold' : 'text-stone-500'}`}>
+              <Link key={p.href} href={p.href} className={cls}>
                 {p.icon}
                 <span>{p.label}</span>
               </Link>
