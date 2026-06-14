@@ -15,13 +15,21 @@ export default function SystemPage() {
   const [initialTab, setInitialTab] = useState<string>('connections')
 
   useEffect(() => {
+    const urlTab = new URLSearchParams(window.location.search).get('tab')
     fetch('/api/admin/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { setRole(d?.user?.role ?? null); setLoading(false) })
+      .then(d => {
+        const userRole = d?.user?.role ?? null
+        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability']
+        const userTabs = ['connections', 'workers']
+        const validTabs = userRole === 'admin' ? adminTabs : userTabs
+        if (urlTab && validTabs.includes(urlTab)) setInitialTab(urlTab)
+        setRole(userRole)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
-  // Early return AFTER all hooks
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
@@ -44,13 +52,6 @@ export default function SystemPage() {
   ]
 
   const tabs = isAdmin ? adminTabs : userTabs
-
-  // Detect tab from URL params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const t = params.get('tab')
-    if (t && tabs.some(tab => tab.id === t)) setInitialTab(t)
-  }, [tabs])
 
   return (
     <ClientTabs
