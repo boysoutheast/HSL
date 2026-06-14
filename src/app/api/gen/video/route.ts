@@ -53,50 +53,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const contentType = req.headers.get('content-type') ?? ''
-  const isMultipart = contentType.includes('multipart/form-data')
-
-  let prompt = ''
-  let orientation = 'portrait'
-  let resolution = 'SD'
-  let durationSeconds = 10
-  let photoReferenceIds: string[] = []
-  let imageBuffer: Buffer | undefined
-  let imageFilename: string | undefined
-
-  if (isMultipart) {
-    let form: FormData
-    try { form = await req.formData() } catch {
-      return NextResponse.json({ error: 'Invalid multipart form data' }, { status: 400 })
-    }
-    prompt = (form.get('prompt') as string | null)?.trim() ?? ''
-    orientation = (form.get('orientation') as string | null) ?? 'portrait'
-    resolution = (form.get('resolution') as string | null) === 'HD' ? 'HD' : 'SD'
-    durationSeconds = parseInt(form.get('durationSeconds') as string ?? '10', 10) || 10
-    const file = form.get('file') as File | null
-    if (file && file.size > 0) {
-      imageBuffer = Buffer.from(await file.arrayBuffer())
-      imageFilename = file.name || 'reference.jpg'
-    }
-  } else {
-    let body: {
-      prompt?: string
-      orientation?: string
-      resolution?: string
-      durationSeconds?: number
-      photoReferenceIds?: string[]
-    }
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-    }
-    prompt = body.prompt?.trim() ?? ''
-    orientation = body.orientation ?? 'portrait'
-    resolution = body.resolution === 'HD' ? 'HD' : 'SD'
-    durationSeconds = body.durationSeconds ?? 10
-    photoReferenceIds = Array.isArray(body.photoReferenceIds)
-      ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-      : []
+  let form: FormData
+  try { form = await req.formData() } catch {
+    return NextResponse.json({ error: 'Request must be multipart/form-data' }, { status: 400 })
   }
+
+  const prompt = (form.get('prompt') as string | null)?.trim() ?? ''
+  const orientation = (form.get('orientation') as string | null) ?? 'portrait'
+  const resolution = (form.get('resolution') as string | null) === 'HD' ? 'HD' : 'SD'
+  const durationSeconds = parseInt(form.get('durationSeconds') as string ?? '10', 10) || 10
+
+  const file = form.get('file') as File | null
+  if (!file || file.size === 0) {
+    return NextResponse.json({ error: 'file is required' }, { status: 400 })
+  }
+  const imageBuffer = Buffer.from(await file.arrayBuffer())
+  const imageFilename = file.name || 'reference.jpg'
 
   if (!prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
@@ -152,27 +124,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create inputs if any
-    if (photoReferenceIds.length > 0) {
-      // Validate photos belong to user (admin sees all)
-      const validPhotos = await tx.photoReference.findMany({
-        where: { id: { in: photoReferenceIds } },
-        select: { id: true },
-      })
-      const validIds = new Set(validPhotos.map(p => p.id))
-      const orderedIds = photoReferenceIds.filter(id => validIds.has(id))
-
-      if (orderedIds.length > 0) {
-        await tx.generatedMediaInput.createMany({
-          data: orderedIds.map((photoReferenceId, i) => ({
-            generatedMediaId: gm.id,
-            photoReferenceId,
-            inputOrder: i,
-          })),
-        })
-      }
-    }
-
     return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance }
   })
 
@@ -180,16 +131,6 @@ export async function POST(req: NextRequest) {
   let externalJobId: string | null = null
   try {
     const { submitVideoJob } = await import('@/lib/geminigen')
-
-    // Resolve photo URLs (only for JSON flow with photoReferenceIds)
-    let imageUrls: string[] = []
-    if (!imageBuffer && photoReferenceIds.length > 0) {
-      const photos = await prisma.photoReference.findMany({
-        where: { id: { in: photoReferenceIds } },
-        select: { fileUrl: true },
-      })
-      imageUrls = photos.map(p => p.fileUrl)
-    }
 
     const aspectRatio = orientation === 'landscape' ? 'landscape'
       : orientation === 'square' ? 'square'
@@ -199,8 +140,7 @@ export async function POST(req: NextRequest) {
       prompt,
       aspectRatio,
       durationSeconds: duration,
-      imageUrls,
-      imageBuffer,       // direct upload — takes priority over imageUrls
+      imageBuffer,
       imageFilename,
     })
 
