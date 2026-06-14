@@ -1,87 +1,168 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
-import { debitCredits, InsufficientCreditsError } from '@/lib/credits'
+import { requireApiKey } from '@/lib/api-key-auth'
 
 export const dynamic = 'force-dynamic'
 
-const COST_MATRIX: Record<string, Record<string, number>> = {
-  SD: { '5': 800, '6': 1000, '8': 1300, '10': 1500 },
-  HD: { '5': 1500, '6': 1800, '8': 2400, '10': 3000 },
-  FHD: { '5': 3000, '6': 3500, '8': 5000, '10': 6500 },
+// GET /api/gen/video?limit=20&offset=0 — list jobs
+export async function GET(req: NextRequest) {
+  const user = await requireApiKey(req)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '20', 10) || 20, 1), 100)
+  const offset = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0)
+
+  const where = { userId: user.id }
+
+  const [total, items] = await prisma.$transaction([
+    prisma.generatedMedia.count({ where }),
+    prisma.generatedMedia.findMany({
+      where,
+      select: {
+        id: true,
+        status: true,
+        prompt: true,
+        mediaType: true,
+        creditsCost: true,
+        videoUrl: true,
+        thumbnailUrl: true,
+        durationSeconds: true,
+        errorMessage: true,
+        createdAt: true,
+        completedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit,
+    }),
+  ])
+
+  return NextResponse.json({ items, total, limit, offset })
 }
 
+// POST /api/gen/video — create video generation job
 export async function POST(req: NextRequest) {
-  const token = extractBearerToken(req.headers.get('authorization'))
-  if (!token) return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
+  const user = await requireApiKey(req)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  const agent = await validateHermesApiKey(token)
-  if (!agent) return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
-  if (!agent.ownerUserId) return NextResponse.json({ error: 'No billing owner for this agent' }, { status: 403 })
-
-  let body: any
+  let body: {
+    prompt?: string
+    orientation?: string
+    resolution?: string
+    durationSeconds?: number
+    photoReferenceIds?: string[]
+  }
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const prompt = (body.prompt || '').trim()
-  if (!prompt || prompt.length < 3) return NextResponse.json({ error: 'prompt required (min 3 chars)' }, { status: 400 })
-
-  const orientation = (body.orientation || 'portrait').toLowerCase()
-  if (!['portrait', 'landscape', 'square'].includes(orientation)) return NextResponse.json({ error: 'invalid orientation' }, { status: 400 })
-
-  const resolution = (body.resolution || 'SD').toUpperCase()
-  if (!['SD', 'HD', 'FHD'].includes(resolution)) return NextResponse.json({ error: 'invalid resolution' }, { status: 400 })
-
-  const durationSeconds = parseInt(String(body.durationSeconds || 6), 10)
-  const durationKey = String(durationSeconds)
-  const costRow = COST_MATRIX[resolution]
-  if (!costRow) return NextResponse.json({ error: 'invalid resolution' }, { status: 400 })
-  const creditsCost = costRow[durationKey]
-  if (!creditsCost) return NextResponse.json({ error: 'invalid duration (5,6,8,10)' }, { status: 400 })
-
-  const photoRefIds: string[] = Array.isArray(body.photoReferenceIds) ? body.photoReferenceIds : []
-
-  // Verify photo references in scope
-  if (photoRefIds.length > 0) {
-    const refs = await prisma.photoReference.findMany({ where: { id: { in: photoRefIds } } })
-    if (refs.length !== photoRefIds.length) return NextResponse.json({ error: 'Some photo references not found' }, { status: 404 })
-    // Scope via instagramAccountId from photo ref chain
+  const prompt = body.prompt?.trim()
+  if (!prompt) {
+    return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   }
 
-  const generatedMediaId = crypto.randomUUID()
-  let balanceAfter: number
+  const photoReferenceIds = Array.isArray(body.photoReferenceIds)
+    ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    : []
 
-  try {
-    const result = await debitCredits(agent.ownerUserId, creditsCost, 'video_generation', generatedMediaId, `gen_${generatedMediaId}`)
-    balanceAfter = result.balanceAfter
-  } catch (err) {
-    if (err instanceof InsufficientCreditsError) return NextResponse.json({ error: 'Insufficient credits', balance: err.balance, required: err.required }, { status: 402 })
-    throw err
+  // Calculate credit cost
+  const resolution = body.resolution === 'HD' ? 'HD' : 'SD'
+  const duration = body.durationSeconds === 6 ? 6 : 10
+  const baseCost = duration <= 6 ? 1000 : 1300
+  const creditsCost = resolution === 'HD' ? baseCost * 2 : baseCost
+
+  // Credit check
+  if (user.creditBalance < creditsCost) {
+    return NextResponse.json({
+      error: 'Insufficient credits',
+      balance: user.creditBalance,
+      required: creditsCost,
+    }, { status: 402 })
   }
 
-  const media = await prisma.generatedMedia.create({
-    data: {
-      id: generatedMediaId, userId: agent.ownerUserId, prompt, instagramAccountId: body.instagramAccountId ?? null,
-      mediaType: 'VIDEO', creditsCost, orientation, resolution, durationSeconds, status: 'queued',
-    },
-  })
+  // Deduct credits + create job + queue worker task
+  const idempotencyKey = `gen_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
-  if (photoRefIds.length > 0) {
-    await prisma.generatedMediaInput.createMany({
-      data: photoRefIds.map((pid, idx) => ({ generatedMediaId, photoReferenceId: pid, inputOrder: idx })),
+  const result = await prisma.$transaction(async (tx) => {
+    // Deduct
+    const updatedUser = await tx.adminUser.update({
+      where: { id: user.id },
+      data: { creditBalance: { decrement: creditsCost } },
+      select: { creditBalance: true },
     })
-  }
 
-  const task = await prisma.workerTask.create({
-    data: {
-      type: 'GENERATE_VIDEO', capability: 'GENERATE_VIDEO',
-      payloadJson: JSON.stringify({ generatedMediaId, prompt, orientation, resolution, durationSeconds, photoReferenceIds: photoRefIds, instagramAccountId: body.instagramAccountId ?? null, userId: agent.ownerUserId }),
-      status: 'pending', priority: 5, maxAttempts: 2,
-    },
+    await tx.creditTransaction.create({
+      data: {
+        userId: user.id,
+        amount: -creditsCost,
+        reason: 'video_generation',
+        balanceAfter: updatedUser.creditBalance,
+        idempotencyKey,
+      },
+    })
+
+    // Create GeneratedMedia
+    const orientation = body.orientation || 'portrait'
+    const gm = await tx.generatedMedia.create({
+      data: {
+        userId: user.id,
+        prompt,
+        status: 'queued',
+        mediaType: 'VIDEO',
+        model: 'geminigen',
+        orientation,
+        resolution,
+        durationSeconds: duration,
+        creditsCost,
+      },
+    })
+
+    // Create inputs if any
+    if (photoReferenceIds.length > 0) {
+      // Validate photos belong to user (admin sees all)
+      const validPhotos = await tx.photoReference.findMany({
+        where: { id: { in: photoReferenceIds } },
+        select: { id: true },
+      })
+      const validIds = new Set(validPhotos.map(p => p.id))
+      const orderedIds = photoReferenceIds.filter(id => validIds.has(id))
+
+      if (orderedIds.length > 0) {
+        await tx.generatedMediaInput.createMany({
+          data: orderedIds.map((photoReferenceId, i) => ({
+            generatedMediaId: gm.id,
+            photoReferenceId,
+            inputOrder: i,
+          })),
+        })
+      }
+    }
+
+    // Queue worker task
+    await tx.workerTask.create({
+      data: {
+        type: 'GENERATE_VIDEO',
+        capability: 'fast-executor',
+        payloadJson: JSON.stringify({
+          generatedMediaId: gm.id,
+          prompt,
+          orientation,
+          resolution,
+          durationSeconds: duration,
+          photoReferenceIds: photoReferenceIds.length > 0 ? photoReferenceIds : undefined,
+        }),
+        status: 'pending',
+        priority: 2,
+      },
+    })
+
+    return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance }
   })
 
-  await prisma.generatedMedia.update({ where: { id: generatedMediaId }, data: { workerTaskId: task.id } })
-
-  return NextResponse.json({ id: generatedMediaId, status: 'queued', creditsCost, balanceRemaining: balanceAfter }, { status: 201 })
+  return NextResponse.json(result, { status: 201 })
 }

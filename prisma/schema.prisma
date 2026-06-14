@@ -367,6 +367,7 @@ model AdminUser {
   hermesAgents        HermesAgent[]
   generatedMedia      GeneratedMedia[]
   creditTransactions  CreditTransaction[]
+  apiKeys             UserApiKey[]
 
   @@map("admin_users")
 }
@@ -1383,5 +1384,23 @@ model ThreadMessage {
 
   @@index([threadId])
   @@map("thread_messages")
+}
+
+
+model UserApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  keyHash     String    @map("key_hash")
+  prefix      String    // first 8 chars for display (hsk_xxxx)
+  name        String    @default("Default")
+  lastUsedAt  DateTime? @map("last_used_at")
+  status      String    @default("active") // active | revoked
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user        AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@unique([userId, keyHash])
+  @@map("user_api_keys")
 }
 

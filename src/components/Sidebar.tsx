@@ -21,8 +21,7 @@ const pillars = [
   { label: 'Ads', href: '/ads', icon: I.ads },
   { label: 'Influencer', href: '/influencer', icon: I.infl },
   { label: 'Media', href: '/media', icon: I.media },
-  { label: 'Connections', href: '/meta-connections', icon: I.sys },
-  { label: 'System', href: '/system', icon: I.sys, adminOnly: true },
+  { label: 'System', href: '/system', icon: I.sys },
 ]
 
 export default function Sidebar({ user, onLogout }: { user?: User | null; onLogout?: () => void }) {
@@ -52,7 +51,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
     return pathname === href || pathname.startsWith(href + '/') || pathname.startsWith(href + '?')
   }
 
-  const visiblePillars = pillars.filter((p) => !p.adminOnly || isAdmin)
+  const visiblePillars = pillars
 
   return (
     <>

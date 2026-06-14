@@ -4,33 +4,38 @@ import { requireApiKey } from '@/lib/api-key-auth'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/gen/media?limit=20 — list user's generated media
-export async function GET(req: NextRequest) {
+// GET /api/gen/video/[id] — job status
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
   const user = await requireApiKey(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { searchParams } = new URL(req.url)
-  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '20', 10) || 20, 1), 100)
-
-  const items = await prisma.generatedMedia.findMany({
-    where: { userId: user.id, mediaType: 'VIDEO' },
+  const job = await prisma.generatedMedia.findFirst({
+    where: { id: params.id, userId: user.id },
     select: {
       id: true,
       status: true,
       prompt: true,
+      mediaType: true,
       creditsCost: true,
       videoUrl: true,
       thumbnailUrl: true,
       durationSeconds: true,
+      orientation: true,
+      resolution: true,
       errorMessage: true,
       createdAt: true,
       completedAt: true,
     },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
   })
 
-  return NextResponse.json({ media: items })
+  if (!job) {
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(job)
 }
