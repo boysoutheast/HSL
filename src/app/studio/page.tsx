@@ -67,8 +67,8 @@ export default function StudioPage() {
     if (!apiKey) return
     try {
       const [credRes, genRes] = await Promise.all([
-        fetch('/api/hermes/credits', { headers: { authorization: `Bearer ${apiKey}` } }),
-        fetch('/api/hermes/generated-media?limit=20', { headers: { authorization: `Bearer ${apiKey}` } }),
+        fetch('/api/gen/credits', { headers: { authorization: `Bearer ${apiKey}` } }),
+        fetch('/api/gen/media?limit=20', { headers: { authorization: `Bearer ${apiKey}` } }),
       ])
       if (credRes.ok) {
         const data = await credRes.json()
@@ -101,7 +101,7 @@ export default function StudioPage() {
     setGenerating(true)
     setError(null)
     try {
-      const res = await fetch('/api/hermes/generate/video', {
+      const res = await fetch('/api/gen/video', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

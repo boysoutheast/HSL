@@ -1,36 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
-import { getBalance, getTransactionHistory } from '@/lib/credits'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/hermes/credits — get agent owner's credit balance and transaction history
+// GET /api/hermes/credits → 307 redirect to /api/gen/credits
 export async function GET(req: NextRequest) {
-  const token = extractBearerToken(req.headers.get('authorization'))
-  if (!token) {
-    return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
-  }
-
-  const agent = await validateHermesApiKey(token)
-  if (!agent) {
-    return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
-  }
-
-  if (!agent.ownerUserId) {
-    return NextResponse.json({ error: 'No billing owner for this agent' }, { status: 403 })
-  }
-
-  const { searchParams } = new URL(req.url)
-  const limit = Math.min(parseInt(searchParams.get('limit') ?? '20'), 100)
-  const offset = parseInt(searchParams.get('offset') ?? '0')
-
-  const [balance, history] = await Promise.all([
-    getBalance(agent.ownerUserId),
-    getTransactionHistory(agent.ownerUserId, limit, offset),
-  ])
-
-  return NextResponse.json({
-    balance,
-    ...history,
-  })
+  const url = new URL(req.url)
+  url.pathname = '/api/gen/credits'
+  return NextResponse.redirect(url, 307)
 }

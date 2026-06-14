@@ -273,13 +273,13 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
             </Section>
 
             <Section title="Hermes Agent — Ambil Hasil">
-              <Endpoint method="GET" path="/api/hermes/generated-media" desc="List video jadi (Bearer token). Query: ?status=completed&limit=20. Difilter assignment — agent cuma lihat media dari IG account yang di-assign ke dia." />
+              <Endpoint method="GET" path="/api/gen/media" desc="List video jadi (Bearer token). Query: ?status=completed&limit=20. Scope: ownerUserId." />
               <p className="text-xs text-stone-500 mt-2">
                 Response item: <code className="text-xs bg-stone-100 px-1 rounded">id, status, videoUrl, thumbnailUrl, prompt, durationSeconds, instagramAccountId, completedAt, inputs[]</code>
               </p>
             </Section>
 
-            <Section title="Customer API — /api/hermes/* (White-label)">
+            <Section title="Video Generator API — /api/gen/* (White-label)">
               <p className="text-sm text-stone-600 mb-3">
                 Endpoint publik untuk customer. Pakai API key Bearer token.
                 Semua endpoint white-label — tidak ada nama provider/model yang bocor.
@@ -287,7 +287,7 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
 
               <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                 <h3 className="text-sm font-bold text-violet-800 mb-2">🎬 Generate Video</h3>
-                <Endpoint method="POST" path="/api/hermes/generate/video" desc="Buat video generation job. Body: prompt* (teks), photoReferenceIds[] (opsional, 0-5 ID foto referensi), instagramAccountId (opsional). Balikin 201 { id, status: 'queued', creditsCost, balanceRemaining }." />
+                <Endpoint method="POST" path="/api/gen/video" desc="Buat video generation job. Body: prompt* (teks), photoReferenceIds[] (opsional, 0-5 ID foto referensi), instagramAccountId (opsional). Balikin 201 { id, status: 'queued', creditsCost, balanceRemaining }." />
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-stone-500">
                     <strong>Cost (server-side):</strong> SD 6s = 1,000 • SD 10s = 1,300 • HD = 2×. Tidak bisa di-override client.
@@ -298,20 +298,21 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
                 </div>
                 <Code>{`curl -X POST -H "Authorization: Bearer *** -H "Content-Type: application/json" \\
   -d '{"prompt":"Product demo cinematic 4K","photoReferenceIds":[]}' \\
-  ${BASE}/api/hermes/generate/video`}</Code>
+  ${BASE}/api/gen/video`}</Code>
               </div>
 
               <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                 <h3 className="text-sm font-bold text-violet-800 mb-2">📊 Credits & Balance</h3>
-                <Endpoint method="GET" path="/api/hermes/credits" desc="Cek saldo + riwayat transaksi. Return: { balance (int), transactions[] (id, amount, reason, balanceAfter, createdAt) }." />
+                <Endpoint method="GET" path="/api/gen/credits" desc="Cek saldo + riwayat transaksi. Return: { balance (int), transactions[] (id, amount, reason, balanceAfter, createdAt) }." />
                 <Code>{`curl -H "Authorization: Bearer *** \\
-  ${BASE}/api/hermes/credits`}</Code>
+  ${BASE}/api/gen/credits`}</Code>
               </div>
 
               <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
                 <h3 className="text-sm font-bold text-violet-800 mb-2">📹 Cek Hasil</h3>
-                <Endpoint method="GET" path="/api/hermes/generated-media/[id]" desc="Detail satu generated media. Return: id, status (queued|processing|completed|failed), prompt, videoUrl, thumbnailUrl, creditsCost, errorMessage, completedAt." />
-                <Endpoint method="GET" path="/api/hermes/generated-media" desc="List semua generated media milik agent. Query: ?status=completed&limit=20&offset=0." />
+                <Endpoint method="GET" path="/api/gen/media/[id]" desc="Detail satu generated media. Return: id, status (queued|processing|completed|failed), prompt, videoUrl, thumbnailUrl, creditsCost, errorMessage, completedAt." />
+                <Endpoint method="GET" path="/api/gen/media" desc="List semua generated media milik agent. Query: ?status=completed&limit=20&offset=0." />
+                <Endpoint method="GET" path="/api/gen/media/[id]/download" desc="Download/redirect ke videoUrl. 302 redirect. 409 kalau video belum ready." />
               </div>
             </Section>
 
