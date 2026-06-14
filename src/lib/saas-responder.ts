@@ -166,6 +166,7 @@ export async function runSaasResponder(threadId: string): Promise<SaasDecision |
             capability: 'content_generation',
             priority: 5,
             maxAttempts: 2,
+            scope: 'internal',
             status: 'pending',
             payloadJson: JSON.stringify(decision.nextTask.payload ?? {}),
           },

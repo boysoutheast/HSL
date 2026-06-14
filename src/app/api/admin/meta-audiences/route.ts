@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
         userId: auth.id,
       }),
       priority: 4,
+      scope: 'internal',
     },
   })
 

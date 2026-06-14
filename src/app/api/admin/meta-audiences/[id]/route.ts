@@ -63,6 +63,7 @@ export async function DELETE(
           userId: auth.id,
         }),
         priority: 6,
+        scope: 'internal',
       },
     })
   }

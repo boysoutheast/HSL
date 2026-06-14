@@ -88,6 +88,7 @@ export async function POST(req: NextRequest) {
             fileDownloadUrl: mediaUrl,
             thumbnailUrl,
           }),
+          scope: 'internal',
           status: 'pending',
           priority: 3,
           maxAttempts: 3,

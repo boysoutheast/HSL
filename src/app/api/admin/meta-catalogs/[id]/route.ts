@@ -93,6 +93,7 @@ export async function POST(
           userId: auth.id,
         }),
         priority: 5,
+        scope: 'internal',
       },
     })
     taskId = task.id

@@ -106,6 +106,7 @@ export async function POST(
         campaignSessionId: sessionId,
         payload: body.payload ?? {},
       }),
+      scope: 'internal',
       status: 'PENDING',
       priority,
       testLaunchId: null,

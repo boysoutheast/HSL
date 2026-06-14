@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         priority,
         maxAttempts,
         testLaunchId,
+        scope: 'internal',
         status: 'pending',
       },
     })

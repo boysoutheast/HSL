@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
           lastMetaCallAt: account.lastMetaCallAt?.toISOString() ?? null,
           queuedAt: now.toISOString(),
         }),
+        scope: 'internal',
         status: 'pending',
         priority: 9, // low priority — health check
         maxAttempts: 2,

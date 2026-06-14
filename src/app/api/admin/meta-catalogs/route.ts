@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
           userId: auth.id,
         }),
         priority: 5,
+        scope: 'internal',
       },
     })
     taskId = task.id

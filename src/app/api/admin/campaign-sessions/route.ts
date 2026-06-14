@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
         campaignSessionId: session.id,
         payload: { campaignSessionId: session.id, name: session.name },
       }),
+      scope: 'internal',
       status: 'PENDING',
       priority: 1,
       testLaunchId: session.testLaunchId,

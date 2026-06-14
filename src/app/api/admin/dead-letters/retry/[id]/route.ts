@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       data: {
         type: entry.taskType,
         payloadJson: entry.payloadJson,
+        scope: 'internal',
         status: 'pending',
         priority: 5,
         attempts: 0,

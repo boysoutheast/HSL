@@ -313,6 +313,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       data: {
         type: 'create_full_launch_v3',
         payloadJson: JSON.stringify(payload),
+        scope: 'internal',
         status: 'pending',
         priority: 1,
         testLaunchId: approvalRequest.testLaunchId,

@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
           resolution,
           durationSeconds,
         }),
+        scope: 'internal',
         status: 'pending',
         priority: 2,
       },

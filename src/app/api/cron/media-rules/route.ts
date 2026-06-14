@@ -129,6 +129,7 @@ export async function POST(req: NextRequest) {
             ...extraPayload,
           }),
           priority: 5,
+          scope: 'internal',
         },
       })
       taskId = task.id
