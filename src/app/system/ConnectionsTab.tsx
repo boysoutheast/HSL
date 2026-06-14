@@ -71,7 +71,7 @@ export default function ConnectionsTab() {
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
-    "prompt": "A product demo of Glazingskin lotion on a wooden table",
+    "prompt": "A product demo on a clean table, soft lighting, 10 seconds",
     "orientation": "portrait",
     "resolution": "SD",
     "durationSeconds": 10
@@ -173,14 +173,28 @@ export default function ConnectionsTab() {
         <h3 className="text-base font-semibold text-stone-800">📡 API Gen Endpoints</h3>
 
         {[
-          ['POST', '/api/gen/video', 'Generate video. Deduct credits.', [
-            ['prompt', 'string', '✅'], ['orientation', 'portrait|landscape|square', '—'],
-            ['resolution', 'SD|HD', '—'], ['durationSeconds', '6|10', '—'],
+          ['POST', '/api/gen/video', 'Submit video generation. Deducts credits.', [
+            ['prompt', 'string', '✅', 'Deskripsi video (Bahasa Indonesia OK)'],
+            ['orientation', 'portrait|landscape', '—', 'Default: portrait'],
+            ['resolution', 'SD|HD', '—', 'Default: SD'],
+            ['durationSeconds', '6|10', '—', 'Default: 10'],
+            ['photoReferenceIds', 'string[]', '—', 'Array photo reference IDs (optional)'],
+          ], [
+            ['id', 'string', 'GeneratedMedia ID — simpan untuk polling'],
+            ['creditsCost', 'number', 'Credits terpotong'],
+            ['balanceAfter', 'number', 'Sisa credits'],
           ]],
-          ['GET', '/api/gen/video/:id', 'Cek job status.', []],
-          ['GET', '/api/gen/credits', 'Cek balance + transactions.', []],
-          ['GET', '/api/gen/media?limit=20', 'List hasil generate.', []],
-        ].map(([method, path, desc, fields]) => (
+          ['GET', '/api/gen/video/:id', 'Poll job status.', [], [
+            ['status', 'string', 'queued → processing → ready_for_rehost → completed | failed'],
+            ['videoUrl', 'string|null', 'URL video (null sebelum completed)'],
+            ['thumbnailUrl', 'string|null', 'URL thumbnail'],
+            ['prompt', 'string', 'Prompt yang dipakai'],
+            ['errorMessage', 'string|null', 'Error detail jika failed'],
+            ['completedAt', 'string|null', 'ISO timestamp saat completed'],
+          ]],
+          ['GET', '/api/gen/credits', 'Cek balance + history.', [], []],
+          ['GET', '/api/gen/media?limit=20', 'List completed media.', [], []],
+        ].map(([method, path, desc, reqFields, respFields]: any) => (
           <div key={path as string}>
             <div className="flex items-center gap-2 mb-1">
               <span className={`px-2 py-0.5 text-xs font-mono font-bold rounded ${
@@ -188,25 +202,71 @@ export default function ConnectionsTab() {
               }`}>{method}</span>
               <code className="text-sm font-mono text-stone-800">{path as string}</code>
             </div>
-            <p className="text-sm text-stone-600 mb-1">{desc}</p>
-            {(fields as any[]).length > 0 && (
-              <table className="w-full text-xs mb-2">
-                <thead><tr className="text-stone-400 uppercase"><th className="pb-1 pr-2 text-left font-medium">Field</th><th className="pb-1 pr-2 text-left font-medium">Type</th><th className="pb-1 text-left font-medium">Req</th></tr></thead>
-                <tbody className="divide-y divide-stone-50">
-                  {(fields as any[]).map((f: any) => (
-                    <tr key={f[0]}><td className="py-1 pr-2 font-mono">{f[0]}</td><td className="py-1 pr-2 text-stone-500">{f[1]}</td><td className="py-1">{f[2]}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+            <p className="text-sm text-stone-600 mb-2">{desc}</p>
+            {reqFields.length > 0 && (
+              <div className="mb-2">
+                <div className="text-xs text-stone-400 font-semibold mb-1">Request Body:</div>
+                <table className="w-full text-xs">
+                  <thead><tr className="text-stone-400 uppercase"><th className="pb-1 pr-2 text-left font-medium">Field</th><th className="pb-1 pr-2 text-left font-medium">Type</th><th className="pb-1 pr-2 text-left font-medium">Req</th><th className="pb-1 text-left font-medium">Notes</th></tr></thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {reqFields.map((f: any) => (
+                      <tr key={f[0]}><td className="py-1 pr-2 font-mono">{f[0]}</td><td className="py-1 pr-2 text-stone-500">{f[1]}</td><td className="py-1 pr-2">{f[2]}</td><td className="py-1 text-stone-500 text-[11px]">{f[3]}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {respFields.length > 0 && (
+              <div>
+                <div className="text-xs text-stone-400 font-semibold mb-1">Response:</div>
+                <table className="w-full text-xs">
+                  <thead><tr className="text-stone-400 uppercase"><th className="pb-1 pr-2 text-left font-medium">Field</th><th className="pb-1 pr-2 text-left font-medium">Type</th><th className="pb-1 text-left font-medium">Notes</th></tr></thead>
+                  <tbody className="divide-y divide-stone-50">
+                    {respFields.map((f: any) => (
+                      <tr key={f[0]}><td className="py-1 pr-2 font-mono">{f[0]}</td><td className="py-1 pr-2 text-stone-500">{f[1]}</td><td className="py-1 text-stone-500 text-[11px]">{f[2]}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Curl example + Pricing */}
+      {/* Error Codes */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
-        <h3 className="text-base font-semibold text-stone-800 mb-3">🚀 Curl Example</h3>
-        <pre className="bg-stone-900 text-green-400 text-xs p-4 rounded-xl overflow-x-auto">{curlEx}</pre>
+        <h3 className="text-base font-semibold text-stone-800 mb-3">⚠️ Error Codes</h3>
+        <table className="w-full text-sm">
+          <thead><tr className="text-xs text-stone-400 uppercase border-b border-stone-100"><th className="pb-2 pr-2 text-left">Status</th><th className="pb-2 text-left">Meaning</th></tr></thead>
+          <tbody>
+            <tr className="border-b border-stone-50"><td className="py-2 pr-2 font-mono text-xs font-bold text-red-600">400</td><td className="py-2 text-xs">Bad request — prompt kosong, invalid JSON</td></tr>
+            <tr className="border-b border-stone-50"><td className="py-2 pr-2 font-mono text-xs font-bold text-red-600">401</td><td className="py-2 text-xs">Invalid or missing API key</td></tr>
+            <tr><td className="py-2 pr-2 font-mono text-xs font-bold text-red-600">402</td><td className="py-2 text-xs">Insufficient credits — balance & required credits returned in body</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Curl example + Polling */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-stone-800 mb-3">🚀 Generate Example</h3>
+          <pre className="bg-stone-900 text-green-400 text-xs p-4 rounded-xl overflow-x-auto">{curlEx}</pre>
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-stone-800 mb-3">🔄 Polling Example</h3>
+          <pre className="bg-stone-900 text-green-400 text-xs p-4 rounded-xl overflow-x-auto">{`# Poll sampai video selesai (max 5 menit)
+JOB_ID="abc123"
+while true; do
+  STATUS=$(curl -s https://ai.boytenggara.com/api/gen/video/$JOB_ID \\
+    -H "x-api-key: YOUR_API_KEY" | jq -r '.status')
+  if [ "$STATUS" = "completed" ]; then
+    curl -s https://ai.boytenggara.com/api/gen/video/$JOB_ID \\
+      -H "x-api-key: YOUR_API_KEY" | jq '.videoUrl'
+    break
+  fi
+  sleep 5
+done`}</pre>
+        </div>
       </div>
 
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
