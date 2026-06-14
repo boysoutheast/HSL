@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Queue worker task
+    // Queue worker task (scope='user' — owned by this user)
     await tx.workerTask.create({
       data: {
         type: 'GENERATE_VIDEO',
@@ -157,6 +157,8 @@ export async function POST(req: NextRequest) {
           photoReferenceIds: photoReferenceIds.length > 0 ? photoReferenceIds : undefined,
         }),
         status: 'pending',
+        scope: 'user',
+        ownerUserId: user.id,
         priority: 2,
       },
     })

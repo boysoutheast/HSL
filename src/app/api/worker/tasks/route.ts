@@ -27,7 +27,9 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const metaAccountId = searchParams.get('metaAccountId')
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = {
+      scope: 'internal',
+    }
     if (type) {
       where.type = type
     }

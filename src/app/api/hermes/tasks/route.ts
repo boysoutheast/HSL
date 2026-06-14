@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
       status: 'pending',
       type: { in: types },
       capability: 'content_generation',
+      scope: 'internal',
     },
     orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     take: 10,
@@ -63,14 +64,14 @@ export async function POST(req: NextRequest) {
 
   if (body.taskId) {
     const updated = await prisma.workerTask.updateMany({
-      where: { id: body.taskId, status: 'pending', capability: 'content_generation' },
+      where: { id: body.taskId, status: 'pending', capability: 'content_generation', scope: 'internal' },
       data: { status: 'processing', workerId: `hermes:${agent.id}`, startedAt: new Date(), attempts: { increment: 1 } },
     })
     if (updated.count === 1) claimedId = body.taskId
   } else {
     // Auto-pick: ambil kandidat lalu coba claim satu per satu
     const candidates = await prisma.workerTask.findMany({
-      where: { status: 'pending', type: { in: types }, capability: 'content_generation' },
+      where: { status: 'pending', type: { in: types }, capability: 'content_generation', scope: 'internal' },
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
       take: 5,
       select: { id: true },

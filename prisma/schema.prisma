@@ -645,11 +645,13 @@ model WorkerTask {
   attempts     Int       @default(0)
   maxAttempts  Int       @default(3) @map("max_attempts")
   lastError    String?   @map("last_error")
-  workerId     String?   @map("worker_id") // which Worker instance claimed this
-  testLaunchId String?   @map("test_launch_id") // nullable — tasks can exist without a launch
-  createdAt    DateTime  @default(now()) @map("created_at")
-  startedAt    DateTime? @map("started_at")
-  completedAt  DateTime? @map("completed_at")
+  workerId       String?   @map("worker_id") // which Worker instance claimed this
+  testLaunchId   String?   @map("test_launch_id") // nullable — tasks can exist without a launch
+  ownerUserId    String?   @map("owner_user_id")   // null = internal/system task
+  scope          String    @default("internal")    // 'internal' | 'user'
+  createdAt      DateTime  @default(now()) @map("created_at")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
 
   testLaunch TestLaunch?        @relation(fields: [testLaunchId], references: [id])
   results        WorkerTaskResult[]
@@ -658,6 +660,8 @@ model WorkerTask {
   @@index([status, priority])
   @@index([testLaunchId])
   @@index([capability])
+  @@index([scope, status])
+  @@index([ownerUserId])
   @@map("worker_tasks")
 }
 
