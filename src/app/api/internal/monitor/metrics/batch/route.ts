@@ -43,54 +43,38 @@ export async function POST(req: NextRequest) {
 
   const sessionIds = [...new Set(body.map((m) => m.campaignSessionId))]
 
-  // Bulk upsert via raw SQL — more reliable for high-volume upserts than Prisma's upsert
-  const values = body
-    .map((m) => {
-      const windowEnd = new Date(m.windowEnd).toISOString()
-      const windowStart = new Date(new Date(m.windowEnd).getTime() - 24 * 60 * 60 * 1000).toISOString()
-      return `(
-        '${m.campaignSessionId}',
-        '${m.metaEntityId}',
-        '${m.entityType}',
-        '${windowStart}',
-        '${windowEnd}',
-        '7d',
-        ${m.spend},
-        ${m.impressions},
-        ${m.clicks},
-        ${m.leads ?? 0},
-        ${m.purchases ?? 0},
-        ${m.purchaseValue ?? 0},
-        ${m.roas ?? 'NULL'},
-        ${m.cpc ?? 'NULL'},
-        ${m.ctr ?? 'NULL'}
-      )`
-    })
-    .join(',\n')
-
-  const upsertSql = `
-    INSERT INTO metric_snapshots (
-      campaign_session_id, meta_entity_id, entity_type,
-      window_start, window_end, attribution_window,
-      spend, impressions, clicks, leads, purchases, purchase_value,
-      roas, cpc, ctr
-    )
-    VALUES ${values}
-    ON CONFLICT (campaign_session_id, meta_entity_id, window_end)
-    DO UPDATE SET
-      entity_type = EXCLUDED.entity_type,
-      spend = EXCLUDED.spend,
-      impressions = EXCLUDED.impressions,
-      clicks = EXCLUDED.clicks,
-      leads = EXCLUDED.leads,
-      purchases = EXCLUDED.purchases,
-      purchase_value = EXCLUDED.purchase_value,
-      roas = EXCLUDED.roas,
-      cpc = EXCLUDED.cpc,
-      ctr = EXCLUDED.ctr
-  `
-
-  await prisma.$executeRawUnsafe(upsertSql)
+  // Per-row parameterized upsert — safe from SQL injection
+  for (const m of body) {
+    await prisma.$executeRaw`
+      INSERT INTO metric_snapshots (
+        campaign_session_id, meta_entity_id, entity_type,
+        window_start, window_end, attribution_window,
+        spend, impressions, clicks, leads, purchases, purchase_value,
+        roas, cpc, ctr
+      )
+      VALUES (
+        ${m.campaignSessionId}, ${m.metaEntityId}, ${m.entityType},
+        ${new Date(new Date(m.windowEnd).getTime() - 24 * 60 * 60 * 1000).toISOString()},
+        ${new Date(m.windowEnd).toISOString()},
+        ${'7d'},
+        ${m.spend}, ${m.impressions}, ${m.clicks},
+        ${m.leads ?? 0}, ${m.purchases ?? 0}, ${m.purchaseValue ?? 0},
+        ${m.roas ?? null}, ${m.cpc ?? null}, ${m.ctr ?? null}
+      )
+      ON CONFLICT (campaign_session_id, meta_entity_id, window_end)
+      DO UPDATE SET
+        entity_type = EXCLUDED.entity_type,
+        spend = EXCLUDED.spend,
+        impressions = EXCLUDED.impressions,
+        clicks = EXCLUDED.clicks,
+        leads = EXCLUDED.leads,
+        purchases = EXCLUDED.purchases,
+        purchase_value = EXCLUDED.purchase_value,
+        roas = EXCLUDED.roas,
+        cpc = EXCLUDED.cpc,
+        ctr = EXCLUDED.ctr
+    `
+  }
 
   // Update CampaignSession.lastMonitorAt and nextMonitorAt for all affected sessions
   const now = new Date()

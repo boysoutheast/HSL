@@ -56,17 +56,25 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { rotateApiKey, ...updateData } = body
+  const { rotateApiKey, ...rawBody } = body
+
+  // Allowlist: only these fields can be updated (mass assignment protection)
+  const allowedUpdate: Record<string, unknown> = {}
+  if (typeof rawBody.name === 'string') allowedUpdate.name = rawBody.name.trim().slice(0, 100)
+  if (typeof rawBody.status === 'string' && ['active', 'inactive'].includes(rawBody.status)) {
+    allowedUpdate.status = rawBody.status
+  }
+  if (typeof rawBody.notes === 'string') allowedUpdate.notes = rawBody.notes.trim().slice(0, 1000)
 
   let newRawApiKey: string | undefined
   if (rotateApiKey) {
     newRawApiKey = randomBytes(32).toString('hex')
-    ;(updateData as Record<string, unknown>).apiKeyHash = hashApiKey(newRawApiKey)
+    allowedUpdate.apiKeyHash = hashApiKey(newRawApiKey)
   }
 
   const agent = await prisma.hermesAgent.update({
     where: { id: params.id },
-    data: updateData,
+    data: allowedUpdate,
     select: {
       id: true,
       name: true,

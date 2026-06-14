@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
             ],
           }),
     },
-    select: { id: true },
+    select: { id: true, fileUrl: true },
   })
 
   if (photoReferences.length !== photoReferenceIds.length) {
@@ -77,8 +77,9 @@ export async function POST(req: NextRequest) {
 
   const orderedPhotoIds = photoReferenceIds.map((id) => id.trim())
 
-  const result = await prisma.$transaction(async (tx) => {
-    const generatedMedia = await tx.generatedMedia.create({
+  // Create job (no worker task — GeminiGen called directly)
+  const generatedMedia = await prisma.$transaction(async (tx) => {
+    const gm = await tx.generatedMedia.create({
       data: {
         prompt,
         instagramAccountId,
@@ -92,40 +93,55 @@ export async function POST(req: NextRequest) {
 
     await tx.generatedMediaInput.createMany({
       data: orderedPhotoIds.map((photoReferenceId, index) => ({
-        generatedMediaId: generatedMedia.id,
+        generatedMediaId: gm.id,
         photoReferenceId,
         inputOrder: index,
       })),
     })
 
-    const workerTask = await tx.workerTask.create({
-      data: {
-        type: 'GENERATE_VIDEO',
-        payloadJson: JSON.stringify({
-          generatedMediaId: generatedMedia.id,
-          prompt,
-          instagramAccountId,
-          photoReferenceIds: orderedPhotoIds,
-          orientation,
-          resolution,
-          durationSeconds,
-        }),
-        scope: 'internal',
-        status: 'pending',
-        priority: 2,
-      },
-    })
-
-    const updated = await tx.generatedMedia.update({
-      where: { id: generatedMedia.id },
-      data: { workerTaskId: workerTask.id },
-      select: { id: true, status: true, workerTaskId: true },
-    })
-
-    return updated
+    return gm
   })
 
-  return NextResponse.json(result, { status: 201 })
+  // ── Direct GeminiGen submit ──
+  try {
+    const { submitVideoJob } = await import('@/lib/geminigen')
+
+    const imageUrls = photoReferences.map(p => p.fileUrl)
+
+    const aspectRatio = orientation === 'landscape'
+      ? 'landscape'
+      : orientation === 'square'
+      ? 'square'
+      : 'portrait'
+
+    const externalJobId = await submitVideoJob({
+      prompt,
+      aspectRatio,
+      durationSeconds,
+      imageUrls,
+    })
+
+    await prisma.generatedMedia.update({
+      where: { id: generatedMedia.id },
+      data: { externalJobId, status: 'processing' },
+    })
+
+    return NextResponse.json(
+      { id: generatedMedia.id, status: 'processing' },
+      { status: 201 },
+    )
+
+  } catch (err) {
+    console.error('[admin/gen/video] GeminiGen submit failed:', err)
+    await prisma.generatedMedia.update({
+      where: { id: generatedMedia.id },
+      data: { status: 'failed', errorMessage: String(err) },
+    })
+    return NextResponse.json(
+      { error: 'Video generation service unavailable. Job marked failed.' },
+      { status: 503 },
+    )
+  }
 }
 
 export async function GET(req: NextRequest) {

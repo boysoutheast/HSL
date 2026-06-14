@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     }, { status: 402 })
   }
 
-  // Deduct credits + create job + queue worker task
+  // Deduct credits + create job (no worker task — GeminiGen called directly)
   const idempotencyKey = `gen_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
   const result = await prisma.$transaction(async (tx) => {
@@ -143,28 +143,63 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Queue worker task (scope='user' — owned by this user)
-    await tx.workerTask.create({
-      data: {
-        type: 'GENERATE_VIDEO',
-        capability: 'fast-executor',
-        payloadJson: JSON.stringify({
-          generatedMediaId: gm.id,
-          prompt,
-          orientation,
-          resolution,
-          durationSeconds: duration,
-          photoReferenceIds: photoReferenceIds.length > 0 ? photoReferenceIds : undefined,
-        }),
-        status: 'pending',
-        scope: 'user',
-        ownerUserId: user.id,
-        priority: 2,
-      },
-    })
-
-    return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance }
+    return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance, prompt, orientation, duration, photoReferenceIds }
   })
 
-  return NextResponse.json(result, { status: 201 })
+  // ── Direct GeminiGen submit (outside transaction) ──
+  let externalJobId: string | null = null
+  try {
+    const { submitVideoJob } = await import('@/lib/geminigen')
+
+    // Resolve photo URLs
+    let imageUrls: string[] = []
+    if (result.photoReferenceIds.length > 0) {
+      const photos = await prisma.photoReference.findMany({
+        where: { id: { in: result.photoReferenceIds } },
+        select: { fileUrl: true },
+      })
+      imageUrls = photos.map(p => p.fileUrl)
+    }
+
+    const aspectRatio = result.orientation === 'landscape'
+      ? 'landscape'
+      : result.orientation === 'square'
+      ? 'square'
+      : 'portrait'
+
+    externalJobId = await submitVideoJob({
+      prompt: result.prompt,
+      aspectRatio,
+      durationSeconds: result.duration,
+      imageUrls,
+    })
+
+    // Store externalJobId + mark processing
+    await prisma.generatedMedia.update({
+      where: { id: result.id },
+      data: { externalJobId, status: 'processing' },
+    })
+
+  } catch (err) {
+    console.error('[gen/video] GeminiGen submit failed:', err)
+    await prisma.$transaction([
+      prisma.generatedMedia.update({
+        where: { id: result.id },
+        data: { status: 'failed', errorMessage: String(err) },
+      }),
+      prisma.adminUser.update({
+        where: { id: user.id },
+        data: { creditBalance: { increment: creditsCost } },
+      }),
+    ])
+    return NextResponse.json(
+      { error: 'Video generation service unavailable. Credits refunded.' },
+      { status: 503 },
+    )
+  }
+
+  return NextResponse.json(
+    { id: result.id, status: 'processing', creditsCost, balanceAfter: result.balanceAfter },
+    { status: 201 },
+  )
 }

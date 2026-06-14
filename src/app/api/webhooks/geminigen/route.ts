@@ -68,34 +68,34 @@ export async function POST(req: NextRequest) {
       : null
 
   if (numericStatus === 2 && mediaUrl) {
-    // COMPLETED — enqueue REHOST_VIDEO
-    await prisma.$transaction(async (tx) => {
-      await tx.generatedMedia.update({
+    // COMPLETED — rehost langsung (no worker)
+    try {
+      const { rehostVideo, rehostThumbnail } = await import('@/lib/video-rehost')
+      const videoUrl = await rehostVideo(mediaUrl, generatedMedia.id)
+      const finalThumb = thumbnailUrl
+        ? await rehostThumbnail(thumbnailUrl, generatedMedia.id)
+        : null
+
+      await prisma.generatedMedia.update({
         where: { id: generatedMedia.id },
         data: {
-          status: 'ready_for_rehost',
+          status: 'completed',
+          videoUrl,
+          thumbnailUrl: finalThumb,
           rawWebhookJson,
           completedAt: new Date(),
           errorMessage: null,
         },
       })
-      await tx.workerTask.create({
-        data: {
-          type: 'REHOST_VIDEO',
-          capability: 'REHOST_VIDEO',
-          payloadJson: JSON.stringify({
-            generatedMediaId: generatedMedia.id,
-            fileDownloadUrl: mediaUrl,
-            thumbnailUrl,
-          }),
-          scope: 'internal',
-          status: 'pending',
-          priority: 3,
-          maxAttempts: 3,
-        },
+      return NextResponse.json({ ok: true, action: 'completed' })
+    } catch (err) {
+      console.error('[webhook/geminigen] rehost failed, will retry via cron:', err)
+      await prisma.generatedMedia.update({
+        where: { id: generatedMedia.id },
+        data: { rawWebhookJson },
       })
-    })
-    return NextResponse.json({ ok: true, action: 'rehost_queued' })
+      return NextResponse.json({ ok: true, action: 'rehost_pending' })
+    }
   }
 
   if (numericStatus === 3) {
