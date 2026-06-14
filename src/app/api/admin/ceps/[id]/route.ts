@@ -74,12 +74,12 @@ export async function PATCH(
     data: {
       ...(body.topicId !== undefined ? { topicId: body.topicId } : {}),
       ...(body.productId !== undefined ? { productId: body.productId } : {}),
-      ...(body.cepText !== undefined ? { cepText: body.cepText } : {}),
-      ...(body.painPoint !== undefined ? { painPoint: body.painPoint } : {}),
-      ...(body.angle !== undefined ? { angle: body.angle } : {}),
-      ...(body.source !== undefined ? { source: body.source } : {}),
+      ...(body.cepText !== undefined ? { cepText: body.cepText?.trim().slice(0, 5000) ?? undefined } : {}),
+      ...(body.painPoint !== undefined ? { painPoint: body.painPoint?.trim().slice(0, 3000) ?? undefined } : {}),
+      ...(body.angle !== undefined ? { angle: body.angle?.trim().slice(0, 3000) ?? undefined } : {}),
+      ...(body.source !== undefined ? { source: body.source?.trim().slice(0, 200) ?? undefined } : {}),
       ...(resolvedStatus !== undefined ? { status: resolvedStatus } : {}),
-      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.notes !== undefined ? { notes: body.notes?.trim().slice(0, 2000) ?? undefined } : {}),
     },
   })
 

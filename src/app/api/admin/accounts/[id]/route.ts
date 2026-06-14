@@ -86,9 +86,26 @@ export async function PATCH(
     if (!existing) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Input length limits (DoS prevention)
+  const updateData: Record<string, unknown> = {}
+  if (body.username !== undefined) updateData.username = body.username?.trim().slice(0, 200) ?? undefined
+  if (body.accountName !== undefined) updateData.accountName = body.accountName?.trim().slice(0, 200) ?? undefined
+  if (body.gender !== undefined) updateData.gender = body.gender?.trim().slice(0, 50) ?? undefined
+  if (body.purpose !== undefined) updateData.purpose = body.purpose?.trim().slice(0, 5000) ?? undefined
+  if (body.notes !== undefined) updateData.notes = body.notes?.trim().slice(0, 2000) ?? undefined
+  if (body.characterDescription !== undefined) updateData.characterDescription = body.characterDescription?.trim().slice(0, 3000) ?? undefined
+  if (body.behavior !== undefined) updateData.behavior = body.behavior?.trim().slice(0, 3000) ?? undefined
+  if (body.speakingStyle !== undefined) updateData.speakingStyle = body.speakingStyle?.trim().slice(0, 3000) ?? undefined
+  if (body.expressionStyle !== undefined) updateData.expressionStyle = body.expressionStyle?.trim().slice(0, 3000) ?? undefined
+  if (body.movementStyle !== undefined) updateData.movementStyle = body.movementStyle?.trim().slice(0, 3000) ?? undefined
+  if (body.forbiddenRules !== undefined) updateData.forbiddenRules = body.forbiddenRules?.trim().slice(0, 3000) ?? undefined
+  if (typeof body.status === 'string' && ['active', 'inactive', 'draft'].includes(body.status)) {
+    updateData.status = body.status
+  }
+
   const account = await prisma.instagramAccount.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ account })

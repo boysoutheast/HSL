@@ -28,9 +28,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { name, email, password } = body
+  const name = (body.name as string)?.trim().slice(0, 200) ?? ''
+  const email = (body.email as string)?.trim().toLowerCase().slice(0, 255) ?? ''
+  const password = (body.password as string) ?? ''
 
-  if (!name?.trim() || !email?.trim() || !password) {
+  if (!name || !email || !password) {
     return NextResponse.json({ error: 'Semua field wajib diisi' }, { status: 400 })
   }
 
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password minimal 8 karakter' }, { status: 400 })
   }
 
-  const exists = await prisma.adminUser.findUnique({ where: { email: email.toLowerCase().trim() } })
+  const exists = await prisma.adminUser.findUnique({ where: { email } })
   if (exists) {
     return NextResponse.json({ error: 'Email sudah terdaftar' }, { status: 409 })
   }
@@ -47,8 +49,8 @@ export async function POST(req: NextRequest) {
 
   await prisma.adminUser.create({
   data: {
-    name: name.trim(),
-    email: email.toLowerCase().trim(),
+    name,
+    email,
     passwordHash,
     role: 'user',
     status: 'pending',

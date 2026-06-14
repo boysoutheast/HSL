@@ -145,7 +145,28 @@ export async function PATCH(
 
   const testLaunch = await prisma.testLaunch.update({
     where: { id: params.id },
-    data: body,
+    data: {
+      ...(body.metaBusinessId !== undefined ? { metaBusinessId: body.metaBusinessId } : {}),
+      ...(body.metaAdAccountId !== undefined ? { metaAdAccountId: body.metaAdAccountId } : {}),
+      ...(body.metaAccountId !== undefined ? { metaAccountId: body.metaAccountId } : {}),
+      ...(body.productId !== undefined ? { productId: body.productId } : {}),
+      ...(body.name !== undefined ? { name: body.name?.trim().slice(0, 200) ?? undefined } : {}),
+      ...(body.objective !== undefined ? { objective: body.objective } : {}),
+      ...(body.dailyBudget !== undefined ? { dailyBudget: body.dailyBudget } : {}),
+      ...(body.budgetMode !== undefined ? { budgetMode: body.budgetMode } : {}),
+      ...(body.currency !== undefined ? { currency: body.currency } : {}),
+      ...(body.pageId !== undefined ? { pageId: body.pageId } : {}),
+      ...(body.igAccountId !== undefined ? { igAccountId: body.igAccountId } : {}),
+      ...(body.pixelId !== undefined ? { pixelId: body.pixelId } : {}),
+      ...(body.placementMode !== undefined ? { placementMode: body.placementMode } : {}),
+      ...(body.placementsJson !== undefined ? { placementsJson: body.placementsJson } : {}),
+      ...(body.audienceJson !== undefined ? { audienceJson: body.audienceJson } : {}),
+      ...(body.destinationUrl !== undefined ? { destinationUrl: body.destinationUrl?.trim().slice(0, 2000) ?? undefined } : {}),
+      ...(body.targetingJson !== undefined ? { targetingJson: body.targetingJson } : {}),
+      ...(body.launchMode !== undefined ? { launchMode: body.launchMode } : {}),
+      ...(body.sourceAdsetId !== undefined ? { sourceAdsetId: body.sourceAdsetId } : {}),
+      ...(body.notes !== undefined ? { notes: body.notes?.trim().slice(0, 2000) ?? undefined } : {}),
+    },
     include: {
       creatives: true,
       adsets: {

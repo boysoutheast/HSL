@@ -30,8 +30,17 @@ export async function POST(req: NextRequest) {
 
   const { workerId, mode = 'standard', capabilities = [], maxTasks = 5 } = body
 
-  if (!workerId) {
-    return NextResponse.json({ error: 'workerId is required' }, { status: 400 })
+  if (!workerId || typeof workerId !== 'string' || workerId.length > 100) {
+    return NextResponse.json({ error: 'workerId invalid' }, { status: 400 })
+  }
+
+  // Verify worker is registered
+  const registered = await prisma.workerRegistry.findFirst({
+    where: { workerId },
+    select: { id: true },
+  })
+  if (!registered) {
+    return NextResponse.json({ error: 'Worker not registered' }, { status: 403 })
   }
 
   const leaseDurationSeconds = 60

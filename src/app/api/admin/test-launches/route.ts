@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
         metaBusinessId: (body.metaBusinessId as string) || undefined,
         metaAdAccountId: (body.metaAdAccountId as string) || undefined,
         productId: (body.productId as string) || undefined,
-        name: String(body.name),
+        name: String(body.name).trim().slice(0, 200),
         objective: String(body.objective),
         dailyBudget: totalBudget,
         currency: (body.currency as string) ?? 'IDR',
@@ -269,11 +269,11 @@ export async function POST(req: NextRequest) {
         placementMode: (body.placementMode as string) ?? 'automatic',
         placementsJson: typeof body.placementsJson === 'string' ? (body.placementsJson as string) : undefined,
         audienceJson: rootAudienceJson ?? undefined,
-        destinationUrl: (body.destinationUrl as string) || undefined,
+        destinationUrl: (body.destinationUrl as string)?.trim().slice(0, 2000) || undefined,
         targetingJson: rootTargetingJson ?? undefined,
         launchMode: String(body.launchMode),
         sourceAdsetId: (body.sourceAdsetId as string) || undefined,
-        notes: (body.notes as string) || undefined,
+        notes: (body.notes as string)?.trim().slice(0, 2000) || undefined,
         ...(flatCreatives.length > 0 && budgetMode === 'CBO'
           ? {
               creatives: {
