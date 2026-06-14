@@ -1,45 +1,67 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import ClientTabs from '@/components/ClientTabs'
 import WorkersPage from '../workers/page'
 import DeadLettersPage from '../admin/dead-letters/page'
 import ObservabilityPage from '../observability/page'
 import AdminUsersPage from '../admin-users/page'
+import ConnectionsTab from './ConnectionsTab'
 
-const tabs = [
-  { id: 'workers', label: 'Workers' },
-  { id: 'users', label: 'Users' },
-]
+export default function SystemPage() {
+  const [role, setRole] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-export default async function SystemPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string; sub?: string }>
-}) {
-  const { tab, sub } = await searchParams
-  const key = tab && tabs.some(t => t.id === tab) ? tab : 'workers'
+  useEffect(() => {
+    fetch('/api/admin/auth/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setRole(d?.user?.role ?? null); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
+        Loading...
+      </div>
+    )
+  }
+
+  const isAdmin = role === 'admin'
+
+  // Tabs: visible to all users vs admin-only
+  const userTabs = [
+    { id: 'connections', label: 'Connections' },
+    { id: 'workers', label: 'Workers' },
+  ]
+  const adminTabs = [
+    ...userTabs,
+    { id: 'users', label: 'Users' },
+    { id: 'dead-letters', label: 'Dead Letters' },
+    { id: 'observability', label: 'Observability' },
+  ]
+
+  const tabs = isAdmin ? adminTabs : userTabs
+
+  // Detect tab from URL params
+  const [initialTab, setInitialTab] = useState<string>('connections')
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const t = params.get('tab')
+    if (t && tabs.some(tab => tab.id === t)) setInitialTab(t)
+  }, [tabs])
 
   return (
     <ClientTabs
       tabs={tabs}
-      initial={key}
+      initial={initialTab}
       basePath="/system"
       panels={{
-        workers: (
-          <ClientTabs
-            compact
-            tabs={[
-              { id: 'tasks', label: 'Workers & Tasks' },
-              { id: 'dead-letters', label: 'Dead Letters' },
-              { id: 'observability', label: 'Observability' },
-            ]}
-            initial={sub === 'dead-letters' ? 'dead-letters' : sub === 'observability' ? 'observability' : 'tasks'}
-            panels={{
-              tasks: <WorkersPage />,
-              'dead-letters': <DeadLettersPage />,
-              observability: <ObservabilityPage />,
-            }}
-          />
-        ),
-        users: <AdminUsersPage />,
+        connections: <ConnectionsTab />,
+        workers: <WorkersPage />,
+        users: isAdmin ? <AdminUsersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
+        'dead-letters': isAdmin ? <DeadLettersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
+        observability: isAdmin ? <ObservabilityPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
       }}
     />
   )
