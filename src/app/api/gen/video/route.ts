@@ -44,35 +44,66 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/gen/video — create video generation job
+// Accepts multipart/form-data (with file) OR application/json
+// Multipart fields: prompt, orientation, resolution, durationSeconds, file (image binary)
+// JSON fields:      prompt, orientation, resolution, durationSeconds, photoReferenceIds[]
 export async function POST(req: NextRequest) {
   const user = await requireApiKey(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: {
-    prompt?: string
-    orientation?: string
-    resolution?: string
-    durationSeconds?: number
-    photoReferenceIds?: string[]
-  }
-  try { body = await req.json() } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  const contentType = req.headers.get('content-type') ?? ''
+  const isMultipart = contentType.includes('multipart/form-data')
+
+  let prompt = ''
+  let orientation = 'portrait'
+  let resolution = 'SD'
+  let durationSeconds = 10
+  let photoReferenceIds: string[] = []
+  let imageBuffer: Buffer | undefined
+  let imageFilename: string | undefined
+
+  if (isMultipart) {
+    let form: FormData
+    try { form = await req.formData() } catch {
+      return NextResponse.json({ error: 'Invalid multipart form data' }, { status: 400 })
+    }
+    prompt = (form.get('prompt') as string | null)?.trim() ?? ''
+    orientation = (form.get('orientation') as string | null) ?? 'portrait'
+    resolution = (form.get('resolution') as string | null) === 'HD' ? 'HD' : 'SD'
+    durationSeconds = parseInt(form.get('durationSeconds') as string ?? '10', 10) || 10
+    const file = form.get('file') as File | null
+    if (file && file.size > 0) {
+      imageBuffer = Buffer.from(await file.arrayBuffer())
+      imageFilename = file.name || 'reference.jpg'
+    }
+  } else {
+    let body: {
+      prompt?: string
+      orientation?: string
+      resolution?: string
+      durationSeconds?: number
+      photoReferenceIds?: string[]
+    }
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+    prompt = body.prompt?.trim() ?? ''
+    orientation = body.orientation ?? 'portrait'
+    resolution = body.resolution === 'HD' ? 'HD' : 'SD'
+    durationSeconds = body.durationSeconds ?? 10
+    photoReferenceIds = Array.isArray(body.photoReferenceIds)
+      ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      : []
   }
 
-  const prompt = body.prompt?.trim()
   if (!prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   }
 
-  const photoReferenceIds = Array.isArray(body.photoReferenceIds)
-    ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-    : []
-
   // Calculate credit cost
-  const resolution = body.resolution === 'HD' ? 'HD' : 'SD'
-  const duration = body.durationSeconds === 6 ? 6 : 10
+  const duration = durationSeconds === 6 ? 6 : 10
   const baseCost = duration <= 6 ? 1000 : 1300
   const creditsCost = resolution === 'HD' ? baseCost * 2 : baseCost
 
@@ -107,7 +138,6 @@ export async function POST(req: NextRequest) {
     })
 
     // Create GeneratedMedia
-    const orientation = body.orientation || 'portrait'
     const gm = await tx.generatedMedia.create({
       data: {
         userId: user.id,
@@ -143,7 +173,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance, prompt, orientation, duration, photoReferenceIds }
+    return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance }
   })
 
   // ── Direct GeminiGen submit (outside transaction) ──
@@ -151,27 +181,27 @@ export async function POST(req: NextRequest) {
   try {
     const { submitVideoJob } = await import('@/lib/geminigen')
 
-    // Resolve photo URLs
+    // Resolve photo URLs (only for JSON flow with photoReferenceIds)
     let imageUrls: string[] = []
-    if (result.photoReferenceIds.length > 0) {
+    if (!imageBuffer && photoReferenceIds.length > 0) {
       const photos = await prisma.photoReference.findMany({
-        where: { id: { in: result.photoReferenceIds } },
+        where: { id: { in: photoReferenceIds } },
         select: { fileUrl: true },
       })
       imageUrls = photos.map(p => p.fileUrl)
     }
 
-    const aspectRatio = result.orientation === 'landscape'
-      ? 'landscape'
-      : result.orientation === 'square'
-      ? 'square'
+    const aspectRatio = orientation === 'landscape' ? 'landscape'
+      : orientation === 'square' ? 'square'
       : 'portrait'
 
     externalJobId = await submitVideoJob({
-      prompt: result.prompt,
+      prompt,
       aspectRatio,
-      durationSeconds: result.duration,
+      durationSeconds: duration,
       imageUrls,
+      imageBuffer,       // direct upload — takes priority over imageUrls
+      imageFilename,
     })
 
     // Store externalJobId + mark processing

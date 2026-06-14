@@ -1,21 +1,25 @@
 // GeminiGen video generation client — direct API wrapper
 // All access to GeminiGen goes through this file.
 //
-// API shape (observed from production):
-//   Submit: POST /video-gen/grok         → { uuid, ... }
-//   Poll:   GET  /video-gen/history/{uuid} → { data: { uuid, status, media_url, thumbnail_url } }
+// API shape (confirmed from agent flow):
+//   Submit: POST /video-gen/grok
+//     Fields: prompt, model=grok-video, aspect_ratio, duration, mode=custom
+//     File:   files = <binary image>   ← multipart, field name "files"
+//   Poll:   GET /video-gen/history/{uuid} → { data: { uuid, status, media_url, thumbnail_url } }
 //   status:  1=processing, 2=completed, 3=failed
 
 export interface GeminiGenSubmitParams {
   prompt: string
-  aspectRatio: string // 'portrait' | 'landscape' | 'square'
-  durationSeconds: number // 6 | 10
-  imageUrls?: string[] // optional photo references (first image only)
+  aspectRatio: string      // 'portrait' | 'landscape' | 'square'
+  durationSeconds: number  // 6 | 10
+  imageUrls?: string[]     // optional — fetch from URL, send as file
+  imageBuffer?: Buffer     // optional — raw bytes from direct upload (takes priority)
+  imageFilename?: string   // filename hint for imageBuffer (default: reference.jpg)
 }
 
 export interface GeminiGenJobStatus {
   uuid: string
-  status: number // 1=processing, 2=completed, 3=failed
+  status: number  // 1=processing, 2=completed, 3=failed
   mediaUrl: string | null
   thumbnailUrl: string | null
 }
@@ -33,14 +37,20 @@ function apiKey(): string {
 export async function submitVideoJob(params: GeminiGenSubmitParams): Promise<string> {
   const form = new FormData()
   form.append('prompt', params.prompt)
+  form.append('model', 'grok-video')
   form.append('aspect_ratio', params.aspectRatio)
   form.append('duration', String(params.durationSeconds))
+  form.append('mode', 'custom')
 
-  if (params.imageUrls && params.imageUrls.length > 0) {
+  // Image reference — direct buffer takes priority over URL fetch
+  if (params.imageBuffer && params.imageBuffer.length > 0) {
+    const blob = new Blob([new Uint8Array(params.imageBuffer)], { type: 'image/jpeg' })
+    form.append('files', blob, params.imageFilename ?? 'reference.jpg')
+  } else if (params.imageUrls && params.imageUrls.length > 0) {
     const imgRes = await fetch(params.imageUrls[0])
     if (imgRes.ok) {
       const blob = await imgRes.blob()
-      form.append('image_reference', blob, 'reference.jpg')
+      form.append('files', blob, 'reference.jpg')
     }
   }
 
