@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
   const resolution = (body.resolution || 'SD').toUpperCase()
   if (!['SD', 'HD', 'FHD'].includes(resolution)) return NextResponse.json({ error: 'invalid resolution' }, { status: 400 })
 
-  const durationSeconds = String(body.durationSeconds || 6)
+  const durationSeconds = parseInt(String(body.durationSeconds || 6), 10)
+  const durationKey = String(durationSeconds)
   const costRow = COST_MATRIX[resolution]
   if (!costRow) return NextResponse.json({ error: 'invalid resolution' }, { status: 400 })
-  const creditsCost = costRow[durationSeconds]
+  const creditsCost = costRow[durationKey]
   if (!creditsCost) return NextResponse.json({ error: 'invalid duration (5,6,8,10)' }, { status: 400 })
 
   const photoRefIds: string[] = Array.isArray(body.photoReferenceIds) ? body.photoReferenceIds : []

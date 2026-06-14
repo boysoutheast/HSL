@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   '/api/admin/auth/register',
   '/api/admin/auth/google',
   '/api/health',
+  '/data-deletion',
+  '/api/meta/data-deletion',
 ]
 
 export function middleware(req: NextRequest) {
