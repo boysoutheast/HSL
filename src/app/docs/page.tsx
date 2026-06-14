@@ -210,24 +210,18 @@ curl -H "x-api-key: hsk_xxx..." \\
             </Section>
 
             <Section title="Submit Job">
-              <Endpoint method="POST" path="/api/gen/video" desc="Buat video generation job. Terima JSON atau multipart/form-data." />
+              <Endpoint method="POST" path="/api/gen/video" desc="Buat video generation job. Wajib multipart/form-data dengan foto referensi." />
               <div className="mt-3 space-y-1 text-xs text-stone-500">
                 <p><strong>Cost (server-side, tidak bisa di-override):</strong> SD 6s = 1.000 · SD 10s = 1.300 · HD = 2×</p>
               </div>
-
-              {/* Mode 1: Upload langsung */}
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-stone-700 mb-1">Mode A — Upload foto langsung (multipart/form-data)</p>
-                <p className="text-xs text-stone-500 mb-2">
-                  Kirim foto referensi sebagai binary. File tidak disimpan di storage HSL — langsung pass ke video engine dan dibuang.
-                </p>
-                <div className="pl-3 space-y-1 text-xs text-stone-600 mb-2">
-                  <p><code className="bg-stone-100 px-1 rounded">prompt</code> <span className="text-red-500">*</span> — deskripsi video</p>
-                  <p><code className="bg-stone-100 px-1 rounded">file</code> — binary image (field name: <code className="bg-stone-100 px-1 rounded">file</code>), jadi character reference</p>
-                  <p><code className="bg-stone-100 px-1 rounded">orientation</code> — portrait (default) | landscape | square</p>
-                  <p><code className="bg-stone-100 px-1 rounded">resolution</code> — SD (default) | HD</p>
-                  <p><code className="bg-stone-100 px-1 rounded">durationSeconds</code> — 10 (default) | 6</p>
-                </div>
+              <div className="mt-3 pl-3 space-y-1 text-xs text-stone-600">
+                <p><code className="bg-stone-100 px-1 rounded">prompt</code> <span className="text-red-500">*</span> — deskripsi video</p>
+                <p><code className="bg-stone-100 px-1 rounded">file</code> <span className="text-red-500">*</span> — foto referensi karakter (binary, field name: <code className="bg-stone-100 px-1 rounded">file</code>)</p>
+                <p><code className="bg-stone-100 px-1 rounded">orientation</code> — portrait (default) | landscape | square</p>
+                <p><code className="bg-stone-100 px-1 rounded">resolution</code> — SD (default) | HD</p>
+                <p><code className="bg-stone-100 px-1 rounded">durationSeconds</code> — 10 (default) | 6</p>
+              </div>
+              <div className="mt-3">
                 <Code>{`curl -X POST \\
   -H "x-api-key: hsk_xxx..." \\
   -F "prompt=TVC 10 detik, karakter sesuai foto referensi, gaya casual" \\
@@ -243,34 +237,10 @@ curl -H "x-api-key: hsk_xxx..." \\
   "status": "processing",
   "creditsCost": 1300,
   "balanceAfter": 998700
-}`}</Code>
-              </div>
+}
 
-              {/* Mode 2: JSON dengan library ID */}
-              <div className="mt-4">
-                <p className="text-xs font-semibold text-stone-700 mb-1">Mode B — Referensi dari library (JSON)</p>
-                <p className="text-xs text-stone-500 mb-2">
-                  Pakai foto yang sudah ada di library agent. HSL fetch foto dan forward ke video engine.
-                </p>
-                <div className="pl-3 space-y-1 text-xs text-stone-600 mb-2">
-                  <p><code className="bg-stone-100 px-1 rounded">prompt</code> <span className="text-red-500">*</span> — deskripsi video</p>
-                  <p><code className="bg-stone-100 px-1 rounded">photoReferenceIds[]</code> — ID foto dari library (<code className="bg-stone-100 px-1 rounded">GET /api/hermes/library</code>)</p>
-                  <p><code className="bg-stone-100 px-1 rounded">orientation</code> · <code className="bg-stone-100 px-1 rounded">resolution</code> · <code className="bg-stone-100 px-1 rounded">durationSeconds</code> — sama seperti mode A</p>
-                </div>
-                <Code>{`curl -X POST \\
-  -H "x-api-key: hsk_xxx..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "prompt": "Demo skincare produk, gaya casual, pencahayaan natural",
-    "orientation": "portrait",
-    "resolution": "SD",
-    "durationSeconds": 10,
-    "photoReferenceIds": ["photo_id_dari_library"]
-  }' \\
-  ${BASE}/api/gen/video
-
-# photoReferenceIds: ambil dari:
-#   GET /api/hermes/library → instagramAccounts[].photoReferences[].id
+# 400 — file tidak disertakan:
+{ "error": "file is required" }
 
 # 402 — saldo kurang:
 { "error": "Insufficient credits", "balance": 500, "required": 1300 }`}</Code>
