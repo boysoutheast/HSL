@@ -9,8 +9,10 @@ import AdminUsersPage from '../admin-users/page'
 import ConnectionsTab from './ConnectionsTab'
 
 export default function SystemPage() {
+  // ALL hooks must be called unconditionally — before any early return
   const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialTab, setInitialTab] = useState<string>('connections')
 
   useEffect(() => {
     fetch('/api/admin/auth/me', { credentials: 'include' })
@@ -19,6 +21,7 @@ export default function SystemPage() {
       .catch(() => setLoading(false))
   }, [])
 
+  // Early return AFTER all hooks
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
@@ -29,7 +32,6 @@ export default function SystemPage() {
 
   const isAdmin = role === 'admin'
 
-  // Tabs: visible to all users vs admin-only
   const userTabs = [
     { id: 'connections', label: 'Connections' },
     { id: 'workers', label: 'Workers' },
@@ -44,7 +46,6 @@ export default function SystemPage() {
   const tabs = isAdmin ? adminTabs : userTabs
 
   // Detect tab from URL params
-  const [initialTab, setInitialTab] = useState<string>('connections')
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const t = params.get('tab')
