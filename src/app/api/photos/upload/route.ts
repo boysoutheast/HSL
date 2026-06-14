@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { uploadFile } from '@/lib/storage'
+import { requireApiKey } from '@/lib/api-key-auth'
 import { v4 as uuidv4 } from 'uuid'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  const user = await requireApiKey(req)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   let formData: FormData
   try {
     formData = await req.formData()
