@@ -30,6 +30,19 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
   const initials = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
   const [showCreate, setShowCreate] = useState(false)
   const [badges, setBadges] = useState<{ ads: number; influencer: number }>({ ads: 0, influencer: 0 })
+  const [viewAsUser, setViewAsUser] = useState(false)
+
+  useEffect(() => {
+    if (!isAdmin) return
+    setViewAsUser(sessionStorage.getItem('hsl_viewAsUser') === '1')
+  }, [isAdmin])
+
+  function toggleViewAsUser() {
+    const next = !viewAsUser
+    setViewAsUser(next)
+    sessionStorage.setItem('hsl_viewAsUser', next ? '1' : '0')
+    window.dispatchEvent(new CustomEvent('hsl_viewAsUser_change', { detail: next }))
+  }
 
   useEffect(() => {
     let live = true
@@ -92,6 +105,13 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
 
         <div className="border-t border-stone-100 p-2 space-y-1 shrink-0">
           {user && <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"><div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0"><span className="text-[10px] font-bold text-violet-700">{initials}</span></div><div className="flex-1 min-w-0"><p className="text-xs font-medium text-stone-700 truncate">{user.name ?? user.email}</p><p className="text-[10px] text-stone-400 capitalize">{user.role}</p></div></div>}
+          {isAdmin && (
+            <button onClick={toggleViewAsUser} title={viewAsUser ? 'Kembali ke mode Admin' : 'Lihat tampilan sebagai User'}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg transition-colors ${viewAsUser ? 'bg-amber-50 text-amber-700 font-medium' : 'text-stone-400 hover:bg-stone-50'}`}>
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              {viewAsUser ? 'User View (aktif)' : 'View as User'}
+            </button>
+          )}
           {onLogout && <button onClick={onLogout} className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">{I.logout} Sign out</button>}
         </div>
       </aside>
