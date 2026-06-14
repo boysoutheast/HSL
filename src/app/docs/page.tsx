@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'auth' | 'library' | 'tasks' | 'content' | 'video' | 'capi' | 'admin'
+type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin'
 
 function Code({ children }: { children: string }) {
   return (
@@ -41,17 +41,29 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-4 mb-5">
+      <div className="w-7 h-7 rounded-full bg-violet-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{n}</div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-stone-900 mb-1.5">{title}</p>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function DocsPage() {
-  const [tab, setTab] = useState<TabKey>('auth')
+  const [tab, setTab] = useState<TabKey>('connect')
 
   const tabs: Array<{ key: TabKey; label: string }> = [
-    { key: 'auth', label: '🔑 Auth' },
-    { key: 'library', label: '📚 Library' },
-    { key: 'tasks', label: '⚡ Task Queue' },
-    { key: 'content', label: '🛍️ Content' },
-    { key: 'video', label: '🎬 Video Gen' },
-    { key: 'capi', label: '📡 CAPI' },
-    { key: 'admin', label: '🛠 Admin API' },
+    { key: 'connect',  label: '🔌 Connect' },
+    { key: 'generate', label: '🎬 Generate' },
+    { key: 'credits',  label: '💳 Credits' },
+    { key: 'library',  label: '📚 Library' },
+    { key: 'content',  label: '🛍️ Content' },
+    { key: 'capi',     label: '📡 CAPI' },
+    { key: 'admin',    label: '🛠 Admin' },
   ]
 
   return (
@@ -83,49 +95,252 @@ export default function DocsPage() {
           ))}
         </div>
 
-        {/* ── AUTH ── */}
-        {tab === 'auth' && (
+        {/* ── CONNECT ── */}
+        {tab === 'connect' && (
           <>
-            <Section title="Hermes Agent — Bearer Token">
-              <p className="text-sm text-stone-600 mb-3">
-                Semua endpoint <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> pakai
-                API key agent (dibuat admin di <strong>System → Agents</strong>). Kirim sebagai Bearer token.
+            <Section title="Cara Konek Agent ke HSL">
+              <p className="text-sm text-stone-600 mb-4">
+                Semua agent eksternal konek via <strong>API key</strong> yang di-generate dari dashboard.
+                Satu key = satu agent = akses ke resource yang di-assign untuk agent tersebut.
               </p>
-              <Code>{`curl -H "Authorization: Bearer hsl_xxxxxxxx" \\
-  ${BASE}/api/hermes/library`}</Code>
-              <p className="text-xs text-stone-500 mt-2">
-                Response selalu difilter berdasarkan assignment agent (akun, character, topic, product, CEP).
-              </p>
+
+              <Step n={1} title="Daftar atau minta akses">
+                <p className="text-xs text-stone-500">
+                  Daftar di <strong>{BASE}/register</strong> → akun status <em>pending</em>.
+                  Admin approve di System → Users sebelum bisa generate key.
+                </p>
+              </Step>
+
+              <Step n={2} title="Generate API key">
+                <p className="text-xs text-stone-500 mb-2">
+                  Login → <strong>System → Connections</strong> → tombol "Generate API Key".
+                  Key hanya muncul sekali — simpan baik-baik.
+                </p>
+                <Code>{`# Format key:
+hsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Gunakan sebagai x-api-key header:
+curl -H "x-api-key: hsk_xxx..." ${BASE}/api/gen/credits
+
+# Atau Authorization: Bearer:
+curl -H "Authorization: Bearer hsk_xxx..." ${BASE}/api/gen/credits`}</Code>
+              </Step>
+
+              <Step n={3} title="Cek koneksi + saldo">
+                <Code>{`curl -H "x-api-key: hsk_xxx..." \\
+  ${BASE}/api/gen/credits
+
+# Response:
+{
+  "balance": 2000000,
+  "transactions": [...]
+}`}</Code>
+                <p className="text-xs text-stone-500 mt-2">
+                  Saldo diperlukan untuk generate video. Hubungi admin untuk top-up.
+                </p>
+              </Step>
+
+              <Step n={4} title="Mulai generate">
+                <Code>{`curl -X POST \\
+  -H "x-api-key: hsk_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{"prompt": "Demo produk skincare, gaya casual, 10 detik"}' \\
+  ${BASE}/api/gen/video
+
+# Response 201:
+{
+  "id": "gen_xxx",
+  "status": "queued",
+  "creditsCost": 1300,
+  "balanceRemaining": 1998700
+}`}</Code>
+              </Step>
+
+              <Step n={5} title="Poll sampai selesai">
+                <Code>{`# Cek tiap ~15 detik
+curl -H "x-api-key: hsk_xxx..." \\
+  ${BASE}/api/gen/video/gen_xxx
+
+# Status: queued → processing → completed (ada videoUrl) | failed (ada errorMessage)`}</Code>
+              </Step>
             </Section>
 
-            <Section title="Admin Dashboard — Session Cookie">
-              <p className="text-sm text-stone-600 mb-2">
-                Login via email+password atau <strong>Sign in with Google</strong>. Session cookie 8 jam.
-              </p>
-              <Endpoint method="POST" path="/api/admin/auth/login" desc="Body: { email, password }" />
-              <Endpoint method="GET" path="/api/admin/auth/google" desc="Redirect ke Google OAuth (perlu GOOGLE_CLIENT_ID/SECRET)" />
-              <Endpoint method="POST" path="/api/admin/auth/logout" desc="Hapus session" />
-            </Section>
-
-            <Section title="Meta — Facebook Login for Business">
-              <p className="text-sm text-stone-600 mb-2">
-                Connect akun Meta tanpa paste token manual. Klik <strong>Connect with Facebook</strong> di
-                <strong>System → Connections</strong> → OAuth → token long-lived (60 hari) disimpan terenkripsi +
-                auto-sync Business, Ad Accounts, Pages, IG.
-              </p>
-              <Endpoint method="GET" path="/api/admin/meta-oauth/start" desc="Mulai OAuth flow (perlu META_APP_ID/SECRET, opsional META_LOGIN_CONFIG_ID)" />
-              <Endpoint method="GET" path="/api/admin/meta-oauth/callback" desc="Callback — jangan dipanggil manual" />
-            </Section>
-
-            <Section title="Cron — x-cron-secret">
-              <Code>{`curl -X POST -H "x-cron-secret: $CRON_SECRET" \\
-  ${BASE}/api/cron/media-rules`}</Code>
-              <div className="mt-2">
-                <Endpoint method="POST" path="/api/cron/posting-monitor" desc="Evaluasi posting monitor" />
-                <Endpoint method="POST" path="/api/cron/media-rules" desc="Evaluasi media auto top-up rules (jalankan tiap jam)" />
-                <Endpoint method="POST" path="/api/cron/fetch-metrics" desc="Tarik metrics" />
-                <Endpoint method="POST" path="/api/cron/cleanup-locks" desc="Bersihkan lock expired" />
+            <Section title="Two Auth Systems — Mana yang Dipakai">
+              <div className="space-y-3">
+                <div className="flex gap-3 p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                  <span className="text-violet-600 font-bold text-xs mt-0.5 shrink-0">x-api-key</span>
+                  <div>
+                    <p className="text-xs font-semibold text-stone-800">UserApiKey — untuk agent & integrasi</p>
+                    <p className="text-xs text-stone-500">Generate dari System → Connections. Akses endpoint <code className="bg-stone-100 px-1 rounded">/api/gen/*</code>. Scope: resource milik akun sendiri.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 p-3 bg-stone-50 border border-stone-200 rounded-lg">
+                  <span className="text-stone-500 font-bold text-xs mt-0.5 shrink-0">session cookie</span>
+                  <div>
+                    <p className="text-xs font-semibold text-stone-800">Dashboard login — untuk manusia</p>
+                    <p className="text-xs text-stone-500">Login via browser ke <strong>{BASE}/login</strong>. Akses semua admin endpoint. Tidak cocok untuk automation.</p>
+                  </div>
+                </div>
               </div>
+            </Section>
+
+            <Section title="Error Codes Umum">
+              <div className="space-y-1.5 text-xs">
+                <div className="flex gap-3"><code className="text-red-600 font-mono w-8">401</code><span className="text-stone-600">API key tidak valid atau expired</span></div>
+                <div className="flex gap-3"><code className="text-red-600 font-mono w-8">402</code><span className="text-stone-600">Saldo tidak cukup — hubungi admin untuk top-up</span></div>
+                <div className="flex gap-3"><code className="text-red-600 font-mono w-8">403</code><span className="text-stone-600">Resource bukan milik agent ini</span></div>
+                <div className="flex gap-3"><code className="text-red-600 font-mono w-8">404</code><span className="text-stone-600">Resource tidak ditemukan (atau bukan milik lo)</span></div>
+                <div className="flex gap-3"><code className="text-red-600 font-mono w-8">409</code><span className="text-stone-600">Conflict — task sudah di-claim, atau idempotency hit</span></div>
+              </div>
+            </Section>
+          </>
+        )}
+
+        {/* ── GENERATE ── */}
+        {tab === 'generate' && (
+          <>
+            <Section title="Video Generation">
+              <p className="text-sm text-stone-600 mb-3">
+                Generate video dari prompt teks. Proses async — submit job, poll sampai
+                <code className="text-xs bg-stone-100 px-1 rounded mx-1">completed</code>,
+                lalu pakai <code className="text-xs bg-stone-100 px-1 rounded">videoUrl</code>.
+              </p>
+              <Code>{`queued → processing → completed (videoUrl siap)
+                    └→ failed  (errorMessage — cek prompt / saldo)`}</Code>
+            </Section>
+
+            <Section title="Submit Job">
+              <Endpoint method="POST" path="/api/gen/video" desc="Buat video generation job." />
+              <div className="mt-3 space-y-2 text-xs text-stone-600">
+                <p><strong>Body:</strong></p>
+                <div className="pl-3 space-y-1">
+                  <p><code className="bg-stone-100 px-1 rounded">prompt</code> <span className="text-red-500">*</span> — deskripsi video dalam bahasa apapun</p>
+                  <p><code className="bg-stone-100 px-1 rounded">photoReferenceIds[]</code> — opsional, 0–5 ID foto referensi (dari library agent)</p>
+                  <p><code className="bg-stone-100 px-1 rounded">instagramAccountId</code> — opsional, konteks karakter akun IG</p>
+                  <p><code className="bg-stone-100 px-1 rounded">orientation</code> — <code className="bg-stone-100 px-1 rounded">portrait</code> (default) | landscape | square</p>
+                  <p><code className="bg-stone-100 px-1 rounded">resolution</code> — <code className="bg-stone-100 px-1 rounded">SD</code> (default) | HD</p>
+                  <p><code className="bg-stone-100 px-1 rounded">durationSeconds</code> — 6 (default) | 10</p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-1 text-xs text-stone-500">
+                <p><strong>Cost (ditetapkan server, tidak bisa di-override):</strong> SD 6s = 1.000 · SD 10s = 1.300 · HD = 2×</p>
+              </div>
+              <div className="mt-3">
+                <Code>{`curl -X POST \\
+  -H "x-api-key: hsk_xxx..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "Demo skincare produk, gaya casual, pencahayaan natural",
+    "orientation": "portrait",
+    "resolution": "SD",
+    "durationSeconds": 10
+  }' \\
+  ${BASE}/api/gen/video
+
+# 201 Created:
+{
+  "id": "gen_xxx",
+  "status": "queued",
+  "creditsCost": 1300,
+  "balanceRemaining": 998700
+}
+
+# 402 — saldo kurang:
+{ "error": "Insufficient credits", "balance": 500, "required": 1300 }`}</Code>
+              </div>
+            </Section>
+
+            <Section title="Cek Status Job">
+              <Endpoint method="GET" path="/api/gen/video/[id]" desc="Detail satu job." />
+              <div className="mt-3">
+                <Code>{`curl -H "x-api-key: hsk_xxx..." \\
+  ${BASE}/api/gen/video/gen_xxx
+
+# completed:
+{
+  "id": "gen_xxx",
+  "status": "completed",
+  "videoUrl": "https://ai.boytenggara.com/api/photos/serve/...",
+  "prompt": "Demo skincare...",
+  "durationSeconds": 10,
+  "completedAt": "2026-06-14T10:00:00Z"
+}
+
+# failed:
+{
+  "id": "gen_xxx",
+  "status": "failed",
+  "errorMessage": "Generation timed out"
+}`}</Code>
+              </div>
+            </Section>
+
+            <Section title="List Semua Job">
+              <Endpoint method="GET" path="/api/gen/video" desc="List job milik agent. Query: ?limit=20&offset=0" />
+              <Endpoint method="GET" path="/api/gen/media" desc="List semua generated media. Query: ?status=completed&limit=20&offset=0" />
+              <Endpoint method="GET" path="/api/gen/media/[id]/download" desc="Download video — 302 redirect ke videoUrl. 409 jika belum selesai." />
+            </Section>
+
+            <Section title="Task Status Polling (Advanced)">
+              <p className="text-sm text-stone-600 mb-2">
+                Untuk agen yang ingin track semua task (bukan hanya video):
+              </p>
+              <Endpoint method="GET" path="/api/gen/tasks" desc="List semua task milik agent. Query: ?status=pending|processing|completed|failed&limit=20&offset=0" />
+              <Endpoint method="GET" path="/api/gen/tasks/[id]" desc="Detail satu task + result." />
+            </Section>
+          </>
+        )}
+
+        {/* ── CREDITS ── */}
+        {tab === 'credits' && (
+          <>
+            <Section title="Cek Saldo">
+              <Endpoint method="GET" path="/api/gen/credits" desc="Saldo + 10 transaksi terakhir." />
+              <div className="mt-3">
+                <Code>{`curl -H "x-api-key: hsk_xxx..." \\
+  ${BASE}/api/gen/credits
+
+{
+  "balance": 2000000,
+  "transactions": [
+    {
+      "amount": -1300,
+      "reason": "Video generation",
+      "balanceAfter": 998700,
+      "createdAt": "2026-06-14T10:00:00Z"
+    }
+  ]
+}`}</Code>
+              </div>
+            </Section>
+
+            <Section title="Biaya Generate">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-stone-200">
+                      <th className="text-left py-2 pr-4 font-semibold text-stone-700">Tipe</th>
+                      <th className="text-left py-2 pr-4 font-semibold text-stone-700">Durasi</th>
+                      <th className="text-left py-2 font-semibold text-stone-700">Biaya</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    <tr><td className="py-2 pr-4 text-stone-600">SD</td><td className="py-2 pr-4 text-stone-600">6 detik</td><td className="py-2 font-mono text-stone-800">1.000 kredit</td></tr>
+                    <tr><td className="py-2 pr-4 text-stone-600">SD</td><td className="py-2 pr-4 text-stone-600">10 detik</td><td className="py-2 font-mono text-stone-800">1.300 kredit</td></tr>
+                    <tr><td className="py-2 pr-4 text-stone-600">HD</td><td className="py-2 pr-4 text-stone-600">6 detik</td><td className="py-2 font-mono text-stone-800">2.000 kredit</td></tr>
+                    <tr><td className="py-2 pr-4 text-stone-600">HD</td><td className="py-2 pr-4 text-stone-600">10 detik</td><td className="py-2 font-mono text-stone-800">2.600 kredit</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-stone-500 mt-3">
+                Biaya dihitung server-side dan tidak bisa di-override dari request. Saldo dipotong saat job submit, dikembalikan otomatis jika gagal.
+              </p>
+            </Section>
+
+            <Section title="Top-up Saldo">
+              <p className="text-sm text-stone-600">
+                Top-up dilakukan oleh admin. Hubungi admin dengan menyebut <strong>email akun</strong> dan jumlah kredit yang dibutuhkan.
+              </p>
             </Section>
           </>
         )}
@@ -134,44 +349,49 @@ export default function DocsPage() {
         {tab === 'library' && (
           <>
             <Section title="GET /api/hermes/library">
-              <p className="text-sm text-stone-600 mb-3">
-                Satu endpoint untuk semua data assigned. <strong>Persona (character) sudah embedded langsung di setiap instagramAccount</strong> — tidak ada array <code className="text-xs bg-stone-100 px-1 rounded">characters[]</code> terpisah. Termasuk <code className="text-xs bg-stone-100 px-1 rounded">photoReferences[]</code> per akun.
+              <p className="text-sm text-stone-600 mb-2">
+                Untuk agent konten yang di-assign ke akun IG tertentu. Auth: <strong>Bearer token</strong> (bukan x-api-key — ini key terpisah untuk content agent, minta ke admin).
+                Response selalu difilter berdasarkan assignment agent.
               </p>
-              <Code>{`{
-  "agent": { "id": "...", "name": "Worker A" },
+              <p className="text-xs text-stone-500 mb-3">
+                <strong>Persona sudah embedded langsung di setiap instagramAccount</strong> — tidak ada array characters[] terpisah.
+              </p>
+              <Code>{`curl -H "Authorization: Bearer hsl_content_xxx..." \\
+  ${BASE}/api/hermes/library
+
+{
+  "agent": { "id": "...", "name": "Agent Konten" },
   "library": {
     "instagramAccounts": [
       {
         "id": "acc_xxx",
         "username": "budi_official",
-        "accountName": "Budi Official",
         "gender": "F",
-        "status": "active",
-        "purpose": "cpas",
-        "characterDescription": "Ibu rumah tangga 30an, bercerita produk kecantikan",
-        "behavior": "Santai, hangat, relatable. Sesekali pakai bahasa Jawa.",
-        "speakingStyle": "Casual, sering pakai kata 'aku', kalimat pendek",
-        "expressionStyle": "Ekspresif, sering tersenyum, kontak mata ke kamera",
-        "movementStyle": "Gerakan natural, tidak kaku, kadang sambil masak",
-        "forbiddenRules": "Jangan sebut kompetitor. Jangan klaim medis.",
-        "photoCount": 3,
+        "characterDescription": "Ibu rumah tangga 30an...",
+        "behavior": "Santai, hangat, relatable",
+        "speakingStyle": "Casual, sering pakai kata aku",
+        "expressionStyle": "Ekspresif, sering tersenyum",
+        "movementStyle": "Gerakan natural",
+        "forbiddenRules": "Jangan sebut kompetitor",
         "photoReferences": [
           {
-            "id": "...", "fileUrl": "https://ai.boytenggara.com/api/photos/serve/...",
-            "thumbnailUrl": "https://...", "label": "Foto referensi 1",
-            "category": "portrait", "status": "active"
+            "id": "...",
+            "fileUrl": "https://ai.boytenggara.com/api/photos/serve/...",
+            "label": "Foto referensi 1",
+            "category": "portrait"
           }
         ]
       }
     ],
-    "topics": [...],
     "ceps": [...],
-    "products": [{
-      "id": "...", "name": "...",
-      "landingPages": [
-        { "url": "https://...", "variant": "A", "type": "shopee", "isDefault": true }
-      ]
-    }],
+    "products": [
+      {
+        "id": "...", "name": "...",
+        "landingPages": [
+          { "url": "https://...", "variant": "A", "isDefault": true }
+        ]
+      }
+    ],
     "mediaAssets": [
       { "type": "VIDEO", "fileUrl": "https://...", "duration": 23.5, "aspectRatio": "9:16" }
     ]
@@ -180,55 +400,10 @@ export default function DocsPage() {
             </Section>
 
             <Section title="Endpoint Library Lain">
-              <Endpoint method="GET" path="/api/hermes/ready-upload" desc="Akun berikutnya yang siap di-post (polling lama, masih jalan)" />
+              <Endpoint method="GET" path="/api/hermes/ready-upload" desc="Akun berikutnya yang siap di-post" />
               <Endpoint method="GET" path="/api/hermes/photos" desc="Foto referensi assigned" />
               <Endpoint method="GET" path="/api/hermes/ceps" desc="CEP assigned" />
-            </Section>
-          </>
-        )}
-
-        {/* ── TASKS ── */}
-        {tab === 'tasks' && (
-          <>
-            <Section title="Task Queue — Generate Konten On-Demand">
-              <p className="text-sm text-stone-600 mb-3">
-                Media Rules / admin bikin task (GENERATE_VIDEO, GENERATE_PHOTO, CAPTION_ONLY, dll).
-                Worker claim → kerjakan → complete dengan hasil. Claim bersifat atomic — dua worker
-                tidak bisa dapat task yang sama.
-              </p>
-              <Endpoint method="GET" path="/api/hermes/tasks?types=GENERATE_VIDEO,GENERATE_PHOTO" desc="List task pending (max 10)" />
-              <Endpoint method="POST" path="/api/hermes/tasks" desc="Claim task. Body: { taskId?, types? } — kosongkan untuk auto-pick" />
-              <Endpoint method="POST" path="/api/hermes/tasks/[id]" desc="Update lifecycle. Body: { action: 'complete'|'fail', ... }" />
-            </Section>
-
-            <Section title="Contoh: Claim → Complete">
-              <Code>{`# 1. Claim
-curl -X POST -H "Authorization: Bearer hsl_xxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"types":["GENERATE_VIDEO"]}' \\
-  ${BASE}/api/hermes/tasks
-
-# → { "task": { "id": "task_123", "type": "GENERATE_VIDEO", "payload": {...} } }
-
-# 2. Selesai — daftarkan hasil video sebagai MediaAsset
-curl -X POST -H "Authorization: Bearer hsl_xxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "action": "complete",
-    "result": { "note": "video 23s, hook variant B" },
-    "mediaAsset": {
-      "fileUrl": "https://cdn.example.com/video.mp4",
-      "type": "VIDEO",
-      "mimeType": "video/mp4",
-      "fileSizeBytes": 1048576,
-      "duration": 23.5,
-      "aspectRatio": "9:16",
-      "label": "Auto top-up video"
-    }
-  }' \\
-  ${BASE}/api/hermes/tasks/task_123
-
-# Gagal? action: "fail" + error → auto-retry sampai maxAttempts, lalu dead letter.`}</Code>
+              <Endpoint method="GET" path="/api/hermes/generated-media" desc="Video yang sudah selesai dan di-assign ke agent ini" />
             </Section>
           </>
         )}
@@ -237,85 +412,17 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
         {tab === 'content' && (
           <>
             <Section title="Submit Hasil Konten">
-              <Endpoint method="POST" path="/api/hermes/content-log" desc="Log hasil generate/post. Body: accountId, characterId?, topicId?, cepId?, contentType, caption, mediaUrl, postUrl..." />
+              <p className="text-sm text-stone-600 mb-2">Untuk content agent (Bearer token).</p>
+              <Endpoint method="POST" path="/api/hermes/content-log" desc="Log hasil generate/post. Body: accountId, topicId?, cepId?, contentType, caption, mediaUrl, postUrl..." />
               <Endpoint method="POST" path="/api/hermes/cep-feedback" desc="Submit CEP baru untuk review admin. Body: { topicId, cepText, painPoint?, angle? }" />
             </Section>
             <Section title="Produk & Landing Pages">
               <p className="text-sm text-stone-600 mb-2">
                 Produk di library response include <code className="text-xs bg-stone-100 px-1 rounded">landingPages[]</code> —
-                pakai LP dengan <code className="text-xs bg-stone-100 px-1 rounded">isDefault: true</code> untuk CTA,
+                pakai LP dengan <code className="text-xs bg-stone-100 px-1 rounded">isDefault: true</code> untuk CTA default,
                 atau variant lain kalau task payload menyebut variant tertentu (A/B testing).
               </p>
             </Section>
-          </>
-        )}
-
-        {/* ── VIDEO GEN ── */}
-        {tab === 'video' && (
-          <>
-            <Section title="Video Generation">
-              <p className="text-sm text-stone-600 mb-3">
-                Generate video dari prompt + foto referensi. Hasil datang async,
-                di-rehost ke storage HSL. Cek status via polling sampai
-                <code className="text-xs bg-stone-100 px-1 rounded">completed</code>,
-                lalu pakai <code className="text-xs bg-stone-100 px-1 rounded">videoUrl</code>.
-              </p>
-              <p className="text-sm text-stone-600 mb-2">Alur status:</p>
-              <Code>{`queued → processing → ready_for_rehost → completed
-                                  └→ failed (error di-surface, bukan silent)`}</Code>
-            </Section>
-
-            <Section title="Admin — Buat & Lihat Job">
-              <p className="text-xs text-stone-500 mb-3">UI: <strong>Media → Generate</strong> — form prompt + foto referensi (1-5) + IG account (opsional), job list dengan polling 12 detik, video preview + download.</p>
-              <Endpoint method="POST" path="/api/admin/generate/video" desc="Buat job. Body: { prompt*, instagramAccountId?, photoReferenceIds[] (1-5) }. Bikin generated_media + worker_task GENERATE_VIDEO. Return 201 { id, status, workerTaskId }" />
-              <Endpoint method="GET" path="/api/admin/generate/video" desc="List job. Query: ?status=&instagramAccountId=&limit=20&offset=0. Include inputs (photoReference fileUrl + label)" />
-              <Endpoint method="GET" path="/api/admin/generate/video/[id]" desc="Detail satu job + inputs" />
-            </Section>
-
-            <Section title="Hermes Agent — Ambil Hasil">
-              <Endpoint method="GET" path="/api/gen/media" desc="List video jadi (Bearer token). Query: ?status=completed&limit=20. Scope: ownerUserId." />
-              <p className="text-xs text-stone-500 mt-2">
-                Response item: <code className="text-xs bg-stone-100 px-1 rounded">id, status, videoUrl, thumbnailUrl, prompt, durationSeconds, instagramAccountId, completedAt, inputs[]</code>
-              </p>
-            </Section>
-
-            <Section title="Video Generator API — /api/gen/* (White-label)">
-              <p className="text-sm text-stone-600 mb-3">
-                Endpoint publik untuk customer. Pakai API key Bearer token.
-                Semua endpoint white-label — tidak ada nama provider/model yang bocor.
-              </p>
-
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                <h3 className="text-sm font-bold text-violet-800 mb-2">🎬 Generate Video</h3>
-                <Endpoint method="POST" path="/api/gen/video" desc="Buat video generation job. Body: prompt* (teks), photoReferenceIds[] (opsional, 0-5 ID foto referensi), instagramAccountId (opsional). Balikin 201 { id, status: 'queued', creditsCost, balanceRemaining }." />
-                <div className="mt-2 space-y-1">
-                  <p className="text-xs text-stone-500">
-                    <strong>Cost (server-side):</strong> SD 6s = 1,000 • SD 10s = 1,300 • HD = 2×. Tidak bisa di-override client.
-                  </p>
-                  <p className="text-xs text-stone-500">
-                    <strong>Error:</strong> 401 (invalid key) • 402 (credits kurang) • 403 (agent bukan owner).
-                  </p>
-                </div>
-                <Code>{`curl -X POST -H "Authorization: Bearer *** -H "Content-Type: application/json" \\
-  -d '{"prompt":"Product demo cinematic 4K","photoReferenceIds":[]}' \\
-  ${BASE}/api/gen/video`}</Code>
-              </div>
-
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                <h3 className="text-sm font-bold text-violet-800 mb-2">📊 Credits & Balance</h3>
-                <Endpoint method="GET" path="/api/gen/credits" desc="Cek saldo + riwayat transaksi. Return: { balance (int), transactions[] (id, amount, reason, balanceAfter, createdAt) }." />
-                <Code>{`curl -H "Authorization: Bearer *** \\
-  ${BASE}/api/gen/credits`}</Code>
-              </div>
-
-              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 mb-4">
-                <h3 className="text-sm font-bold text-violet-800 mb-2">📹 Cek Hasil</h3>
-                <Endpoint method="GET" path="/api/gen/media/[id]" desc="Detail satu generated media. Return: id, status (queued|processing|completed|failed), prompt, videoUrl, thumbnailUrl, creditsCost, errorMessage, completedAt." />
-                <Endpoint method="GET" path="/api/gen/media" desc="List semua generated media milik agent. Query: ?status=completed&limit=20&offset=0." />
-                <Endpoint method="GET" path="/api/gen/media/[id]/download" desc="Download/redirect ke videoUrl. 302 redirect. 409 kalau video belum ready." />
-              </div>
-            </Section>
-
           </>
         )}
 
@@ -327,7 +434,7 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
                 Endpoint publik. Admin buat config di dashboard (pixel ID + access token, disimpan
                 terenkripsi) → dapat <code className="text-xs bg-stone-100 px-1 rounded">configId</code>.
                 Landing page tinggal POST event ke sini, HSL forward ke Meta CAPI (v25.0).
-                Rate limit 120 req/menit. Event invalid di-skip, bukan reject semua.
+                Rate limit 120 req/menit.
               </p>
               <Endpoint method="POST" path="/api/capi/events" desc="Body: { configId, events: [...] } — max 100 event/request" />
               <Code>{`curl -X POST -H "Content-Type: application/json" \\
@@ -342,9 +449,6 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
     }]
   }' \\
   ${BASE}/api/capi/events`}</Code>
-              <p className="text-xs text-stone-500 mt-2">
-                Kalau config terhubung ke Landing Page, conversion otomatis tercatat di LP stats.
-              </p>
             </Section>
           </>
         )}
@@ -354,51 +458,42 @@ curl -X POST -H "Authorization: Bearer hsl_xxx" \\
           <>
             <Section title="Catatan">
               <p className="text-sm text-stone-600">
-                Semua endpoint admin pakai session cookie (login dulu). Data difilter per ownership —
-                admin lihat semua, user lihat miliknya sendiri.
+                Semua endpoint admin pakai session cookie (login dulu via browser). Data difilter per ownership.
               </p>
+            </Section>
+            <Section title="Auth">
+              <Endpoint method="POST" path="/api/admin/auth/login" desc="Body: { email, password }" />
+              <Endpoint method="GET" path="/api/admin/auth/google" desc="Redirect ke Google OAuth" />
+              <Endpoint method="POST" path="/api/admin/auth/logout" desc="Hapus session" />
+              <Endpoint method="GET" path="/api/admin/meta-oauth/start" desc="Mulai Meta OAuth (Connect Facebook)" />
+            </Section>
+            <Section title="Credits">
+              <Endpoint method="POST" path="/api/admin/credits/grant" desc="Grant kredit ke user. Body: { userId? (default: self), amount, reason? }. Auth: admin only." />
             </Section>
             <Section title="Landing Pages & Stats">
               <Endpoint method="GET" path="/api/admin/products/[id]/landing-pages" desc="List LP per produk" />
               <Endpoint method="POST" path="/api/admin/products/[id]/landing-pages" desc="Tambah LP variant" />
               <Endpoint method="PATCH" path="/api/admin/landing-pages/[lpId]" desc="Update / set default / pause" />
               <Endpoint method="GET" path="/api/admin/landing-pages/[lpId]/stats" desc="Stats + summary (clicks, conversions, CR, revenue)" />
-              <Endpoint method="POST" path="/api/admin/landing-pages/[lpId]/stats" desc="Record stat manual" />
             </Section>
             <Section title="Automation Rules">
               <Endpoint method="GET" path="/api/admin/automation-rules" desc="List rules" />
-              <Endpoint method="POST" path="/api/admin/automation-rules" desc="Buat rule (custom condition tree + multi-action)" />
-              <Endpoint method="POST" path="/api/admin/automation-rules/dry-run" desc="Preview: entity mana yang match kondisi" />
+              <Endpoint method="POST" path="/api/admin/automation-rules" desc="Buat rule" />
+              <Endpoint method="POST" path="/api/admin/automation-rules/dry-run" desc="Preview: entity mana yang match" />
               <Endpoint method="GET" path="/api/admin/rule-templates" desc="Template builtin + custom" />
-              <Endpoint method="POST" path="/api/admin/rule-templates" desc="Save rule sebagai template" />
             </Section>
-            <Section title="Media Rules (Auto Top-up)">
-              <Endpoint method="GET" path="/api/admin/media-rules" desc="List rules" />
-              <Endpoint method="POST" path="/api/admin/media-rules" desc="Buat rule (MIN_COUNT / MAX_AGE_DAYS / NO_WINNER)" />
-              <Endpoint method="PATCH" path="/api/admin/media-rules/[id]" desc="Update / pause" />
+            <Section title="Instagram Accounts">
+              <Endpoint method="GET" path="/api/admin/accounts" desc="List akun IG. Query: ?status=active" />
+              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun + persona" />
+              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + photoReferences + persona fields" />
+              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update termasuk persona fields" />
             </Section>
-            <Section title="Meta — Audiences, Catalogs, Tools">
+            <Section title="Meta Tools">
               <Endpoint method="GET" path="/api/admin/meta-audiences" desc="List custom + lookalike audiences" />
-              <Endpoint method="POST" path="/api/admin/meta-audiences" desc="Buat audience (dispatch ke worker)" />
-              <Endpoint method="GET" path="/api/admin/meta-catalogs" desc="List catalogs (CPAS foundation)" />
-              <Endpoint method="POST" path="/api/admin/meta-catalogs/[id]" desc="Buat product set di catalog" />
-              <Endpoint method="GET" path="/api/admin/meta-tools/ad-preview?adId=..&format=INSTAGRAM_REELS" desc="Preview ad per placement" />
-              <Endpoint method="GET" path="/api/admin/meta-tools/ad-library?q=skincare&country=ID" desc="Cari ads kompetitor di Meta Ad Library" />
+              <Endpoint method="POST" path="/api/admin/meta-audiences" desc="Buat audience" />
+              <Endpoint method="GET" path="/api/admin/meta-catalogs" desc="List catalogs" />
               <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
               <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
-            </Section>
-            <Section title="Instagram Accounts (+ Persona)">
-              <p className="text-sm text-stone-600 mb-2">
-                Persona/character fields langsung ada di akun — tidak perlu endpoint terpisah.
-              </p>
-              <Endpoint method="GET" path="/api/admin/accounts" desc="List akun IG. Query: ?status=active" />
-              <Endpoint method="POST" path="/api/admin/accounts" desc="Buat akun. Body: { username*, accountName?, gender? ('M'|'F'), purpose?, notes?, characterDescription?, behavior?, speakingStyle?, expressionStyle?, movementStyle?, forbiddenRules? }" />
-              <Endpoint method="GET" path="/api/admin/accounts/[id]" desc="Detail + photoReferences + postingMonitor (semua persona fields included)" />
-              <Endpoint method="PATCH" path="/api/admin/accounts/[id]" desc="Update field apapun termasuk persona: characterDescription/behavior/speakingStyle/expressionStyle/movementStyle/forbiddenRules" />
-              <Endpoint method="DELETE" path="/api/admin/accounts/[id]" desc="Hapus akun + cascade topics/CEPs/contentLogs" />
-            </Section>
-            <Section title="Worker Tasks">
-              <Endpoint method="GET" path="/api/admin/worker-tasks?status=pending" desc="Monitor antrian task + counts per status" />
             </Section>
           </>
         )}
