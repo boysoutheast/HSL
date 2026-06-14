@@ -14,6 +14,8 @@ const PUBLIC_PATHS = [
   '/api/health',
   '/data-deletion',
   '/api/meta/data-deletion',
+  '/privacy-policy',
+  '/terms-of-service',
 ]
 
 export function middleware(req: NextRequest) {
