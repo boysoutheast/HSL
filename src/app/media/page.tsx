@@ -4,14 +4,14 @@ import ProductsPage from '../products/page'
 import GenerateVideoPage from './GenerateVideoPage'
 
 const tabs = [
+  { id: 'generate', label: 'AI Generate' },
   { id: 'library', label: 'Library' },
   { id: 'products', label: 'Products' },
-  { id: 'generate', label: 'Generate' },
 ]
 
 export default async function MediaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams
-  const key = tab && tabs.some(t => t.id === tab) ? tab : 'library'
+  const key = tab && tabs.some(t => t.id === tab) ? tab : 'generate'
 
   return (
     <ClientTabs
