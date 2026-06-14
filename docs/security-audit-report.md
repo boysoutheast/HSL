@@ -9,7 +9,9 @@
 - **CRITICAL:** 2/2 fixed
 - **HIGH:** 5/5 fixed
 - **MEDIUM:** 8/8 fixed
-- **LOW (Phase 4 self-refinement):** 10 fixed + 7 DEFERRED
+- **LOW (Phase 4 self-refinement):** 2 fixed
+- **DEFERRED (Phase 5):** 7/7 fixed — commit `67edf21`
+- **TOTAL FIXED:** 25 issues across 5 phases
 
 ---
 
@@ -53,25 +55,25 @@
 | F-17 | LOW | 8 additional routes | Error response leaks `err.message` to client | **FIXED** — worker/tasks, renew, heartbeat, meta-media/ensure, rules/actions, rules/executions, generated-media/update, generated-media/refund | `aa11ef8` |
 | F-18 | LOW | 2 internal routes | `parseInt` without NaN guard | **FIXED** — internal/actions/route.ts, internal/worker/tasks/route.ts | `aa11ef8` |
 
----
+### Phase 5 — DEFERRED ITEMS RESOLVED
 
-## Deferred Items
+| # | Severity | File | Issue | Status | Commit |
+|---|---|---|---|---|---|
+| F-19 | MEDIUM | `src/app/api/admin/products/[id]/route.ts` | D-01 — `data: body` mass assignment | **FIXED** — explicit allowlist: name, description, mainBenefit, productUrl, ingredients, usageInstruction, price, shopeeUrl, notes + status enum + str() limits | `67edf21` |
+| F-20 | MEDIUM | `src/app/api/admin/meta-accounts/[id]/route.ts` | D-02 — `data: body` mass assignment | **FIXED** — explicit allowlist matching existing body type: adAccountId, accessToken, accountName, pageId, igAccountId, pixelId, currency, timezone, notes + str() limits | `67edf21` |
+| F-21 | MEDIUM | `src/app/api/admin/meta-connections/[id]/route.ts` | D-03 — `data: body` mass assignment | **FIXED** — explicit allowlist: name, appId, metaUserId, metaUserName, scopesJson, defaultAdAccountId, accountName, currency, timezone, pixelId + status enum + str() limits | `67edf21` |
+| F-22 | MEDIUM | `src/app/api/admin/topics/[id]/route.ts` | D-04 — `data: body` mass assignment | **FIXED** — explicit allowlist: name, description, instagramAccountId, characterId, productId + status enum + str() limits | `67edf21` |
+| F-23 | MEDIUM | `src/app/api/admin/creative-variants/[id]/route.ts` | D-05 — `data: body` mass assignment | **FIXED** — explicit allowlist: name, primaryText, headline, description, linkUrl, ctaButton + status enum + str() limits | `67edf21` |
+| F-24 | MEDIUM | `src/app/api/admin/characters/[id]/route.ts` | D-06 — `data: body` mass assignment | **FIXED** — explicit allowlist: name, description, behavior, speakingStyle, expressionStyle, movementStyle, forbiddenRules + status enum + str() limits | `67edf21` |
+| F-25 | MEDIUM | `src/app/api/admin/settings/route.ts` | D-07 — `data: body` mass assignment | **FIXED** — numeric allowlist with isFinite + >=0 guard for all 10 setting fields | `67edf21` |
 
-| # | File | Issue | Reason |
-|---|---|---|---|
-| D-01 | `src/app/api/admin/products/[id]/route.ts:89` | `data: body` — mass assignment | Admin-only route; needs full Product model field audit to build allowlist without breaking |
-| D-02 | `src/app/api/admin/meta-accounts/[id]/route.ts:70` | `data: body` — mass assignment | Admin-only; MetaAccount has complex relations — risky to allowlist without field-level review |
-| D-03 | `src/app/api/admin/meta-connections/[id]/route.ts:162` | `data: body` — mass assignment | Admin-only; MetaConnection has sensitive OAuth token fields |
-| D-04 | `src/app/api/admin/topics/[id]/route.ts:69` | `data: body` — mass assignment | Admin-only; Topic model with product FK |
-| D-05 | `src/app/api/admin/creative-variants/[id]/route.ts:74` | `data: body` — mass assignment | Admin-only; CreativeVariant with complex JSON fields |
-| D-06 | `src/app/api/admin/characters/[id]/route.ts:86` | `data: body` — mass assignment | Admin-only; Character model with many persona fields |
-| D-07 | `src/app/api/admin/settings/route.ts:50,54` | `data: body` — mass assignment | Admin-only; PostingMonitorSetting — create + update both use raw body |
+
 
 ---
 
 ## Residual Risk
 
-1. **7 admin CRUD routes** still use `data: body` (DEFERRED). These require auth, so exploitation surface is limited to authenticated admin users.
+1. ~~**7 admin CRUD routes** still use `data: body`~~ → **ALL FIXED** in Phase 5 (`67edf21`). All 7 routes now use explicit field allowlists with `str()` limits and enum guards.
 2. **Meta-tools routes** (`interest-search`, `ad-preview`, `adspixels`, `adaccount-capabilities`, `customaudiences`, `ad-library`) return `MetaGraphError.message` to client. These are Meta API error messages (not internal stack traces) — kept for debuggability.
 3. **`api/capi/events/route.ts`** returns CAPI forwarding error message to client. This is operational data for the CAPI caller. Added console.error for server-side logging.
 4. **No CSP / rate-limit header hardening** — out of scope for this audit.
@@ -81,7 +83,7 @@
 
 ## Recommendations
 
-1. **Build Prisma-field-level allowlists** for the 7 deferred routes. Each needs a map of safe fields vs. internal/relational fields.
+1. ~~**Build Prisma-field-level allowlists** for the 7 deferred routes~~ → **DONE** (`67edf21`). All 7 routes now have explicit Record allowlist with field validation.
 2. **Add automated security scanning** (e.g., CodeQL, Semgrep) to CI pipeline — catch `$executeRawUnsafe`, `data: body`, and raw `parseInt` patterns.
 3. **Add CSRF protection** on all admin mutation endpoints.
 4. **Add CSP headers** in `next.config.js` for XSS mitigation.
