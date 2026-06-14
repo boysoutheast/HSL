@@ -41,10 +41,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Expected non-empty array of metrics' }, { status: 400 })
   }
 
+  if (body.length > 500) {
+    return NextResponse.json({ error: 'Max 500 metrics per batch' }, { status: 400 })
+  }
+
   const sessionIds = [...new Set(body.map((m) => m.campaignSessionId))]
 
   // Per-row parameterized upsert — safe from SQL injection
   for (const m of body) {
+    const windowEnd = new Date(m.windowEnd)
+    if (isNaN(windowEnd.getTime())) {
+      return NextResponse.json({ error: 'Invalid windowEnd date' }, { status: 400 })
+    }
+    const windowEndISO = windowEnd.toISOString()
+    const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000).toISOString()
+
     await prisma.$executeRaw`
       INSERT INTO metric_snapshots (
         campaign_session_id, meta_entity_id, entity_type,
@@ -54,8 +65,8 @@ export async function POST(req: NextRequest) {
       )
       VALUES (
         ${m.campaignSessionId}, ${m.metaEntityId}, ${m.entityType},
-        ${new Date(new Date(m.windowEnd).getTime() - 24 * 60 * 60 * 1000).toISOString()},
-        ${new Date(m.windowEnd).toISOString()},
+        ${windowStart},
+        ${windowEndISO},
         ${'7d'},
         ${m.spend}, ${m.impressions}, ${m.clicks},
         ${m.leads ?? 0}, ${m.purchases ?? 0}, ${m.purchaseValue ?? 0},

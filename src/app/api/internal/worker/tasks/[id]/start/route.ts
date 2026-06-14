@@ -67,6 +67,7 @@ export async function POST(
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Failed to start task', message }, { status: 500 })
+    console.error('[worker/tasks/start] Error:', message)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

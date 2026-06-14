@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'CAPI forward failed'
+    console.error('[capi/events] Error:', message)
     await prisma.capiEventConfig.update({
       where: { id: config.id },
       data: { lastError: message.slice(0, 1000) },

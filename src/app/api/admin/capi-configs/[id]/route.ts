@@ -11,6 +11,8 @@ async function findOwned(id: string, auth: { id: string; role: string }) {
   })
 }
 
+const VALID_EVENTS = ['Purchase', 'Lead', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'PageView', 'CompleteRegistration']
+
 // PATCH /api/admin/capi-configs/[id]
 export async function PATCH(
   req: NextRequest,
@@ -24,6 +26,16 @@ export async function PATCH(
 
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+
+  // Validate allowedEvents if present
+  if (Array.isArray(body.allowedEvents)) {
+    const invalid = body.allowedEvents.find(
+      (e: unknown) => typeof e !== 'string' || !VALID_EVENTS.includes(e)
+    )
+    if (invalid) {
+      return NextResponse.json({ error: `Invalid event in allowedEvents: ${String(invalid)}` }, { status: 400 })
+    }
+  }
 
   const updated = await prisma.capiEventConfig.update({
     where: { id: params.id },

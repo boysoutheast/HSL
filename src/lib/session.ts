@@ -37,7 +37,10 @@ export async function getSessionUser(req: NextRequest): Promise<SessionUser | nu
     return null
   }
 
-  if (session.user.status !== 'active') return null
+  if (session.user.status !== 'active') {
+    await prisma.session.delete({ where: { token } }).catch(() => {})
+    return null
+  }
 
   return {
     id: session.user.id,

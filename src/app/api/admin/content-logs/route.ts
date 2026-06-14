@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   const topicId = searchParams.get('topicId')
   const cepId = searchParams.get('cepId')
   const status = searchParams.get('status')
-  const take = Math.min(parseInt(searchParams.get('take') ?? '50'), 200)
-  const skip = parseInt(searchParams.get('skip') ?? '0')
+  const take = Math.min(parseInt(searchParams.get('take') ?? '50', 10) || 50, 200)
+  const skip = Math.max(0, parseInt(searchParams.get('skip') ?? '0', 10) || 0)
 
   // Non-admin: hanya log dari akun IG miliknya
   const where = {

@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const filterProductId = searchParams.get('productId')
   const filterTopicId   = searchParams.get('topicId')
-  const limit           = Math.min(parseInt(searchParams.get('limit')  ?? '100'), 200)
-  const offset          = parseInt(searchParams.get('offset') ?? '0')
+  const limit           = Math.min(parseInt(searchParams.get('limit')  ?? '100', 10) || 100, 200)
+  const offset          = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0)
 
   const assignments = await prisma.assignment.findMany({
     where: { hermesAgentId: agent.id, status: 'active' },

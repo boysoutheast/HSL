@@ -71,7 +71,8 @@ export async function GET(req: NextRequest) {
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Failed to list tasks', message }, { status: 500 })
+    console.error('[worker/tasks/list] Error:', message)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 
@@ -123,6 +124,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ task }, { status: 201 })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Failed to create task', message }, { status: 500 })
+    console.error('[worker/tasks/create] Error:', message)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

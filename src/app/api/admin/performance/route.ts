@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const instagramAccountId = searchParams.get('instagramAccountId')
-  const take = Math.min(parseInt(searchParams.get('take') ?? '50'), 200)
-  const skip = parseInt(searchParams.get('skip') ?? '0')
+  const take = Math.min(parseInt(searchParams.get('take') ?? '50', 10) || 50, 200)
+  const skip = Math.max(0, parseInt(searchParams.get('skip') ?? '0', 10) || 0)
 
   // Non-admin: hanya tracker dari akun IG miliknya
   const where = {
