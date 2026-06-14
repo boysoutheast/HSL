@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 /* ── types ── */
 interface IgAccount { id: string; username: string; accountName: string | null }
 interface PhotoRef { id: string; fileUrl: string; label: string }
+interface MediaAssetItem { id: string; fileUrl: string | null; publicUrl: string | null; label: string | null }
 interface Product { id: string; name: string; _count?: { photoReferences: number } }
 interface VideoJob {
   id: string; prompt: string; status: string
@@ -15,7 +16,7 @@ interface VideoJob {
 
 interface Asset {
   id: string
-  type: 'photo' | 'product' | 'account'
+  type: 'photo' | 'product' | 'account' | 'media-asset'
   label: string
   thumbnailUrl?: string
   sourceId: string
@@ -64,6 +65,7 @@ export default function GenerateVideoPage() {
   const [pickerTab, setPickerTab] = useState<'account' | 'library' | 'product'>('library')
   const [pickerAccounts, setPickerAccounts] = useState<IgAccount[]>([])
   const [pickerPhotos, setPickerPhotos] = useState<PhotoRef[]>([])
+  const [pickerMediaAssets, setPickerMediaAssets] = useState<MediaAssetItem[]>([])
   const [pickerProducts, setPickerProducts] = useState<Product[]>([])
   const [pickerLoading, setPickerLoading] = useState(false)
   const [pickerError, setPickerError] = useState('')
@@ -127,12 +129,20 @@ export default function GenerateVideoPage() {
         .catch(() => setPickerProducts([]))
     )
 
-    // photos: fetch all active (no account filter for library tab)
+    // photos: fetch all active photoReferences
     fetches.push(
       fetch('/api/admin/photos?status=active', { credentials: 'include' })
         .then(r => r.ok ? r.json() : { photos: [] })
         .then(d => setPickerPhotos(d.photos ?? []))
         .catch(() => setPickerPhotos([]))
+    )
+
+    // media assets: uploaded images from Library
+    fetches.push(
+      fetch('/api/admin/media-assets?type=IMAGE&status=READY', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : { assets: [] })
+        .then(d => setPickerMediaAssets(d.assets ?? []))
+        .catch(() => setPickerMediaAssets([]))
     )
 
     Promise.all(fetches).finally(() => setPickerLoading(false))
@@ -205,14 +215,15 @@ export default function GenerateVideoPage() {
     }
 
     const photoAssetIds = assets.filter(a => a.type === 'photo').map(a => a.sourceId)
-    const allPhotoRefIds = [...photoAssetIds, ...resolvedProductPhotoIds].slice(0, 5)
-
+    const mediaAssetIds = assets.filter(a => a.type === 'media-asset').map(a => a.sourceId)
+    const allPhotoRefIds = [...photoAssetIds, ...resolvedProductPhotoIds]
     const accountAsset = assets.find(a => a.type === 'account')
 
     const payload = {
       prompt: prompt.trim(),
       instagramAccountId: accountAsset?.sourceId ?? undefined,
       photoReferenceIds: allPhotoRefIds,
+      mediaAssetIds,
       orientation,
       durationSeconds: duration,
     }
@@ -484,20 +495,47 @@ export default function GenerateVideoPage() {
                   </div>
                 )
               ) : pickerTab === 'library' ? (
-                pickerPhotos.length === 0 ? (
+                pickerPhotos.length === 0 && pickerMediaAssets.length === 0 ? (
                   <p className="text-sm text-stone-400 py-8 text-center">Belum ada foto.</p>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2">
-                    {pickerPhotos.map(photo => (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        onClick={() => addAsset({ id: `photo-${photo.id}`, type: 'photo', label: photo.label, thumbnailUrl: photo.fileUrl, sourceId: photo.id })}
-                        className="aspect-square rounded-xl overflow-hidden border-2 border-stone-200 hover:border-violet-400 transition"
-                      >
-                        <img src={photo.fileUrl} alt={photo.label} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
+                  <div className="space-y-3">
+                    {pickerMediaAssets.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Upload</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {pickerMediaAssets.map(ma => {
+                            const url = ma.fileUrl ?? ma.publicUrl ?? ''
+                            return (
+                              <button
+                                key={ma.id}
+                                type="button"
+                                onClick={() => addAsset({ id: `ma-${ma.id}`, type: 'media-asset', label: ma.label ?? ma.id, thumbnailUrl: url, sourceId: ma.id })}
+                                className="aspect-square rounded-xl overflow-hidden border-2 border-stone-200 hover:border-violet-400 transition"
+                              >
+                                <img src={url} alt={ma.label ?? ''} className="w-full h-full object-cover" />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {pickerPhotos.length > 0 && (
+                      <div>
+                        {pickerMediaAssets.length > 0 && <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Assigned Photos</p>}
+                        <div className="grid grid-cols-4 gap-2">
+                          {pickerPhotos.map(photo => (
+                            <button
+                              key={photo.id}
+                              type="button"
+                              onClick={() => addAsset({ id: `photo-${photo.id}`, type: 'photo', label: photo.label, thumbnailUrl: photo.fileUrl, sourceId: photo.id })}
+                              className="aspect-square rounded-xl overflow-hidden border-2 border-stone-200 hover:border-violet-400 transition"
+                            >
+                              <img src={photo.fileUrl} alt={photo.label} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               ) : (

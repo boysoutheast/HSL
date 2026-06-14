@@ -8,6 +8,7 @@ type CreateBody = {
   prompt?: string
   instagramAccountId?: string
   photoReferenceIds?: string[]
+  mediaAssetIds?: string[]
   orientation?: string
   resolution?: string
   durationSeconds?: number
@@ -29,6 +30,9 @@ export async function POST(req: NextRequest) {
   const photoReferenceIds = Array.isArray(body.photoReferenceIds)
     ? body.photoReferenceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
     : []
+  const mediaAssetIds = Array.isArray(body.mediaAssetIds)
+    ? body.mediaAssetIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    : []
   const instagramAccountId = body.instagramAccountId?.trim() || null
   const orientation = body.orientation?.trim() || 'portrait'
   const resolution = body.resolution === 'HD' ? 'HD' : 'SD'
@@ -38,27 +42,45 @@ export async function POST(req: NextRequest) {
   if (!prompt) {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   }
-  if (photoReferenceIds.length < 1 || photoReferenceIds.length > 5) {
-    return NextResponse.json({ error: 'photoReferenceIds must contain 1 to 5 items' }, { status: 400 })
+  const totalRefs = photoReferenceIds.length + mediaAssetIds.length
+  if (totalRefs < 1 || totalRefs > 5) {
+    return NextResponse.json({ error: 'Total referensi (photo + media) harus 1–5 item' }, { status: 400 })
   }
 
-  const photoReferences = await prisma.photoReference.findMany({
-    where: {
-      id: { in: photoReferenceIds },
-      ...(auth.role === 'admin'
-        ? {}
-        : {
-            OR: [
-              { instagramAccount: { createdByUserId: auth.id } },
-              { product: { createdByUserId: auth.id } },
-            ],
-          }),
-    },
-    select: { id: true, fileUrl: true },
-  })
+  const photoReferences = photoReferenceIds.length > 0
+    ? await prisma.photoReference.findMany({
+        where: {
+          id: { in: photoReferenceIds },
+          ...(auth.role === 'admin'
+            ? {}
+            : {
+                OR: [
+                  { instagramAccount: { createdByUserId: auth.id } },
+                  { product: { createdByUserId: auth.id } },
+                ],
+              }),
+        },
+        select: { id: true, fileUrl: true },
+      })
+    : []
 
   if (photoReferences.length !== photoReferenceIds.length) {
     return NextResponse.json({ error: 'One or more photoReferenceIds are invalid or out of scope' }, { status: 403 })
+  }
+
+  const mediaAssets = mediaAssetIds.length > 0
+    ? await prisma.mediaAsset.findMany({
+        where: {
+          id: { in: mediaAssetIds },
+          type: 'IMAGE',
+          ...(auth.role === 'admin' ? {} : { userId: auth.id }),
+        },
+        select: { id: true, fileUrl: true, publicUrl: true },
+      })
+    : []
+
+  if (mediaAssets.length !== mediaAssetIds.length) {
+    return NextResponse.json({ error: 'One or more mediaAssetIds are invalid or out of scope' }, { status: 403 })
   }
 
   if (instagramAccountId) {
@@ -91,13 +113,15 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await tx.generatedMediaInput.createMany({
-      data: orderedPhotoIds.map((photoReferenceId, index) => ({
-        generatedMediaId: gm.id,
-        photoReferenceId,
-        inputOrder: index,
-      })),
-    })
+    if (orderedPhotoIds.length > 0) {
+      await tx.generatedMediaInput.createMany({
+        data: orderedPhotoIds.map((photoReferenceId, index) => ({
+          generatedMediaId: gm.id,
+          photoReferenceId,
+          inputOrder: index,
+        })),
+      })
+    }
 
     return gm
   })
@@ -106,7 +130,10 @@ export async function POST(req: NextRequest) {
   try {
     const { submitVideoJob } = await import('@/lib/geminigen')
 
-    const imageUrls = photoReferences.map(p => p.fileUrl)
+    const imageUrls = [
+      ...photoReferences.map(p => p.fileUrl),
+      ...mediaAssets.map(a => a.fileUrl ?? a.publicUrl ?? ''),
+    ].filter(Boolean)
 
     const aspectRatio = orientation === 'landscape'
       ? 'landscape'
