@@ -58,6 +58,7 @@ export async function submitVideoJob(params: GeminiGenSubmitParams): Promise<str
     method: 'POST',
     headers: { 'x-api-key': apiKey() },
     body: form,
+    signal: AbortSignal.timeout(30_000),
   })
 
   if (!res.ok) {
@@ -77,6 +78,7 @@ export async function submitVideoJob(params: GeminiGenSubmitParams): Promise<str
 export async function pollJobStatus(uuid: string): Promise<GeminiGenJobStatus> {
   const res = await fetch(`${BASE}/video-gen/history/${uuid}`, {
     headers: { 'x-api-key': apiKey() },
+    signal: AbortSignal.timeout(15_000),
   })
 
   if (!res.ok) {

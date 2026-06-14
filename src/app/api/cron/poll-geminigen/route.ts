@@ -19,6 +19,19 @@ export async function GET(req: NextRequest) {
 
   const cutoff = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000)
 
+  // Cleanup queued jobs stuck with no externalJobId (submit silently failed)
+  const stuckQueued = await prisma.generatedMedia.findMany({
+    where: { status: 'queued', externalJobId: null, createdAt: { lt: cutoff } },
+    select: { id: true },
+  })
+  for (const j of stuckQueued) {
+    await prisma.generatedMedia.update({
+      where: { id: j.id },
+      data: { status: 'failed', errorMessage: 'Job never submitted — credits refunded' },
+    })
+    await refundCredits(j.id).catch(() => {})
+  }
+
   const jobs = await prisma.generatedMedia.findMany({
     where: {
       status: 'processing',

@@ -67,6 +67,22 @@ export async function POST(req: NextRequest) {
   if (!file || file.size === 0) {
     return NextResponse.json({ error: 'file is required' }, { status: 400 })
   }
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: 'file must be JPEG, PNG, or WebP' }, { status: 400 })
+  }
+
+  const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB
+  if (file.size > MAX_FILE_BYTES) {
+    return NextResponse.json({ error: 'file must be under 10 MB' }, { status: 400 })
+  }
+
+  const MAX_PROMPT = 2000
+  if (prompt.length > MAX_PROMPT) {
+    return NextResponse.json({ error: `prompt max ${MAX_PROMPT} characters` }, { status: 400 })
+  }
+
   const imageBuffer = Buffer.from(await file.arrayBuffer())
   const imageFilename = file.name || 'reference.jpg'
 
