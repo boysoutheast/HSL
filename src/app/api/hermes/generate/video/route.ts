@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
   const task = await prisma.workerTask.create({
     data: {
       type: 'GENERATE_VIDEO',
-      capability: 'content_generation',
+      capability: 'GENERATE_VIDEO',
       payloadJson: JSON.stringify({
         generatedMediaId,
         prompt: body.prompt.trim(),
