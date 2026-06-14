@@ -50,10 +50,12 @@ export function middleware(req: NextRequest) {
   }
 
   // Hermes API (Bearer token auth handled inside route handlers)
+  // Gen API (x-api-key / Bearer auth handled inside route handlers)
   // Worker API (x-api-key auth handled inside route handlers)
   // CAPI proxy (configId auth handled inside route handler)
   if (
     pathname.startsWith('/api/hermes/') ||
+    pathname.startsWith('/api/gen/') ||
     pathname.startsWith('/api/photos/') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/api/worker/') ||
