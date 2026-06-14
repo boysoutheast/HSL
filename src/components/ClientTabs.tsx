@@ -29,11 +29,12 @@ export default function ClientTabs({
   compact?: boolean
 }) {
   const [active, setActive] = useState(initial)
-  const [mounted, setMounted] = useState<Set<string>>(new Set([initial]))
+  // Eager-mount all panels at page load so their fetches fire in parallel.
+  // Tab switching is instant; no per-click network wait.
+  const [mounted] = useState<Set<string>>(() => new Set(tabs.map(t => t.id)))
 
   function switchTab(id: string) {
     setActive(id)
-    setMounted(prev => (prev.has(id) ? prev : new Set(prev).add(id)))
     if (basePath) window.history.replaceState(null, '', `${basePath}?tab=${id}`)
   }
 
