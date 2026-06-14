@@ -81,9 +81,21 @@ export async function PATCH(
     if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (body.name !== undefined) updateData.name = body.name?.trim().slice(0, 200) ?? undefined
+  if (body.description !== undefined) updateData.description = body.description?.trim().slice(0, 2000) ?? undefined
+  if (body.behavior !== undefined) updateData.behavior = body.behavior?.trim().slice(0, 3000) ?? null
+  if (body.speakingStyle !== undefined) updateData.speakingStyle = body.speakingStyle?.trim().slice(0, 3000) ?? null
+  if (body.expressionStyle !== undefined) updateData.expressionStyle = body.expressionStyle?.trim().slice(0, 3000) ?? null
+  if (body.movementStyle !== undefined) updateData.movementStyle = body.movementStyle?.trim().slice(0, 3000) ?? null
+  if (body.forbiddenRules !== undefined) updateData.forbiddenRules = body.forbiddenRules?.trim().slice(0, 3000) ?? null
+  if (typeof body.status === 'string' && ['active', 'inactive'].includes(body.status)) {
+    updateData.status = body.status
+  }
+
   const character = await prisma.character.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ character })

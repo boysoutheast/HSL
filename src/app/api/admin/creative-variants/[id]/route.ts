@@ -69,9 +69,20 @@ export async function PATCH(
     return NextResponse.json({ error: 'headline must be 255 chars or less' }, { status: 400 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (body.name !== undefined) updateData.name = body.name?.trim().slice(0, 200) ?? undefined
+  if (body.primaryText !== undefined) updateData.primaryText = body.primaryText?.trim().slice(0, 125) ?? undefined
+  if (body.headline !== undefined) updateData.headline = body.headline?.trim().slice(0, 255) ?? undefined
+  if (body.description !== undefined) updateData.description = body.description?.trim().slice(0, 2000) ?? null
+  if (body.linkUrl !== undefined) updateData.linkUrl = body.linkUrl?.trim().slice(0, 2000) ?? undefined
+  if (body.ctaButton !== undefined) updateData.ctaButton = body.ctaButton?.trim().slice(0, 50) ?? undefined
+  if (typeof body.status === 'string' && ['DRAFT', 'READY', 'RESERVED', 'ACTIVE', 'ARCHIVED'].includes(body.status)) {
+    updateData.status = body.status
+  }
+
   const variant = await prisma.creativeVariant.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ variant })

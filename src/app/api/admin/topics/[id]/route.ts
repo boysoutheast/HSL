@@ -64,9 +64,19 @@ export async function PATCH(
     if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (body.name !== undefined) updateData.name = body.name?.trim().slice(0, 200) ?? undefined
+  if (body.description !== undefined) updateData.description = body.description?.trim().slice(0, 2000) ?? undefined
+  if (body.instagramAccountId !== undefined) updateData.instagramAccountId = body.instagramAccountId
+  if (body.characterId !== undefined) updateData.characterId = body.characterId
+  if (body.productId !== undefined) updateData.productId = body.productId
+  if (typeof body.status === 'string' && ['active', 'inactive'].includes(body.status)) {
+    updateData.status = body.status
+  }
+
   const topic = await prisma.topic.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ topic })

@@ -46,12 +46,21 @@ export async function PUT(req: NextRequest) {
     orderBy: { createdAt: 'asc' },
   })
 
+  const settingKeys = ['checkIntervalMinutes', 'minimumDecisionAgeMinutes', 'deadEarlyAgeMinutes', 'stuckThresholdPercentPerHour', 'growingThresholdPercentPerHour', 'hotThresholdPercentPerHour', 'stuckConfirmationCount', 'hotLockDurationMinutes', 'maxPostPerDay', 'minimumGapUploadMinutes']
+  const updateData: Record<string, number> = {}
+  for (const key of settingKeys) {
+    const val = (body as Record<string, unknown>)[key]
+    if (val !== undefined && typeof val === 'number' && isFinite(val) && val >= 0) {
+      ;(updateData as Record<string, unknown>)[key] = val
+    }
+  }
+
   if (!settings) {
-    settings = await prisma.postingMonitorSetting.create({ data: body })
+    settings = await prisma.postingMonitorSetting.create({ data: updateData })
   } else {
     settings = await prisma.postingMonitorSetting.update({
       where: { id: settings.id },
-      data: body,
+      data: updateData,
     })
   }
 

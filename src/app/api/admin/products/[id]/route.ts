@@ -84,9 +84,23 @@ export async function PATCH(
     if (!existing) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (body.name !== undefined) updateData.name = body.name?.trim().slice(0, 200) ?? undefined
+  if (body.description !== undefined) updateData.description = body.description?.trim().slice(0, 2000) ?? null
+  if (body.mainBenefit !== undefined) updateData.mainBenefit = body.mainBenefit?.trim().slice(0, 5000) ?? null
+  if (body.productUrl !== undefined) updateData.productUrl = body.productUrl?.trim().slice(0, 2000) ?? null
+  if (body.ingredients !== undefined) updateData.ingredients = body.ingredients?.trim().slice(0, 5000) ?? null
+  if (body.usageInstruction !== undefined) updateData.usageInstruction = body.usageInstruction?.trim().slice(0, 5000) ?? null
+  if (body.price !== undefined) updateData.price = typeof body.price === 'number' ? body.price : undefined
+  if (body.shopeeUrl !== undefined) updateData.shopeeUrl = body.shopeeUrl?.trim().slice(0, 2000) ?? null
+  if (body.notes !== undefined) updateData.notes = body.notes?.trim().slice(0, 2000) ?? null
+  if (typeof body.status === 'string' && ['active', 'inactive', 'draft'].includes(body.status)) {
+    updateData.status = body.status
+  }
+
   const product = await prisma.product.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ product })

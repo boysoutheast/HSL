@@ -65,9 +65,20 @@ export async function PATCH(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const updateData: Record<string, unknown> = {}
+  if (body.adAccountId !== undefined) updateData.adAccountId = body.adAccountId
+  if (body.accessToken !== undefined) updateData.accessToken = body.accessToken
+  if (body.accountName !== undefined) updateData.accountName = body.accountName?.trim().slice(0, 200) ?? undefined
+  if (body.pageId !== undefined) updateData.pageId = body.pageId
+  if (body.igAccountId !== undefined) updateData.igAccountId = body.igAccountId
+  if (body.pixelId !== undefined) updateData.pixelId = body.pixelId
+  if (body.currency !== undefined) updateData.currency = body.currency?.trim().slice(0, 50) ?? undefined
+  if (body.timezone !== undefined) updateData.timezone = body.timezone?.trim().slice(0, 50) ?? undefined
+  if (body.notes !== undefined) updateData.notes = body.notes?.trim().slice(0, 2000) ?? null
+
   const metaAccount = await prisma.metaAccount.update({
     where: { id: params.id },
-    data: body,
+    data: updateData,
   })
 
   return NextResponse.json({ metaAccount })
