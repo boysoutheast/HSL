@@ -332,15 +332,16 @@ model PostingMonitorSetting {
 }
 
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
   name         String?
-  role         String   @default("user")
-  status       String   @default("active")
-  creditBalance Int     @default(0) @map("credit_balance")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  role         String    @default("user")
+  status       String    @default("active")
+  creditBalance Int      @default(0) @map("credit_balance")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   sessions            Session[]
   instagramAccounts   InstagramAccount[]

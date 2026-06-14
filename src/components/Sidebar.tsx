@@ -21,6 +21,7 @@ const pillars = [
   { label: 'Ads', href: '/ads', icon: I.ads },
   { label: 'Influencer', href: '/influencer', icon: I.infl },
   { label: 'Media', href: '/media', icon: I.media },
+  { label: 'Connections', href: '/meta-connections', icon: I.sys },
   { label: 'System', href: '/system', icon: I.sys, adminOnly: true },
 ]
 

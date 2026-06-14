@@ -57,8 +57,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
   }
 
-  // Login sukses → reset counter
+  // Login sukses → reset counter + record login time
   recordSuccess(rlKey)
+
+  await prisma.adminUser.update({
+    where: { id: user!.id },
+    data: { lastLoginAt: new Date() },
+  })
 
   const token = await createSession(user!.id)
   const res = NextResponse.json({
