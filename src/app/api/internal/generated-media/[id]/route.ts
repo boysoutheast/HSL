@@ -75,6 +75,6 @@ export async function PATCH(
     return NextResponse.json({ ok: true, id: updated.id, status: updated.status })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Failed to update GeneratedMedia', message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

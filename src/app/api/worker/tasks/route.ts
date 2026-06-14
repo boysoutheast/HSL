@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ tasks: tasksWithPayload })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Worker tasks GET failed', message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
 

@@ -65,6 +65,6 @@ export async function POST(req: NextRequest) {
     if (message.includes('Unique constraint') || message.includes('duplicate key')) {
       return NextResponse.json({ error: 'Duplicate execution (deduplicationKey collision)', message }, { status: 409 })
     }
-    return NextResponse.json({ error: 'Failed to create rule execution', message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

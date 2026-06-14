@@ -89,6 +89,6 @@ export async function POST(
       return NextResponse.json({ ok: true, action: 'already_refunded', via: 'idempotency_key' })
     }
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Refund failed', message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

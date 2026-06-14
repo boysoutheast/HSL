@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get('status')
   const workerId = searchParams.get('workerId')
   const testLaunchId = searchParams.get('testLaunchId')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
-  const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 100)
+  const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0)
 
   const where: Record<string, unknown> = {}
   if (type) where.type = type

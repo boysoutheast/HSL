@@ -20,8 +20,8 @@ export async function GET(req: NextRequest) {
   const source = searchParams.get('source')
   const actionType = searchParams.get('actionType')
   const ruleExecutionId = searchParams.get('ruleExecutionId')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100)
-  const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 100)
+  const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0)
 
   const where: Record<string, unknown> = {}
   if (campaignSessionId) where.campaignSessionId = campaignSessionId

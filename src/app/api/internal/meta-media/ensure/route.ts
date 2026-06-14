@@ -112,6 +112,6 @@ export async function POST(req: NextRequest) {
     }, { status: 201 })
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Failed to ensure meta media binding', message }, { status: 500 })
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
