@@ -154,6 +154,7 @@ model Product {
   CreativeVariant   CreativeVariant[]
   landingPages      LandingPage[]
   mediaLibraryRules MediaLibraryRule[]
+  cpasPainEntries   CpasPainEntry[]
 
   @@map("products")
 }
@@ -189,6 +190,12 @@ model Cep {
   createdByHermesId String?  @map("created_by_hermes_id")
   status            String   @default("active")
   notes             String?
+  // CPAS generation fields
+  exchangeValue   String? @map("exchange_value")  // e.g. "instant-cerah" | "less-effort"
+  deliveryStyle   String? @map("delivery_style")  // e.g. "before-after" | "fun-fact"
+  hookDirection   String? @map("hook_direction")  // hook direction from planner
+  adsetNaming     String? @map("adset_naming")    // e.g. "gatal-riskred-edukprob-035"
+  spawnJobId      String? @map("spawn_job_id")    // WorkerTask id that generated this CEP
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -368,6 +375,10 @@ model AdminUser {
   generatedMedia      GeneratedMedia[]
   creditTransactions  CreditTransaction[]
   apiKeys             UserApiKey[]
+  cpasGraveyard       CpasGraveyard[]
+  cpasDiary           CpasDiary[]
+  cpasLessons         CpasLesson[]
+  cpasPainEntries     CpasPainEntry[]
 
   @@map("admin_users")
 }
@@ -810,6 +821,9 @@ model CampaignSession {
   nextMonitorAt          DateTime? @map("next_monitor_at")
   lastMonitorAt          DateTime? @map("last_monitor_at")
   lastActionAt           DateTime? @map("last_action_at")
+  // CPAS slot management
+  adsetCap               Int?      @map("adset_cap")        // max active adsets for this campaign
+  metaCampaignId         String?   @map("meta_campaign_id") // actual Meta campaign ID for live slot count
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
@@ -824,6 +838,7 @@ model CampaignSession {
   creativeReservations CreativeReservation[]
   creativeRotations    CreativeRotation[]
   RuleExecution        RuleExecution[]
+  cpasGraveyard        CpasGraveyard[]
 
   @@map("campaign_sessions")
 }
@@ -899,6 +914,12 @@ model MetricSnapshot {
   frequency            Float?
   rawMetricsJson       String?  @map("raw_metrics_json")
   dataFreshnessSeconds Int?     @map("data_freshness_seconds")
+  // CPAS-specific metrics (catalog_segment fields from Meta Insights)
+  catalogSegmentROAS      Float? @map("catalog_segment_roas")
+  catalogSegmentPurchases Int?   @map("catalog_segment_purchases")
+  catalogSegmentValue     Float? @map("catalog_segment_value")
+  cplc                    Float? // cost per link click = spend / linkClicks, computed on insert
+  addToCartCount          Int?   @map("add_to_cart_count")
   createdAt            DateTime @default(now()) @map("created_at")
 
   user            AdminUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1406,5 +1427,102 @@ model UserApiKey {
   @@index([userId, status])
   @@unique([userId, keyHash])
   @@map("user_api_keys")
+}
+
+// ── CPAS KNOWLEDGE DB ─────────────────────────────────────────────────────────
+
+model CpasGraveyard {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  campaignSessionId String?  @map("campaign_session_id")
+  metaAdsetId       String   @map("meta_adset_id")
+  adsetName         String   @map("adset_name")
+  campaignName      String   @map("campaign_name")
+  productKey        String   @map("product_key")
+  killTier          String   @map("kill_tier")    // T1 | T2 | T3
+  killReason        String   @map("kill_reason")
+  spendAtKill       Float    @map("spend_at_kill")
+  roasAtKill        Float?   @map("roas_at_kill")
+  catalogROASAtKill Float?   @map("catalog_roas_at_kill")
+  purchasesAtKill   Int?     @map("purchases_at_kill")
+  cplcAtKill        Float?   @map("cplc_at_kill")
+  cepText           String?  @map("cep_text")
+  exchangeValue     String?  @map("exchange_value")
+  deliveryStyle     String?  @map("delivery_style")
+  killCount         Int      @default(1) @map("kill_count")
+  firstKilledAt     DateTime @map("first_killed_at")
+  lastKilledAt      DateTime @map("last_killed_at")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user            AdminUser        @relation(fields: [userId], references: [id])
+  campaignSession CampaignSession? @relation(fields: [campaignSessionId], references: [id], onDelete: SetNull)
+
+  @@index([productKey, lastKilledAt])
+  @@index([userId, createdAt])
+  @@index([metaAdsetId])
+  @@map("cpas_graveyard")
+}
+
+model CpasDiary {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  period            String   // ISO string from cron run e.g. "2026-06-15T06:00"
+  productKey        String?  @map("product_key")
+  totalSpend7d      Float?   @map("total_spend_7d")
+  totalPurchases7d  Int?     @map("total_purchases_7d")
+  avgROAS7d         Float?   @map("avg_roas_7d")
+  activeAdsets      Int?     @map("active_adsets")
+  killedThisRun     Int?     @map("killed_this_run")
+  spawnedThisRun    Int?     @map("spawned_this_run")
+  revivedThisRun    Int?     @map("revived_this_run")
+  topWinnerCep      String?  @map("top_winner_cep")
+  summaryText       String?  @map("summary_text")
+  deltaVsPrevRun    String?  @map("delta_vs_prev_run")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user AdminUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, period])
+  @@map("cpas_diary")
+}
+
+model CpasLesson {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  productKey    String?  @map("product_key")
+  lessonType    String   @map("lesson_type") // WINNER_PATTERN | FAILURE_PATTERN | AUDIENCE_INSIGHT | CEP_INSIGHT
+  title         String
+  body          String
+  confidence    String   @default("medium") // low | medium | high
+  evidenceCount Int      @default(1) @map("evidence_count")
+  status        String   @default("active") // active | superseded | archived
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user AdminUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, productKey, lessonType])
+  @@map("cpas_lessons")
+}
+
+model CpasPainEntry {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  productId      String?  @map("product_id")
+  productKey     String   @map("product_key")
+  painText       String   @map("pain_text")
+  exchangeValues String[] @map("exchange_values")
+  deliveryStyles String[] @map("delivery_styles")
+  isActive       Boolean  @default(true) @map("is_active")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user    AdminUser @relation(fields: [userId], references: [id])
+  product Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([productKey, isActive])
+  @@map("cpas_pain_entries")
 }
 
