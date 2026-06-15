@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin'
+type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin' | 'workers' | 'cpas'
 
 function Code({ children }: { children: string }) {
   return (
@@ -62,6 +62,8 @@ export default function DocsPage() {
     { key: 'credits',  label: '💳 Credits' },
     { key: 'library',  label: '📚 Library' },
     { key: 'content',  label: '🛍️ Content' },
+    { key: 'workers' as TabKey, label: '🤖 Workers' },
+    { key: 'cpas' as TabKey,    label: '🛍️ CPAS' },
     { key: 'capi',     label: '📡 CAPI' },
     { key: 'admin',    label: '🛠 Admin' },
   ]
@@ -192,6 +194,39 @@ curl -H "x-api-key: hsk_xxx..." \\
                 <div className="flex gap-3"><code className="text-red-600 font-mono w-8">404</code><span className="text-stone-600">Resource tidak ditemukan (atau bukan milik lo)</span></div>
                 <div className="flex gap-3"><code className="text-red-600 font-mono w-8">409</code><span className="text-stone-600">Conflict — task sudah di-claim, atau idempotency hit</span></div>
               </div>
+            </Section>
+
+            <Section title="Tipe Key & Auth">
+              <p className="text-sm text-stone-600 mb-3">HSL punya 3 jenis auth — pastikan pakai key yang sesuai endpoint-nya:</p>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-stone-400 uppercase border-b border-stone-100">
+                    <th className="pb-2 pr-4 text-left font-medium">Key Type</th>
+                    <th className="pb-2 pr-4 text-left font-medium">Header</th>
+                    <th className="pb-2 text-left font-medium">Endpoint yang dilayani</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-50">
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-stone-700">Gen API Key</td>
+                    <td className="py-2 pr-4 font-mono text-stone-500">x-api-key: hsl_xxx</td>
+                    <td className="py-2 text-stone-500">/api/gen/* (video, credits, media)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-stone-700">Content Agent Key</td>
+                    <td className="py-2 pr-4 font-mono text-stone-500">Authorization: Bearer hsl_content_xxx</td>
+                    <td className="py-2 text-stone-500">/api/hermes/* (library, ceps, content, cpas)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-medium text-stone-700">Worker Key</td>
+                    <td className="py-2 pr-4 font-mono text-stone-500">Authorization: Bearer hsl_worker_xxx</td>
+                    <td className="py-2 text-stone-500">/api/hermes/tasks (worker task queue)</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="text-xs text-stone-400 mt-3">
+                Alias: <code className="bg-stone-100 px-1 rounded">/api/hermes/credits</code> dan <code className="bg-stone-100 px-1 rounded">/api/hermes/generate/video</code> otomatis redirect ke endpoint /api/gen/* yang sesuai.
+              </p>
             </Section>
           </>
         )}
@@ -491,6 +526,105 @@ curl -H "x-api-key: hsk_xxx..." \\
               <Endpoint method="GET" path="/api/admin/meta-catalogs" desc="List catalogs" />
               <Endpoint method="GET" path="/api/admin/capi-configs" desc="List CAPI configs" />
               <Endpoint method="POST" path="/api/admin/capi-configs" desc="Buat config (pixelId + token)" />
+            </Section>
+          </>
+        )}
+
+        {/* ── WORKERS ── */}
+        {tab === 'workers' && (
+          <>
+            <Section title="Worker Task Queue">
+              <p className="text-sm text-stone-600 mb-3">
+                Untuk <strong>worker agent</strong> yang mengerjakan task async (generate video, photo, caption, post).
+                Auth: <strong>Bearer worker key</strong> (berbeda dari content agent key — minta ke admin).
+              </p>
+              <p className="text-xs text-stone-500 mb-3">
+                Task types yang tersedia: <code className="bg-stone-100 px-1 rounded">GENERATE_VIDEO</code>, <code className="bg-stone-100 px-1 rounded">GENERATE_PHOTO</code>, <code className="bg-stone-100 px-1 rounded">CAPTION_ONLY</code>, <code className="bg-stone-100 px-1 rounded">POST_CONTENT</code>, <code className="bg-stone-100 px-1 rounded">REFRESH_CREATIVE</code>, <code className="bg-stone-100 px-1 rounded">CEP_GENERATION</code>
+              </p>
+              <Endpoint method="GET" path="/api/hermes/tasks" desc="Ambil task pending. Query: ?types=GENERATE_VIDEO,GENERATE_PHOTO (opsional, filter tipe). Response: { tasks: [{id, type, payload, ...}] }" />
+              <Endpoint method="POST" path="/api/hermes/tasks" desc="Claim task (tandai sebagai processing). Body: { taskId }. Response: { task }" />
+              <Endpoint method="POST" path="/api/hermes/tasks/[id]" desc="Update hasil task. Body: { action: 'complete' | 'fail', result?: {...}, error?: string, mediaAsset?: {...} }" />
+            </Section>
+
+            <Section title="Flow Worker Agent">
+              <Code>{`# 1. Ambil task pending
+curl -H "Authorization: Bearer hsl_worker_xxx" \
+  ${BASE}/api/hermes/tasks?types=GENERATE_VIDEO
+
+# Response
+{ "tasks": [{ "id": "task_xxx", "type": "GENERATE_VIDEO", "payload": {...} }] }
+
+# 2. Claim task (tandai processing)
+curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "taskId": "task_xxx" }' \
+  ${BASE}/api/hermes/tasks
+
+# 3. Kerjakan task... lalu report hasilnya
+curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "complete", "result": { "videoUrl": "https://..." } }' \
+  ${BASE}/api/hermes/tasks/task_xxx
+
+# Atau kalau gagal:
+curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "action": "fail", "error": "GeminiGen timeout" }' \
+  ${BASE}/api/hermes/tasks/task_xxx`}</Code>
+            </Section>
+          </>
+        )}
+
+        {/* ── CPAS ── */}
+        {tab === 'cpas' && (
+          <>
+            <Section title="CPAS Agent — Overview">
+              <p className="text-sm text-stone-600 mb-2">
+                Endpoint untuk agent yang mengelola CPAS (Shopee collaborative ads): cek slot, spawn adset baru, log hasil kill, tulis diary & lesson.
+                Auth: <strong>Bearer content agent key</strong> (sama dengan /api/hermes/library).
+              </p>
+              <p className="text-xs text-stone-500">
+                Semua response difilter per agent. Campaign harus mengandung kata "hermes" (case-insensitive) agar bisa di-spawn.
+              </p>
+            </Section>
+
+            <Section title="Spawn Flow">
+              <Code>{`# 1. Cek slot tersedia di campaign
+GET /api/hermes/cpas/slot-count?campaignSessionId=sess_xxx
+→ { cap, activeAdsets, inProcess, freeSlots, metaCampaignId }
+
+# 2. Buat spawn job (buat CEP + WorkerTask sekaligus)
+POST /api/hermes/cpas/spawn-job
+Body: {
+  userId, productKey, campaignSessionId,
+  cepData: { painText, exchangeValue, deliveryStyle, hookDirection, adsetNaming, cepText },
+  referencePhotoUrl?, productId?
+}
+→ { jobId, cepId, taskId, stage: "plan" }
+
+# 3. Poll status
+GET /api/hermes/cpas/spawn-job/[jobId]
+→ { id, status, stage, resultJson, createdAt, completedAt }
+
+# Stages: plan → image_submitted → images_ready → adset_written
+
+# 4. Update stage saat progress
+PATCH /api/hermes/cpas/spawn-job/[jobId]
+Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
+# Stage hanya bisa maju, tidak bisa mundur`}</Code>
+            </Section>
+            <Section title="Knowledge Endpoints">
+              <Endpoint method="GET" path="/api/hermes/cpas/slot-count" desc="Cek slot spawn tersedia. Query: campaignSessionId (wajib). Response: { cap, activeAdsets, inProcess, freeSlots }" />
+              <Endpoint method="POST" path="/api/hermes/cpas/spawn-job" desc="Buat spawn job baru (CEP + WorkerTask atomik). Lihat flow di atas." />
+              <Endpoint method="GET" path="/api/hermes/cpas/spawn-job/[id]" desc="Poll status + stage label spawn job" />
+              <Endpoint method="PATCH" path="/api/hermes/cpas/spawn-job/[id]" desc="Update stage / status. Stage hanya maju (plan → image_submitted → images_ready → adset_written)" />
+              <Endpoint method="GET" path="/api/hermes/cpas/graveyard" desc="List adset yang pernah di-kill. Query: productKey?, killTier?, since?, limit?" />
+              <Endpoint method="POST" path="/api/hermes/cpas/graveyard" desc="Log adset yang baru di-kill. Body: { metaAdsetId, adsetName, productKey, killTier, killReason, spendAtKill, catalogROASAtKill?, cplcAtKill? }" />
+              <Endpoint method="GET" path="/api/hermes/cpas/diary" desc="List diary entry. Query: productKey?, limit?" />
+              <Endpoint method="POST" path="/api/hermes/cpas/diary" desc="Tulis diary entry. Body: { period, productKey?, killedThisRun?, spawnedThisRun?, avgROAS7d?, summaryText? }" />
+              <Endpoint method="GET" path="/api/hermes/cpas/lessons" desc="List lessons yang sudah diarsip" />
+              <Endpoint method="POST" path="/api/hermes/cpas/lessons" desc="Submit lesson. Body: { productKey, lessonText, sourceType?, sourceId? }" />
+              <Endpoint method="GET" path="/api/hermes/cpas/pain-library" desc="Ambil pain entries aktif. Query: productKey?" />
             </Section>
           </>
         )}
