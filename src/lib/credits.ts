@@ -19,6 +19,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { generateTxHash } from '@/lib/hash-receipt'
 
 export const VIDEO_10S_COST = 1300  // legacy — replaced by getGenerationCost()
 export const TRIAL_GRANT = 1300
@@ -69,13 +70,13 @@ export async function debitCredits(
   reason: string,
   refId?: string,
   idempotencyKey?: string,
-): Promise<{ balanceAfter: number; transactionId: string }> {
+): Promise<{ balanceAfter: number; transactionId: string; txHash?: string }> {
   const key = idempotencyKey ?? `debit_${userId}_${refId ?? crypto.randomUUID()}`
 
   // Fast-path idempotency guard (outside tx)
   const existing = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
   if (existing) {
-    return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
+    return { balanceAfter: existing.balanceAfter, transactionId: existing.id, txHash: existing.txHash ?? undefined }
   }
 
   try {
@@ -114,7 +115,10 @@ export async function debitCredits(
         },
       })
 
-      return { balanceAfter, transactionId: txn.id }
+      const txHash = generateTxHash({ txId: txn.id, userId, amount: -amount, balanceAfter, idempotencyKey: key })
+      await tx.creditTransaction.update({ where: { id: txn.id }, data: { txHash } })
+
+      return { balanceAfter, transactionId: txn.id, txHash }
     })
   } catch (err) {
     // If the interactive tx failed due to unique-violation (race),
@@ -125,7 +129,7 @@ export async function debitCredits(
     // Re-read and return the existing row.
     const retry = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
     if (retry) {
-      return { balanceAfter: retry.balanceAfter, transactionId: retry.id }
+      return { balanceAfter: retry.balanceAfter, transactionId: retry.id, txHash: retry.txHash ?? undefined }
     }
     throw err
   }
@@ -151,6 +155,7 @@ export async function refundCredits(generatedMediaId: string): Promise<{
   refunded: boolean
   balanceAfter?: number
   transactionId?: string
+  txHash?: string
 }> {
   // Idempotency fast-path via CreditTransaction
   const idempotencyKey = `refund_${generatedMediaId}`
@@ -160,6 +165,7 @@ export async function refundCredits(generatedMediaId: string): Promise<{
       refunded: true,
       balanceAfter: existingTxn.balanceAfter,
       transactionId: existingTxn.id,
+      txHash: existingTxn.txHash ?? undefined,
     }
   }
 
@@ -221,7 +227,22 @@ export async function refundCredits(generatedMediaId: string): Promise<{
     },
   })
 
-  return { refunded: true, balanceAfter, transactionId: txn.id }
+  const txHash = generateTxHash({
+    txId: txn.id,
+    userId: media.userId,
+    amount: media.creditsCost,
+    balanceAfter,
+    idempotencyKey,
+  })
+  await prisma.creditTransaction.update({ where: { id: txn.id }, data: { txHash } })
+
+  // Revoke media hash
+  await prisma.generatedMedia.update({
+    where: { id: generatedMediaId },
+    data: { mediaHashRevokedAt: new Date() },
+  }).catch(() => {}) // best-effort — hash may not exist (old media)
+
+  return { refunded: true, balanceAfter, transactionId: txn.id, txHash }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -240,12 +261,12 @@ export async function grantCredits(
   amount: number,
   reason: string,
   idempotencyKey?: string,
-): Promise<{ balanceAfter: number; transactionId: string }> {
+): Promise<{ balanceAfter: number; transactionId: string; txHash?: string }> {
   const key = idempotencyKey ?? `grant_${userId}_${crypto.randomUUID()}`
 
   const existing = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
   if (existing) {
-    return { balanceAfter: existing.balanceAfter, transactionId: existing.id }
+    return { balanceAfter: existing.balanceAfter, transactionId: existing.id, txHash: existing.txHash ?? undefined }
   }
 
   try {
@@ -275,14 +296,17 @@ export async function grantCredits(
         },
       })
 
-      return { balanceAfter, transactionId: txn.id }
+      const txHash = generateTxHash({ txId: txn.id, userId, amount, balanceAfter, idempotencyKey: key })
+      await tx.creditTransaction.update({ where: { id: txn.id }, data: { txHash } })
+
+      return { balanceAfter, transactionId: txn.id, txHash }
     })
   } catch (err) {
     if (err instanceof Error && err.message.includes('AdminUser')) throw err
 
     const retry = await prisma.creditTransaction.findUnique({ where: { idempotencyKey: key } })
     if (retry) {
-      return { balanceAfter: retry.balanceAfter, transactionId: retry.id }
+      return { balanceAfter: retry.balanceAfter, transactionId: retry.id, txHash: retry.txHash ?? undefined }
     }
     throw err
   }
