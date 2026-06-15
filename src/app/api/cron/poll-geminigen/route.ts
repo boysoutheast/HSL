@@ -85,6 +85,23 @@ export async function GET(req: NextRequest) {
             errorMessage: null,
           },
         })
+
+        // Generate mediaHash
+        const { generateMediaHash } = await import('@/lib/hash-receipt')
+        const media = await prisma.generatedMedia.findUnique({ where: { id: job.id }, select: { userId: true, creditsCost: true } })
+        if (media?.userId) {
+          const mediaHash = generateMediaHash({
+            mediaId: job.id,
+            userId: media.userId ?? '',
+            videoUrl,
+            completedAt: new Date().toISOString(),
+            creditsCost: media.creditsCost ?? 0,
+          })
+          await prisma.generatedMedia.update({
+            where: { id: job.id },
+            data: { mediaHash },
+          }).catch(() => {})
+        }
         results.completed++
 
       } else if (status.status === 3) {

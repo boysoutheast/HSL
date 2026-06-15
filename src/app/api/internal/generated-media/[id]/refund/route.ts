@@ -76,9 +76,23 @@ export async function POST(
         },
       })
 
+      // Generate txHash for the refund transaction
+      const { generateTxHash } = await import('@/lib/hash-receipt')
+      const refundTxn = await tx.creditTransaction.findUnique({ where: { idempotencyKey } })
+      if (refundTxn) {
+        const txHash = generateTxHash({
+          txId: refundTxn.id,
+          userId: gm.userId!,
+          amount: gm.creditsCost!,
+          balanceAfter: updatedUser.creditBalance,
+          idempotencyKey,
+        })
+        await tx.creditTransaction.update({ where: { id: refundTxn.id }, data: { txHash } })
+      }
+
       await tx.generatedMedia.update({
         where: { id: gm.id },
-        data: { refundedAt: new Date() },
+        data: { refundedAt: new Date(), mediaHashRevokedAt: new Date() },
       })
     })
 

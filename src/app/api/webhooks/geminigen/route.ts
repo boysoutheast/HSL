@@ -87,6 +87,23 @@ export async function POST(req: NextRequest) {
           errorMessage: null,
         },
       })
+
+      // Generate mediaHash
+      const { generateMediaHash } = await import('@/lib/hash-receipt')
+      const media = await prisma.generatedMedia.findUnique({ where: { id: generatedMedia.id }, select: { userId: true, creditsCost: true } })
+      if (media?.userId) {
+        const mediaHash = generateMediaHash({
+          mediaId: generatedMedia.id,
+          userId: media.userId ?? '',
+          videoUrl,
+          completedAt: new Date().toISOString(),
+          creditsCost: media.creditsCost ?? 0,
+        })
+        await prisma.generatedMedia.update({
+          where: { id: generatedMedia.id },
+          data: { mediaHash },
+        }).catch(() => {})
+      }
       return NextResponse.json({ ok: true, action: 'completed' })
     } catch (err) {
       console.error('[webhook/geminigen] rehost failed, will retry via cron:', err)

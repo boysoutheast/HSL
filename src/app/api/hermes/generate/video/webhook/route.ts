@@ -81,6 +81,22 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Generate mediaHash
+    if (body.videoUrl) {
+      const { generateMediaHash } = await import('@/lib/hash-receipt')
+      const mediaHash = generateMediaHash({
+        mediaId: media.id,
+        userId: media.userId ?? '',
+        videoUrl: body.videoUrl,
+        completedAt: new Date().toISOString(),
+        creditsCost: media.creditsCost ?? 0,
+      })
+      await prisma.generatedMedia.update({
+        where: { id: media.id },
+        data: { mediaHash },
+      }).catch(() => {})
+    }
+
     // Mark worker task completed
     if (media.workerTaskId) {
       await prisma.workerTask.updateMany({

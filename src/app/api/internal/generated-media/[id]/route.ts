@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateApiKey, unauthorizedResponse } from '../../_lib/api-key-auth'
+import { generateMediaHash } from '@/lib/hash-receipt'
 
 export const runtime = 'nodejs'
 
@@ -71,6 +72,28 @@ export async function PATCH(
       where: { id: params.id },
       data,
     })
+
+    // Generate mediaHash if status just became completed with videoUrl
+    if (data.status === 'completed' && data.videoUrl) {
+      const completedAt = (data.completedAt as string) ?? new Date().toISOString()
+      const media = await prisma.generatedMedia.findUnique({
+        where: { id: params.id },
+        select: { userId: true, creditsCost: true },
+      })
+      if (media?.userId) {
+        const mediaHash = generateMediaHash({
+          mediaId: params.id,
+          userId: media.userId ?? '',
+          videoUrl: String(data.videoUrl),
+          completedAt,
+          creditsCost: media.creditsCost ?? 0,
+        })
+        await prisma.generatedMedia.update({
+          where: { id: params.id },
+          data: { mediaHash },
+        }).catch(() => {})
+      }
+    }
 
     return NextResponse.json({ ok: true, id: updated.id, status: updated.status })
   } catch (err) {
