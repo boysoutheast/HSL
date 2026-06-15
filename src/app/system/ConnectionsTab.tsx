@@ -10,6 +10,11 @@ interface Transaction {
   id: string; amount: number; reason: string; balanceAfter: number; createdAt: string; txHash?: string
 }
 
+interface HermesAgent {
+  id: string; name: string; status: string; notes: string | null; createdAt: string
+  _count?: { assignments: number; contentLogs: number }
+}
+
 // ─── Helpers ────────────────────────────────────────────
 function fmt(s: string) {
   return new Date(s).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -28,14 +33,25 @@ export default function ConnectionsTab() {
   const [revoking, setRevoking] = useState<string | null>(null)
   const [showTxDetail, setShowTxDetail] = useState(false)
 
+  // Hermes Agent Keys
+  const [hermesAgents, setHermesAgents] = useState<HermesAgent[]>([])
+  const [hermesAgentName, setHermesAgentName] = useState('')
+  const [hermesAgentNotes, setHermesAgentNotes] = useState('')
+  const [hermesCreating, setHermesCreating] = useState(false)
+  const [hermesNewKey, setHermesNewKey] = useState<{name: string; key: string} | null>(null)
+  const [hermesRegenLoading, setHermesRegenLoading] = useState<string | null>(null)
+  const [hermesKeyCopied, setHermesKeyCopied] = useState(false)
+
   const fetchAll = useCallback(async () => {
     try {
-      const [kr, cr] = await Promise.all([
+      const [kr, cr, hr] = await Promise.all([
         fetch('/api/admin/connections/api-keys', { credentials: 'include' }),
         fetch('/api/admin/connections/credits', { credentials: 'include' }),
+        fetch('/api/admin/hermes-agents', { credentials: 'include' }),
       ])
       if (kr.ok) { const d = await kr.json(); setKeys(d.apiKeys ?? []) }
       if (cr.ok) { const d = await cr.json(); setBalance(d.creditBalance); setTxs(d.recentTransactions ?? []) }
+      if (hr.ok) { const d = await hr.json(); setHermesAgents(d.agents ?? []) }
     } catch {}
     setLoading(false)
   }, [])
@@ -68,6 +84,56 @@ export default function ConnectionsTab() {
     setCopied(true); setTimeout(() => setCopied(false), 3000)
   }
 
+  const handleHermesCreate = async () => {
+    if (!hermesAgentName.trim()) return
+    setHermesCreating(true)
+    try {
+      const r = await fetch('/api/admin/hermes-agents', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: hermesAgentName.trim(), notes: hermesAgentNotes.trim() || undefined }),
+      })
+      const d = await r.json()
+      if (r.ok && d.apiKey) {
+        setHermesNewKey({ name: d.agent.name, key: d.apiKey })
+        setHermesAgentName('')
+        setHermesAgentNotes('')
+        setHermesKeyCopied(false)
+        await fetchAll()
+      }
+    } catch {}
+    setHermesCreating(false)
+  }
+
+  const handleHermesRegen = async (agent: HermesAgent) => {
+    if (!window.confirm(`Regenerate key untuk "${agent.name}"? Key lama langsung tidak berlaku.`)) return
+    setHermesRegenLoading(agent.id)
+    try {
+      const r = await fetch(`/api/admin/hermes-agents/${agent.id}/regenerate-key`, { method: 'POST', credentials: 'include' })
+      const d = await r.json()
+      if (r.ok) { setHermesNewKey({ name: agent.name, key: d.apiKey }); setHermesKeyCopied(false) }
+    } catch {}
+    setHermesRegenLoading(null)
+  }
+
+  const handleHermesToggle = async (agent: HermesAgent) => {
+    const newStatus = agent.status === 'active' ? 'inactive' : 'active'
+    try {
+      await fetch(`/api/admin/hermes-agents/${agent.id}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      setHermesAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: newStatus } : a))
+    } catch {}
+  }
+
+  const handleHermesCopy = async () => {
+    if (!hermesNewKey) return
+    await navigator.clipboard.writeText(hermesNewKey.key)
+    setHermesKeyCopied(true); setTimeout(() => setHermesKeyCopied(false), 3000)
+  }
+
   const curlEx = `curl -X POST https://ai.boytenggara.com/api/gen/video \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
@@ -87,6 +153,79 @@ export default function ConnectionsTab() {
         <p className="text-sm text-stone-500 mt-0.5">
           API key management & credit untuk <code className="text-xs bg-stone-100 px-1 rounded">/api/gen/*</code> endpoints.
         </p>
+      </div>
+
+      {/* Hermes Agent Keys */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-stone-800">🤖 Hermes Agent Keys</h3>
+          <p className="text-sm text-stone-500 mt-0.5">Bearer token untuk Hermes AI agents akses <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> endpoints.</p>
+        </div>
+
+        {/* New Key Alert */}
+        {hermesNewKey && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
+            <div className="text-sm font-semibold text-emerald-800">✅ Key baru untuk <span className="font-bold">{hermesNewKey.name}</span> — simpan sekarang!</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm font-mono text-emerald-900 break-all">{hermesNewKey.key}</code>
+              <button onClick={handleHermesCopy} className="btn-outline btn-sm whitespace-nowrap">{hermesKeyCopied ? 'Copied!' : 'Copy'}</button>
+            </div>
+            <p className="text-xs text-emerald-700">⚠️ Simpan key ini sekarang — tidak akan ditampilkan lagi.</p>
+          </div>
+        )}
+
+        {/* Create Form */}
+        <div className="flex gap-3">
+          <input type="text" value={hermesAgentName} onChange={e => setHermesAgentName(e.target.value)}
+            placeholder="Agent name (required)"
+            className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm flex-1" />
+          <input type="text" value={hermesAgentNotes} onChange={e => setHermesAgentNotes(e.target.value)}
+            placeholder="Notes (optional)"
+            className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-48" />
+          <button onClick={handleHermesCreate} disabled={hermesCreating || !hermesAgentName.trim()} className="btn-primary whitespace-nowrap">
+            {hermesCreating ? 'Creating...' : 'Create Agent'}
+          </button>
+        </div>
+
+        {/* Agent List */}
+        {hermesAgents.length > 0 && (
+          <div className="border-t border-stone-100 pt-4 mt-2">
+            <div className="text-xs font-semibold text-stone-400 uppercase mb-2">Agents ({hermesAgents.length})</div>
+            <div className="divide-y divide-stone-100">
+              {hermesAgents.map(agent => (
+                <div key={agent.id} className="py-3 flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-stone-800 text-sm">{agent.name}</span>
+                      <span className={`px-1.5 py-0.5 text-[11px] font-semibold rounded-full ${
+                        agent.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
+                      }`}>{agent.status}</span>
+                    </div>
+                    {agent.notes && (
+                      <div className="text-xs text-stone-400 mt-0.5 truncate">{agent.notes}</div>
+                    )}
+                    <div className="text-xs text-stone-400 mt-0.5">
+                      Created {fmt(agent.createdAt)}
+                      {agent._count !== undefined ? ` · ${agent._count?.assignments ?? 0} assignments, ${agent._count?.contentLogs ?? 0} logs` : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button onClick={() => handleHermesRegen(agent)} disabled={hermesRegenLoading === agent.id}
+                      className="text-xs text-violet-600 hover:text-violet-800 underline whitespace-nowrap">
+                      {hermesRegenLoading === agent.id ? 'Regenerating...' : 'Regen Key'}
+                    </button>
+                    <button onClick={() => handleHermesToggle(agent)}
+                      className={`btn-sm text-xs whitespace-nowrap ${
+                        agent.status === 'active' ? 'btn-ghost text-red-600' : 'btn-outline text-stone-600'
+                      }`}>
+                      {agent.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Credit */}
