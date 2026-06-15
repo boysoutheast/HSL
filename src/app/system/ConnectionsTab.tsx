@@ -7,7 +7,7 @@ interface ApiKey {
   id: string; prefix: string; name: string; lastUsedAt: string | null; createdAt: string
 }
 interface Transaction {
-  id: string; amount: number; reason: string; balanceAfter: number; createdAt: string
+  id: string; amount: number; reason: string; balanceAfter: number; createdAt: string; txHash?: string
 }
 
 // ─── Helpers ────────────────────────────────────────────
@@ -26,6 +26,7 @@ export default function ConnectionsTab() {
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
   const [revoking, setRevoking] = useState<string | null>(null)
+  const [showTxDetail, setShowTxDetail] = useState(false)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -91,26 +92,42 @@ export default function ConnectionsTab() {
       {/* Credit */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
         <h3 className="text-base font-semibold text-stone-800 mb-3">💳 Credit Balance</h3>
-        <div className="flex items-baseline gap-2">
+        <div
+          className="flex items-baseline gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setShowTxDetail(!showTxDetail)}
+        >
           <span className="text-3xl font-bold text-violet-700">
             {balance !== null ? balance.toLocaleString() : '—'}
           </span>
           <span className="text-sm text-stone-500">credits</span>
+          <span className="text-xs text-stone-400 ml-1">{showTxDetail ? '▲' : '▼'}</span>
         </div>
-        {txs.length > 0 && (
-          <details className="mt-3">
-            <summary className="text-xs text-stone-400 cursor-pointer">Recent transactions ({txs.length})</summary>
-            <div className="mt-2 space-y-1">
-              {txs.slice(0, 10).map(tx => (
-                <div key={tx.id} className="flex justify-between text-xs py-1 px-2 bg-stone-50 rounded">
+        {showTxDetail && txs.length > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="text-xs text-stone-400 font-semibold mb-2">Recent Transactions</div>
+            {txs.slice(0, 10).map(tx => (
+              <div key={tx.id} className="flex flex-col py-1.5 px-2 bg-stone-50 rounded text-xs">
+                <div className="flex justify-between">
                   <span className="text-stone-600">{tx.reason} · {fmt(tx.createdAt)}</span>
                   <span className={`font-mono font-semibold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {tx.amount > 0 ? '+' : ''}{tx.amount.toLocaleString()}
                   </span>
                 </div>
-              ))}
-            </div>
-          </details>
+                <div className="flex justify-between items-center mt-0.5">
+                  <span className="text-stone-400">Balance: {tx.balanceAfter.toLocaleString()}</span>
+                  {tx.txHash && (
+                    <button
+                      onClick={async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(tx.txHash!) }}
+                      className="text-violet-500 hover:text-violet-700 font-mono text-[10px]"
+                      title={tx.txHash}
+                    >
+                      {tx.txHash.slice(0, 12)}...
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
