@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
+import { validateWorkerApiKey, extractBearerToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
   const token = extractBearerToken(req.headers.get('authorization'))
   if (!token) return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
 
-  const agent = await validateHermesApiKey(token)
-  if (!agent) return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
+  const agent = await validateWorkerApiKey(token)
+  if (!agent) return NextResponse.json({ error: 'Unauthorized — worker key required' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
   const typesParam = searchParams.get('types')
@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
   const token = extractBearerToken(req.headers.get('authorization'))
   if (!token) return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
 
-  const agent = await validateHermesApiKey(token)
-  if (!agent) return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
+  const agent = await validateWorkerApiKey(token)
+  if (!agent) return NextResponse.json({ error: 'Unauthorized — worker key required' }, { status: 401 })
 
   const body = await req.json().catch(() => ({}))
   const types: string[] = Array.isArray(body.types)

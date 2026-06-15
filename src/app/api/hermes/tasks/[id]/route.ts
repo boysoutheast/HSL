@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
+import { validateWorkerApiKey, extractBearerToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,8 +13,8 @@ export async function POST(
   const token = extractBearerToken(req.headers.get('authorization'))
   if (!token) return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
 
-  const agent = await validateHermesApiKey(token)
-  if (!agent) return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
+  const agent = await validateWorkerApiKey(token)
+  if (!agent) return NextResponse.json({ error: 'Unauthorized — worker key required' }, { status: 401 })
 
   const task = await prisma.workerTask.findUnique({ where: { id: params.id } })
   if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
