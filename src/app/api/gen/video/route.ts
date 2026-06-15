@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         createdAt: true,
         completedAt: true,
         refundedAt: true,
+        mediaHash: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: offset,
@@ -116,17 +117,7 @@ export async function POST(req: NextRequest) {
       select: { creditBalance: true },
     })
 
-    await tx.creditTransaction.create({
-      data: {
-        userId: user.id,
-        amount: -creditsCost,
-        reason: 'video_generation',
-        balanceAfter: updatedUser.creditBalance,
-        idempotencyKey,
-      },
-    })
-
-    // Create GeneratedMedia
+    // Create GeneratedMedia first so we have refId
     const gm = await tx.generatedMedia.create({
       data: {
         userId: user.id,
@@ -140,6 +131,28 @@ export async function POST(req: NextRequest) {
         creditsCost,
       },
     })
+
+    const txn = await tx.creditTransaction.create({
+      data: {
+        userId: user.id,
+        amount: -creditsCost,
+        reason: 'video_generation',
+        refId: gm.id,
+        refType: 'generated_media',
+        balanceAfter: updatedUser.creditBalance,
+        idempotencyKey,
+      },
+    })
+
+    const { generateTxHash: genHash } = await import('@/lib/hash-receipt')
+    const txHash = genHash({
+      txId: txn.id,
+      userId: user.id,
+      amount: -creditsCost,
+      balanceAfter: updatedUser.creditBalance,
+      idempotencyKey,
+    })
+    await tx.creditTransaction.update({ where: { id: txn.id }, data: { txHash } })
 
     return { id: gm.id, creditsCost, balanceAfter: updatedUser.creditBalance }
   })

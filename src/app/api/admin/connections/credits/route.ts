@@ -19,11 +19,13 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: 'desc' },
     take: 10,
     select: {
+      id: true,
       amount: true,
       reason: true,
       refType: true,
       createdAt: true,
       balanceAfter: true,
+      txHash: true,
     },
   })
 

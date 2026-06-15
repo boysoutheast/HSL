@@ -31,6 +31,8 @@ export async function GET(
       createdAt: true,
       completedAt: true,
       refundedAt: true,
+      mediaHash: true,
+      mediaHashRevokedAt: true,
     },
   })
 

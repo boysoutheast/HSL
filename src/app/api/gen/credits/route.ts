@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
       refId: true,
       refType: true,
       balanceAfter: true,
+      txHash: true,
       createdAt: true,
     },
   })
