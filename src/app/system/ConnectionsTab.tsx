@@ -329,27 +329,38 @@ export default function ConnectionsTab() {
         <h3 className="text-base font-semibold text-stone-800">📡 API Gen Endpoints</h3>
 
         {[
-          ['POST', '/api/gen/video', 'Submit video generation. Deducts credits.', [
-            ['prompt', 'string', '✅', 'Deskripsi video (Bahasa Indonesia OK)'],
+          ['POST', '/api/gen/video', 'Submit video generation. Wajib multipart/form-data. Deducts credits.', [
+            ['prompt', 'string', '✅', 'Deskripsi video (Bahasa Indonesia OK). Max 2000 char.'],
+            ['file', 'binary', '✅', 'Foto referensi (JPEG/PNG/WebP, max 10MB)'],
+            ['clientRef', 'string', '—', 'Referensi unik per slot (e.g. "ad-3-rahasia-123"). Max 200 char. Dikembalikan di semua poll response. Pakai ini untuk parallel job tracking.'],
             ['orientation', 'portrait|landscape', '—', 'Default: portrait'],
             ['resolution', 'SD|HD', '—', 'Default: SD'],
             ['durationSeconds', '6|10', '—', 'Default: 10'],
-            ['photoReferenceIds', 'string[]', '—', 'Array photo reference IDs (optional)'],
           ], [
-            ['id', 'string', 'GeneratedMedia ID — simpan untuk polling'],
+            ['id', 'string', 'HSL job ID — simpan untuk polling'],
             ['creditsCost', 'number', 'Credits terpotong'],
             ['balanceAfter', 'number', 'Sisa credits'],
           ]],
-          ['GET', '/api/gen/video/:id', 'Poll job status.', [], [
-            ['status', 'string', 'queued → processing → ready_for_rehost → completed | failed'],
+          ['GET', '/api/gen/video/:id', 'Poll status job spesifik.', [], [
+            ['id', 'string', 'HSL job ID'],
+            ['clientRef', 'string|null', 'Referensi caller — sama persis dengan yang di-set saat submit'],
+            ['status', 'string', 'queued → processing → completed | failed'],
             ['videoUrl', 'string|null', 'URL video (null sebelum completed)'],
             ['thumbnailUrl', 'string|null', 'URL thumbnail'],
-            ['prompt', 'string', 'Prompt yang dipakai'],
+            ['creditsCost', 'number|null', 'Credits yang dipotong'],
+            ['refundedAt', 'string|null', 'Non-null = credits sudah dikembalikan (failed/timeout)'],
             ['errorMessage', 'string|null', 'Error detail jika failed'],
             ['completedAt', 'string|null', 'ISO timestamp saat completed'],
           ]],
-          ['GET', '/api/gen/credits', 'Cek balance + history.', [], []],
-          ['GET', '/api/gen/media?limit=20', 'List completed media.', [], []],
+          ['GET', '/api/gen/video', 'List semua job. Filter by clientRef untuk parallel tracking.', [
+            ['clientRef', 'string', '—', 'Filter by clientRef (query param)'],
+            ['limit', 'number', '—', 'Default 20, max 100'],
+            ['offset', 'number', '—', 'Untuk pagination'],
+          ], [
+            ['items', 'array', 'Array job — tiap item include clientRef, status, videoUrl, refundedAt'],
+            ['total', 'number', 'Total job (untuk pagination)'],
+          ]],
+          ['GET', '/api/gen/credits', 'Cek balance + history transaksi.', [], []],
         ].map(([method, path, desc, reqFields, respFields]: any) => (
           <div key={path as string}>
             <div className="flex items-center gap-2 mb-1">
