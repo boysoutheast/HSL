@@ -1322,6 +1322,7 @@ model GeneratedMedia {
   id                 String    @id @default(cuid())
   userId             String?   @map("user_id")
   source             String    @default("hsl-v1")
+  clientRef          String?   @map("client_ref")
   model              String    @default("hsl-video-1")
   externalJobId      String?   @unique @map("external_job_id")
   status             String    @default("queued")
@@ -1349,6 +1350,7 @@ model GeneratedMedia {
   workerTask        WorkerTask?          @relation(fields: [workerTaskId], references: [id], onDelete: SetNull)
   inputs            GeneratedMediaInput[]
 
+  @@index([userId, clientRef])
   @@map("generated_media")
 }
 

@@ -18,6 +18,7 @@ export async function GET(
     where: { id: params.id, userId: user.id },
     select: {
       id: true,
+      clientRef: true,
       status: true,
       prompt: true,
       mediaType: true,

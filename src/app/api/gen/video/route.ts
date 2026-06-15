@@ -14,8 +14,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '20', 10) || 20, 1), 100)
   const offset = Math.max(parseInt(searchParams.get('offset') ?? '0', 10) || 0, 0)
+  const clientRef = searchParams.get('clientRef') ?? null
 
-  const where = { userId: user.id }
+  const where: Record<string, unknown> = { userId: user.id }
+  if (clientRef) where.clientRef = clientRef
 
   const [total, items] = await prisma.$transaction([
     prisma.generatedMedia.count({ where }),
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
       where,
       select: {
         id: true,
+        clientRef: true,
         status: true,
         prompt: true,
         mediaType: true,
@@ -64,6 +67,7 @@ export async function POST(req: NextRequest) {
   const orientation = (form.get('orientation') as string | null) ?? 'portrait'
   const resolution = (form.get('resolution') as string | null) === 'HD' ? 'HD' : 'SD'
   const durationSeconds = parseInt(form.get('durationSeconds') as string ?? '10', 10) || 10
+  const clientRef = (form.get('clientRef') as string | null)?.trim().slice(0, 200) ?? null
 
   const file = form.get('file') as File | null
   if (!file || file.size === 0) {
@@ -129,6 +133,7 @@ export async function POST(req: NextRequest) {
         resolution,
         durationSeconds: duration,
         creditsCost,
+        clientRef: clientRef ?? null,
       },
     })
 
