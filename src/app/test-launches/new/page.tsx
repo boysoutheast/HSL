@@ -296,6 +296,8 @@ export default function NewTestLaunchPage() {
   const [customAudiences, setCustomAudiences] = useState<CustomAudienceOption[]>([])
   const [customAudienceError, setCustomAudienceError] = useState<string | null>(null)
   const [bidStrategies, setBidStrategies] = useState<BidStrategyOption[]>([])
+  const [bidStrategiesLoading, setBidStrategiesLoading] = useState(false)
+  const [bidStrategiesError, setBidStrategiesError] = useState<string | null>(null)
   const [loadingDeps, setLoadingDeps] = useState(true)
 
   // Form
@@ -408,14 +410,25 @@ export default function NewTestLaunchPage() {
   }, [])
 
   const fetchBidStrategies = useCallback(async (adAccountId: string) => {
-    if (!adAccountId) { setBidStrategies([]); return }
+    if (!adAccountId) { setBidStrategies([]); setBidStrategiesError(null); return }
+    setBidStrategiesLoading(true)
+    setBidStrategiesError(null)
     try {
       const res = await fetch(`/api/admin/meta-tools/adaccount-capabilities?adAccountId=${adAccountId}`, { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
         setBidStrategies(data.bidStrategies ?? [])
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setBidStrategiesError(err.error ?? `Gagal memuat bid strategy (${res.status})`)
+        setBidStrategies([])
       }
-    } catch { setBidStrategies([]) }
+    } catch {
+      setBidStrategiesError('Koneksi gagal. Coba pilih ulang Ad Account.')
+      setBidStrategies([])
+    } finally {
+      setBidStrategiesLoading(false)
+    }
   }, [])
 
   const fetchMediaAssets = useCallback(async () => {
@@ -441,6 +454,8 @@ export default function NewTestLaunchPage() {
     setPages([])
     setPixels([])
     setBidStrategies([])
+    setBidStrategiesError(null)
+    setBidStrategiesLoading(false)
     if (id) {
       fetchAdAccounts(id)
       fetchPages(id)
@@ -454,6 +469,8 @@ export default function NewTestLaunchPage() {
     setPixels([])
     setCustomAudiences([])
     setCustomAudienceError(null)
+    setBidStrategiesError(null)
+    setBidStrategiesLoading(false)
     if (id) {
       fetchPixels(id)
       fetchBidStrategies(id)
@@ -1134,7 +1151,14 @@ export default function NewTestLaunchPage() {
                 <div>
                   <label className={labelCls}>Bid Strategy</label>
                   {form.metaAdAccountId ? (
-                    bidStrategies.length > 0 ? (
+                    bidStrategiesLoading ? (
+                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Memuat strategi...</div>
+                    ) : bidStrategiesError ? (
+                      <div className="text-sm text-red-500 flex items-center gap-2">
+                        <span>{bidStrategiesError}</span>
+                        <button type="button" onClick={() => fetchBidStrategies(form.metaAdAccountId)} className="text-xs underline text-red-600">Retry</button>
+                      </div>
+                    ) : bidStrategies.length > 0 ? (
                       <>
                         <select
                           value={form.bidStrategy}
@@ -1170,7 +1194,7 @@ export default function NewTestLaunchPage() {
                         })()}
                       </>
                     ) : (
-                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Memuat strategi dari ad account...</div>
+                      <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Tidak ada bid strategy tersedia</div>
                     )
                   ) : (
                     <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Pilih Ad Account terlebih dahulu</div>
@@ -1245,39 +1269,50 @@ export default function NewTestLaunchPage() {
                             <label className={labelCls}>Daily Budget (IDR)</label>
                             <input type="number" value={adset.dailyBudget} onChange={(e) => updateAdsetField(adset.id, 'dailyBudget', e.target.value)} min="1000" step="1000" className={inputCls} placeholder="30000" />
                           </div>
-                          {bidStrategies.length > 0 && (
-                            <div>
+                          <div>
                               <label className={labelCls}>Bid Strategy (opsional)</label>
-                              <select value={adset.bidStrategy} onChange={(e) => updateAdsetField(adset.id, 'bidStrategy', e.target.value)} className={inputCls}>
-                                <option value="">Inherit (default)</option>
-                                {bidStrategies.filter((b) => b.available).map((bs) => (
-                                  <option key={bs.value} value={JSON.stringify({ strategy: bs.value })}>{bs.label}</option>
-                                ))}
-                              </select>
-                              {adset.bidStrategy && (() => {
-                                const parsed = safeParseJson<Record<string, unknown>>(adset.bidStrategy, {})
-                                if (parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') {
-                                  return (
-                                    <div className="mt-2">
-                                      <label className={labelCls}>Bid Amount</label>
-                                      <input type="number" value={adset.bidAmount} onChange={(e) => updateAdsetField(adset.id, 'bidAmount', e.target.value)} min="1" step="1" className={inputCls} placeholder="20000" />
-                                      <p className="text-xs text-stone-500 mt-1">Isi angka target bid sesuai currency account.</p>
-                                    </div>
-                                  )
-                                }
-                                if (parsed.strategy === 'MIN_ROAS') {
-                                  return (
-                                    <div className="mt-2">
-                                      <label className={labelCls}>ROAS Average Floor</label>
-                                      <input type="number" value={adset.roasAverageFloor} onChange={(e) => updateAdsetField(adset.id, 'roasAverageFloor', e.target.value)} min="1" step="1" className={inputCls} placeholder="10000" />
-                                      <p className="text-xs text-stone-500 mt-1">Meta pakai integer. Contoh: 10000 = ROAS 1.0.</p>
-                                    </div>
-                                  )
-                                }
-                                return null
-                              })()}
+                              {bidStrategiesLoading ? (
+                                <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Memuat...</div>
+                              ) : bidStrategiesError ? (
+                                <div className="text-sm text-red-500 flex items-center gap-2">
+                                  <span>{bidStrategiesError}</span>
+                                  <button type="button" onClick={() => fetchBidStrategies(form.metaAdAccountId)} className="text-xs underline text-red-600">Retry</button>
+                                </div>
+                              ) : bidStrategies.length > 0 ? (
+                                <>
+                                  <select value={adset.bidStrategy} onChange={(e) => updateAdsetField(adset.id, 'bidStrategy', e.target.value)} className={inputCls}>
+                                    <option value="">Inherit (default)</option>
+                                    {bidStrategies.filter((b) => b.available).map((bs) => (
+                                      <option key={bs.value} value={JSON.stringify({ strategy: bs.value })}>{bs.label}</option>
+                                    ))}
+                                  </select>
+                                  {adset.bidStrategy && (() => {
+                                    const parsed = safeParseJson<Record<string, unknown>>(adset.bidStrategy, {})
+                                    if (parsed.strategy === 'COST_CAP' || parsed.strategy === 'BID_CAP') {
+                                      return (
+                                        <div className="mt-2">
+                                          <label className={labelCls}>Bid Amount</label>
+                                          <input type="number" value={adset.bidAmount} onChange={(e) => updateAdsetField(adset.id, 'bidAmount', e.target.value)} min="1" step="1" className={inputCls} placeholder="20000" />
+                                          <p className="text-xs text-stone-500 mt-1">Isi angka target bid sesuai currency account.</p>
+                                        </div>
+                                      )
+                                    }
+                                    if (parsed.strategy === 'MIN_ROAS') {
+                                      return (
+                                        <div className="mt-2">
+                                          <label className={labelCls}>ROAS Average Floor</label>
+                                          <input type="number" value={adset.roasAverageFloor} onChange={(e) => updateAdsetField(adset.id, 'roasAverageFloor', e.target.value)} min="1" step="1" className={inputCls} placeholder="10000" />
+                                          <p className="text-xs text-stone-500 mt-1">Meta pakai integer. Contoh: 10000 = ROAS 1.0.</p>
+                                        </div>
+                                      )
+                                    }
+                                    return null
+                                  })()}
+                                </>
+                              ) : (
+                                <div className={`${inputCls} bg-stone-50 text-stone-400 flex items-center h-[38px]`}>Tidak ada bid strategy</div>
+                              )}
                             </div>
-                          )}
                         </div>
                       )}
 
