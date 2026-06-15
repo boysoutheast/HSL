@@ -18,7 +18,7 @@ const I = {
 
 const pillars = [
   { label: 'Dashboard', href: '/', icon: I.dash },
-  { label: 'Ads', href: '/ads', icon: I.ads },
+  { label: 'Meta Ads', href: '/ads', icon: I.ads },
   { label: 'Accounts', href: '/influencer', icon: I.infl },
   { label: 'Studio', href: '/media', icon: I.studio },
   { label: 'System', href: '/system', icon: I.sys },
@@ -91,7 +91,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visiblePillars.map(p => {
             const active = isActive(p.href)
-            const badge = p.label === 'Ads' ? badges.ads : p.label === 'Accounts' ? badges.influencer : 0
+            const badge = p.label === 'Meta Ads' ? badges.ads : p.label === 'Accounts' ? badges.influencer : 0
             const cls = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`
             return (
               <Link key={p.href} href={p.href} className={cls}>

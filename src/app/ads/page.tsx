@@ -7,11 +7,16 @@ import MediaRulesPage from '../media-rules/page'
 import ActionCenterPage from '../action-center/page'
 
 const tabs = [
-  { id: 'launch', label: 'Launch' },
-  { id: 'monitor', label: 'Monitor' },
+  { id: 'campaigns', label: 'Campaigns' },
   { id: 'rules', label: 'Rules' },
-  { id: 'actions', label: 'Actions' },
 ]
+
+// Legacy tab aliases — old bookmarks/links still work
+const TAB_ALIAS: Record<string, string> = {
+  launch: 'campaigns',
+  monitor: 'campaigns',
+  actions: 'rules',
+}
 
 export default async function AdsPage({
   searchParams,
@@ -19,12 +24,15 @@ export default async function AdsPage({
   searchParams: Promise<{ tab?: string; new?: string; sub?: string }>
 }) {
   const { tab, new: isNew, sub } = await searchParams
-  const key = tab && tabs.some(t => t.id === tab) ? tab : 'launch'
+  const resolved = tab ? (TAB_ALIAS[tab] ?? tab) : 'campaigns'
+  const key = tabs.some(t => t.id === resolved) ? resolved : 'campaigns'
 
-  // Wizard (new=1) tetap navigasi penuh — jarang & berat, gak perlu keep-alive
-  if (key === 'launch' && isNew === '1') {
+  // New campaign wizard — full page, no keep-alive needed
+  if (key === 'campaigns' && isNew === '1') {
     return <NewLaunchPage />
   }
+
+  const rulesInitial = sub === 'media' ? 'media' : sub === 'actions' ? 'actions' : 'campaign'
 
   return (
     <ClientTabs
@@ -32,20 +40,31 @@ export default async function AdsPage({
       initial={key}
       basePath="/ads"
       panels={{
-        launch: <LaunchesPage />,
-        monitor: <CampaignMonitorPage />,
+        campaigns: (
+          <div className="space-y-8">
+            <LaunchesPage />
+            <div className="border-t border-stone-100 pt-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-4">Monitor Aktif</p>
+              <CampaignMonitorPage />
+            </div>
+          </div>
+        ),
         rules: (
           <ClientTabs
             compact
             tabs={[
               { id: 'campaign', label: 'Campaign Rules' },
               { id: 'media', label: 'Media Rules' },
+              { id: 'actions', label: 'Actions' },
             ]}
-            initial={sub === 'media' ? 'media' : 'campaign'}
-            panels={{ campaign: <RulesEditorPage />, media: <MediaRulesPage /> }}
+            initial={rulesInitial}
+            panels={{
+              campaign: <RulesEditorPage />,
+              media: <MediaRulesPage />,
+              actions: <ActionCenterPage />,
+            }}
           />
         ),
-        actions: <ActionCenterPage />,
       }}
     />
   )
