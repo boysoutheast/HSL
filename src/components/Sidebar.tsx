@@ -94,22 +94,11 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
             const badge = p.label === 'Meta Ads' ? badges.ads : p.label === 'Accounts' ? badges.influencer : 0
             const cls = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`
             return (
-              <div key={p.href}>
-                <Link href={p.href} className={cls}>
-                  {p.icon}
-                  <span className="flex-1">{p.label}</span>
-                  {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
-                </Link>
-                {p.label === 'Meta Ads' && (
-                  <Link
-                    href="/meta-connections"
-                    className={`flex items-center gap-3 pl-9 pr-3 py-1.5 rounded-lg text-xs transition-colors ${isActive('/meta-connections') ? 'text-violet-700 font-semibold' : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'}`}
-                  >
-                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
-                    Meta Connections
-                  </Link>
-                )}
-              </div>
+              <Link key={p.href} href={p.href} className={cls}>
+                {p.icon}
+                <span className="flex-1">{p.label}</span>
+                {badge > 0 && <span className="min-w-5 h-5 px-1 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold flex items-center justify-center">{badge}</span>}
+              </Link>
             )
           })}
         </nav>

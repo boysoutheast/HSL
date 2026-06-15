@@ -9,6 +9,7 @@ import AdminUsersPage from '../admin-users/page'
 import ConnectionsTab from './ConnectionsTab'
 import DocsPage from '../docs/page'
 import CpasTab from './CpasTab'
+import MetaConnectionsPage from '../meta-connections/page'
 
 export default function SystemPage() {
   const [role, setRole] = useState<string | null>(null)
@@ -29,7 +30,7 @@ export default function SystemPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const userRole = d?.user?.role ?? null
-        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas']
+        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas', 'meta']
         const userTabs = ['connections', 'workers', 'docs']
         const validTabs = userRole === 'admin' ? adminTabs : userTabs
         if (urlTab && validTabs.includes(urlTab)) setInitialTab(urlTab)
@@ -62,6 +63,7 @@ export default function SystemPage() {
     { id: 'observability', label: 'Observability' },
     { id: 'docs', label: 'Docs' },
     { id: 'cpas', label: 'CPAS' },
+    { id: 'meta', label: 'Meta' },
   ]
 
   const tabs = isAdmin ? adminTabs : userTabs
@@ -79,6 +81,7 @@ export default function SystemPage() {
         observability: isAdmin ? <ObservabilityPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         docs: <DocsPage />,
         cpas: isAdmin ? <CpasTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
+        meta: isAdmin ? <MetaConnectionsPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
       }}
     />
   )
