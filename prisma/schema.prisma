@@ -1341,6 +1341,8 @@ model GeneratedMedia {
   errorMessage       String?   @map("error_message")
   createdAt          DateTime  @default(now()) @map("created_at")
   completedAt        DateTime? @map("completed_at")
+  mediaHash          String?   @unique @map("media_hash")
+  mediaHashRevokedAt DateTime? @map("media_hash_revoked_at")
 
   user              AdminUser?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   instagramAccount  InstagramAccount?    @relation(fields: [instagramAccountId], references: [id], onDelete: SetNull)
@@ -1371,6 +1373,7 @@ model CreditTransaction {
   refType          String?  @map("ref_type") // "generated_media" or null
   balanceAfter     Int      @map("balance_after")
   idempotencyKey   String   @unique @map("idempotency_key")
+  txHash           String?  @unique @map("tx_hash")
   createdAt        DateTime @default(now()) @map("created_at")
 
   user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
