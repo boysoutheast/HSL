@@ -12,6 +12,7 @@ interface VideoJob {
   videoUrl?: string | null; thumbnailUrl?: string | null; errorMessage?: string | null
   instagramAccountId?: string | null; createdAt: string; completedAt?: string | null
   durationSeconds?: number | null; orientation?: string | null; creditsCost?: number | null
+  userId?: string | null; refundedAt?: string | null
   inputs?: { photoReference: { id: string; fileUrl: string; label: string } }[]
 }
 
@@ -44,6 +45,17 @@ const STATUS_CLS: Record<string, string> = {
 
 function fmtDate(s: string) {
   return new Date(s).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtDuration(start: string, end: string | null | undefined): string | null {
+  if (!end) return null
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms < 0) return null
+  const secs = Math.round(ms / 1000)
+  if (secs < 60) return `${secs}s`
+  const mins = Math.floor(secs / 60)
+  const rem = secs % 60
+  return rem > 0 ? `${mins}m ${rem}s` : `${mins}m`
 }
 
 function getCost(duration: number) {
@@ -631,12 +643,14 @@ export default function GenerateVideoPage() {
 
                   {/* metadata */}
                   <div className="p-4 space-y-2">
-                    {/* status + tanggal + meta */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    {/* Row 1: status + requester + meta chips */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_CLS[job.status] ?? 'bg-stone-100 text-stone-500'}`}>
                         {STATUS_LABEL[job.status] ?? job.status}
                       </span>
-                      <span className="text-xs text-stone-400">{fmtDate(job.createdAt)}</span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${job.userId ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'}`}>
+                        {job.userId ? 'api' : 'user'}
+                      </span>
                       {job.durationSeconds && (
                         <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{job.durationSeconds}s</span>
                       )}
@@ -646,8 +660,26 @@ export default function GenerateVideoPage() {
                       {job.creditsCost && (
                         <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{job.creditsCost.toLocaleString('id-ID')} cr</span>
                       )}
+                      {job.refundedAt && (
+                        <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium">refunded</span>
+                      )}
+                    </div>
+
+                    {/* Row 2: ID + timestamps + duration */}
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] text-stone-400">
+                      <code className="bg-stone-50 px-1.5 py-0.5 rounded text-stone-500 font-mono">{job.id.slice(0, 10)}</code>
+                      <span>Req: {fmtDate(job.createdAt)}</span>
                       {job.completedAt && (
-                        <span className="text-[10px] text-stone-400">selesai {fmtDate(job.completedAt)}</span>
+                        <>
+                          <span className="text-stone-200">·</span>
+                          <span>Selesai: {fmtDate(job.completedAt)}</span>
+                          {fmtDuration(job.createdAt, job.completedAt) && (
+                            <>
+                              <span className="text-stone-200">·</span>
+                              <span>Proses: {fmtDuration(job.createdAt, job.completedAt)}</span>
+                            </>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -678,17 +710,19 @@ export default function GenerateVideoPage() {
 
                     {/* ref photos */}
                     {job.inputs && job.inputs.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-stone-400">Ref:</span>
-                        {job.inputs.slice(0, 5).map(inp => (
-                          <img
-                            key={inp.photoReference.id}
-                            src={inp.photoReference.fileUrl}
-                            alt={inp.photoReference.label}
-                            className="w-7 h-7 rounded-lg object-cover border border-stone-200"
-                            title={inp.photoReference.label}
-                          />
-                        ))}
+                      <div>
+                        <p className="text-[10px] text-stone-400 mb-1">Ref photos ({job.inputs.length})</p>
+                        <div className="grid grid-cols-4 gap-1">
+                          {job.inputs.slice(0, 4).map(inp => (
+                            <img
+                              key={inp.photoReference.id}
+                              src={inp.photoReference.fileUrl}
+                              alt={inp.photoReference.label}
+                              className="aspect-square w-full rounded object-cover border border-stone-100"
+                              title={inp.photoReference.label}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )}
 
