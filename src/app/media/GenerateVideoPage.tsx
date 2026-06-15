@@ -82,6 +82,8 @@ export default function GenerateVideoPage() {
   const [pickerProducts, setPickerProducts] = useState<Product[]>([])
   const [pickerLoading, setPickerLoading] = useState(false)
   const [pickerError, setPickerError] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
 
   /* history */
   const [jobs, setJobs] = useState<VideoJob[]>([])
@@ -174,6 +176,30 @@ export default function GenerateVideoPage() {
 
   function removeAsset(index: number) {
     setAssets(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handlePickerUpload = async (file: File) => {
+    setUploading(true)
+    setUploadError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('label', file.name.replace(/\.[^.]+$/, ''))
+      const r = await fetch('/api/admin/media-assets/upload', {
+        method: 'POST', credentials: 'include', body: fd,
+      })
+      const d = await r.json()
+      if (r.ok && d.asset) {
+        const url = d.asset.fileUrl ?? d.asset.publicUrl ?? ''
+        addAsset({ id: `ma-${d.asset.id}`, type: 'media-asset', label: d.asset.label ?? d.asset.id, thumbnailUrl: url, sourceId: d.asset.id })
+        setPickerMediaAssets(prev => [{ id: d.asset.id, fileUrl: url, publicUrl: url, label: d.asset.label }, ...prev])
+      } else {
+        setUploadError(d.error ?? 'Upload gagal')
+      }
+    } catch {
+      setUploadError('Network error')
+    }
+    setUploading(false)
   }
 
   function insertMention(index: number) {
@@ -513,7 +539,24 @@ export default function GenerateVideoPage() {
                 pickerPhotos.length === 0 && pickerMediaAssets.length === 0 ? (
                   <p className="text-sm text-stone-400 py-8 text-center">Belum ada foto.</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div>
+                    {/* Upload */}
+                    <div className="mb-3">
+                      <label className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-dashed cursor-pointer text-sm font-medium transition ${
+                        uploading ? 'border-stone-200 text-stone-300 cursor-not-allowed' : 'border-violet-200 text-violet-600 hover:border-violet-400 hover:bg-violet-50'
+                      }`}>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="sr-only"
+                          disabled={uploading}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handlePickerUpload(f) }}
+                        />
+                        {uploading ? 'Uploading...' : '↑ Upload file baru'}
+                      </label>
+                      {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+                    </div>
+                    <div className="space-y-3">
                     {pickerMediaAssets.length > 0 && (
                       <div>
                         <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-wider mb-2">Upload</p>
@@ -551,6 +594,7 @@ export default function GenerateVideoPage() {
                         </div>
                       </div>
                     )}
+                    </div>
                   </div>
                 )
               ) : (
@@ -600,162 +644,54 @@ export default function GenerateVideoPage() {
         ) : jobs.length === 0 ? (
           <p className="text-sm text-stone-400 py-4">Belum ada job.</p>
         ) : (
-          <div className="space-y-3">
-            {jobs.map(job => {
-              const isExpanded = expandedPrompts.has(job.id)
-              const promptLong = job.prompt.length > 120
-              return (
-                <div key={job.id} className="border border-stone-100 rounded-2xl overflow-hidden hover:border-stone-200 transition">
-                  {/* video / thumbnail row */}
-                  {job.status === 'completed' && job.videoUrl ? (
-                    <div className="relative bg-black group cursor-pointer" onClick={() => setFullscreenJob(job)}>
-                      <video
-                        src={job.videoUrl}
-                        className="w-full max-h-64 object-contain"
-                        preload="metadata"
-                      />
-                      {/* play overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition">
-                        <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                          <svg className="w-6 h-6 text-stone-800 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z"/>
-                          </svg>
-                        </div>
-                      </div>
-                      {/* fullscreen hint */}
-                      <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition">
-                        Tap untuk fullscreen
-                      </div>
-                    </div>
-                  ) : job.status === 'processing' || job.status === 'queued' ? (
-                    <div className="w-full h-20 bg-stone-50 flex items-center justify-center gap-2">
-                      <svg className="w-4 h-4 text-violet-400 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      <span className="text-sm text-stone-400">Sedang diproses...</span>
-                    </div>
-                  ) : job.status === 'failed' ? (
-                    <div className="w-full h-20 bg-red-50 flex items-center justify-center">
-                      <span className="text-sm text-red-400">Gagal generate</span>
-                    </div>
-                  ) : null}
-
-                  {/* metadata */}
-                  <div className="p-4 space-y-2">
-                    {/* Row 1: status + requester + meta chips */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_CLS[job.status] ?? 'bg-stone-100 text-stone-500'}`}>
-                        {STATUS_LABEL[job.status] ?? job.status}
-                      </span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${job.userId ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'}`}>
-                        {job.userId ? 'api' : 'user'}
-                      </span>
-                      {job.durationSeconds && (
-                        <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{job.durationSeconds}s</span>
-                      )}
-                      {job.orientation && (
-                        <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{job.orientation}</span>
-                      )}
-                      {job.creditsCost && (
-                        <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">{job.creditsCost.toLocaleString('id-ID')} cr</span>
-                      )}
-                      {job.refundedAt && (
-                        <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-medium">refunded</span>
-                      )}
-                    </div>
-
-                    {/* Row 2: ID + timestamps + duration */}
-                    <div className="flex items-center gap-2 flex-wrap text-[11px] text-stone-400">
-                      <code className="bg-stone-50 px-1.5 py-0.5 rounded text-stone-500 font-mono">{job.id.slice(0, 10)}</code>
-                      <span>Req: {fmtDate(job.createdAt)}</span>
-                      {job.completedAt && (
-                        <>
-                          <span className="text-stone-200">·</span>
-                          <span>Selesai: {fmtDate(job.completedAt)}</span>
-                          {fmtDuration(job.createdAt, job.completedAt) && (
-                            <>
-                              <span className="text-stone-200">·</span>
-                              <span>Proses: {fmtDuration(job.createdAt, job.completedAt)}</span>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* prompt */}
-                    <div>
-                      <p className={`text-sm text-stone-700 ${!isExpanded && promptLong ? 'line-clamp-2' : ''}`}>
-                        {job.prompt}
-                      </p>
-                      {promptLong && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedPrompts(prev => {
-                            const next = new Set(prev)
-                            next.has(job.id) ? next.delete(job.id) : next.add(job.id)
-                            return next
-                          })}
-                          className="text-[11px] text-violet-500 hover:text-violet-700 mt-0.5"
-                        >
-                          {isExpanded ? 'Sembunyikan' : 'Lihat selengkapnya'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* error */}
-                    {job.status === 'failed' && job.errorMessage && (
-                      <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{job.errorMessage}</p>
-                    )}
-
-                    {/* ref photos */}
-                    {job.inputs && job.inputs.length > 0 && (
-                      <div>
-                        <p className="text-[10px] text-stone-400 mb-1">Ref photos ({job.inputs.length})</p>
-                        <div className="grid grid-cols-4 gap-1">
-                          {job.inputs.slice(0, 4).map(inp => (
-                            <img
-                              key={inp.photoReference.id}
-                              src={inp.photoReference.fileUrl}
-                              alt={inp.photoReference.label}
-                              className="aspect-square w-full rounded object-cover border border-stone-100"
-                              title={inp.photoReference.label}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* actions */}
-                    {job.status === 'completed' && job.videoUrl && (
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setFullscreenJob(job)}
-                          className="flex-1 text-xs px-3 py-2 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-700 transition"
-                        >
-                          ▶ Putar
-                        </button>
-                        <a
-                          href={job.videoUrl}
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs px-3 py-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50 transition"
-                        >
-                          Download
-                        </a>
-                      </div>
-                    )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {jobs.map(job => (
+              <div
+                key={job.id}
+                className="relative rounded-xl overflow-hidden border border-stone-100 bg-stone-50 cursor-pointer hover:border-violet-200 transition aspect-[9/16]"
+                onClick={() => setFullscreenJob(job)}
+              >
+                {/* Thumbnail */}
+                {job.thumbnailUrl ? (
+                  <img src={job.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                ) : job.status === 'completed' && job.videoUrl ? (
+                  <video src={job.videoUrl} className="absolute inset-0 w-full h-full object-cover" preload="metadata" muted />
+                ) : job.status === 'failed' ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+                    <span className="text-[10px] text-red-400">Gagal</span>
                   </div>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-stone-50">
+                    <svg className="w-4 h-4 text-violet-300 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                    <span className="text-[10px] text-stone-400">Proses</span>
+                  </div>
+                )}
+
+                {/* Top overlay: status + user/api */}
+                <div className="absolute top-1.5 left-1.5 right-1.5 flex items-start justify-between gap-1">
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full backdrop-blur-sm ${STATUS_CLS[job.status] ?? 'bg-stone-100 text-stone-600'}`}>
+                    {STATUS_LABEL[job.status] ?? job.status}
+                  </span>
+                  <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full backdrop-blur-sm ${job.userId ? 'bg-blue-100/90 text-blue-700' : 'bg-violet-100/90 text-violet-700'}`}>
+                    {job.userId ? 'api' : 'user'}
+                  </span>
                 </div>
-              )
-            })}
+
+                {/* Bottom overlay: prompt + date */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-2 pt-6 pb-2">
+                  <p className="text-[10px] text-white line-clamp-2 leading-tight">{job.prompt}</p>
+                  <p className="text-[9px] text-white/50 mt-0.5">{fmtDate(job.createdAt)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* ── Fullscreen Video Modal ── */}
+{/* ── Fullscreen Video Modal ── */}
       {fullscreenJob && fullscreenJob.videoUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/95 flex flex-col"
@@ -763,12 +699,31 @@ export default function GenerateVideoPage() {
         >
           {/* header */}
           <div className="flex items-center justify-between px-6 py-4 shrink-0" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 min-w-0">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUS_CLS[fullscreenJob.status] ?? ''}`}>
-                {STATUS_LABEL[fullscreenJob.status]}
-              </span>
-              <span className="text-white/60 text-xs">{fmtDate(fullscreenJob.createdAt)}</span>
-              {fullscreenJob.durationSeconds && <span className="text-white/40 text-xs">{fullscreenJob.durationSeconds}s</span>}
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${STATUS_CLS[fullscreenJob.status] ?? ''}`}>
+                  {STATUS_LABEL[fullscreenJob.status]}
+                </span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${fullscreenJob.userId ? 'bg-blue-100/20 text-blue-300' : 'bg-violet-100/20 text-violet-300'}`}>
+                  {fullscreenJob.userId ? 'api' : 'user'}
+                </span>
+                {fullscreenJob.durationSeconds && <span className="text-white/40 text-xs">{fullscreenJob.durationSeconds}s</span>}
+                {fullscreenJob.orientation && <span className="text-white/40 text-xs">{fullscreenJob.orientation}</span>}
+                {fullscreenJob.creditsCost && <span className="text-white/40 text-xs">{fullscreenJob.creditsCost.toLocaleString('id-ID')} cr</span>}
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-white/40 flex-wrap font-mono">
+                <code className="text-white/50">{fullscreenJob.id.slice(0, 10)}</code>
+                <span>Req: {fmtDate(fullscreenJob.createdAt)}</span>
+                {fullscreenJob.completedAt && (
+                  <>
+                    <span>·</span>
+                    <span>Selesai: {fmtDate(fullscreenJob.completedAt)}</span>
+                    {fmtDuration(fullscreenJob.createdAt, fullscreenJob.completedAt) && (
+                      <><span>·</span><span>Proses: {fmtDuration(fullscreenJob.createdAt, fullscreenJob.completedAt)}</span></>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             <button
               type="button"
