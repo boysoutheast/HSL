@@ -30,6 +30,7 @@ export async function GET(
       errorMessage: true,
       createdAt: true,
       completedAt: true,
+      refundedAt: true,
     },
   })
 

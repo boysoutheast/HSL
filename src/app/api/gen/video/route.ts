@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
         errorMessage: true,
         createdAt: true,
         completedAt: true,
+        refundedAt: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: offset,

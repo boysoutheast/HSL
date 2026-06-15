@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const TIMEOUT_MINUTES = 20
-const MAX_CONCURRENT = 5
+const MAX_CONCURRENT = 10
 
 export async function GET(req: NextRequest) {
   // Auth via cron secret
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         where: { id: job.id },
         data: {
           status: 'failed',
-          errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes`,
+          errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
         },
       })
       await refundCredits(job.id)
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
           where: { id: job.id },
           data: {
             status: 'failed',
-            errorMessage: 'GeminiGen reported generation failed',
+            errorMessage: 'GeminiGen generation failed — credits auto-refunded',
           },
         })
         await refundCredits(job.id)

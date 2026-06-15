@@ -233,6 +233,80 @@ export default function ConnectionsTab() {
         ))}
       </div>
 
+      {/* Flow & Timing */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-5">
+        <h3 className="text-base font-semibold text-stone-800">⏱ Flow & Timing</h3>
+
+        <div className="space-y-4">
+          <div>
+            <div className="text-xs font-semibold text-stone-500 uppercase mb-2">Normal Flow (30s – 5 menit)</div>
+            <pre className="bg-stone-50 border border-stone-200 text-xs text-stone-700 p-3 rounded-xl overflow-x-auto whitespace-pre-wrap">{`POST /api/gen/video → 201 { id, creditsCost, balanceAfter }
+  ↓ (simpan id)
+Poll GET /api/gen/video/{id} setiap 30s
+  status: queued → processing → completed
+  ↓ completed
+Download videoUrl`}</pre>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+              <div className="text-xs font-semibold text-emerald-700 mb-1">Best Case (~40s)</div>
+              <div className="text-xs text-emerald-800">Submit → GeminiGen webhook masuk → langsung completed</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <div className="text-xs font-semibold text-amber-700 mb-1">Worst Case (~20 menit)</div>
+              <div className="text-xs text-amber-800">Submit → GeminiGen timeout → status=failed → <code className="bg-amber-100 px-0.5 rounded">refundedAt</code> terisi → aman resubmit</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="text-xs font-semibold text-stone-500 uppercase mb-2">Status Lifecycle</div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-stone-400 uppercase border-b border-stone-100">
+                <th className="pb-2 pr-3 text-left font-medium">Status</th>
+                <th className="pb-2 pr-3 text-left font-medium">Artinya</th>
+                <th className="pb-2 text-left font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-50">
+              <tr><td className="py-1.5 pr-3 font-mono text-stone-700">queued</td><td className="py-1.5 pr-3 text-stone-600">Job diterima</td><td className="py-1.5 text-stone-500">Tunggu</td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-stone-700">processing</td><td className="py-1.5 pr-3 text-stone-600">Di GeminiGen</td><td className="py-1.5 text-stone-500">Poll tiap 30s</td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-emerald-700">completed</td><td className="py-1.5 pr-3 text-stone-600">Siap</td><td className="py-1.5 text-stone-500">Download <code className="bg-stone-100 px-0.5 rounded">videoUrl</code></td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-red-600">failed</td><td className="py-1.5 pr-3 text-stone-600">Gagal / timeout</td><td className="py-1.5 text-stone-500">Cek <code className="bg-stone-100 px-0.5 rounded">refundedAt</code> → resubmit</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
+          <div className="text-xs font-semibold text-stone-600 mb-1">Polling Recommendation</div>
+          <ul className="text-xs text-stone-500 space-y-0.5 list-disc list-inside">
+            <li>Interval: 30 detik</li>
+            <li>Timeout client: berhenti setelah 25 menit</li>
+            <li>Cek <code className="bg-stone-100 px-0.5 rounded">refundedAt</code> saat status=failed — kalau non-null, aman resubmit</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Refund Policy */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
+        <h3 className="text-base font-semibold text-stone-800">🔄 Refund Policy</h3>
+        <ul className="text-sm text-stone-600 space-y-2">
+          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Refund otomatis saat: GeminiGen failed (status=3) atau timeout {'>'}20 menit</span></li>
+          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Cek <code className="text-xs bg-stone-100 px-1 rounded">refundedAt</code> di response — non-null = credits sudah kembali</span></li>
+          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Idempotent — tidak bisa double refund</span></li>
+          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Cek balance via <code className="text-xs bg-stone-100 px-1 rounded">GET /api/gen/credits</code> setelah refund</span></li>
+        </ul>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <div className="text-xs font-semibold text-blue-700 mb-1">Webhook</div>
+          <div className="text-xs text-blue-800">
+            <code className="bg-blue-100 px-1 rounded">https://ai.boytenggara.com/api/webhooks/geminigen</code>
+          </div>
+          <div className="text-xs text-blue-700 mt-1.5">Kalau aktif → video selesai ~40s. Kalau tidak → cron backup tiap 5 menit.</div>
+        </div>
+      </div>
+
       {/* Error Codes */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
         <h3 className="text-base font-semibold text-stone-800 mb-3">⚠️ Error Codes</h3>
