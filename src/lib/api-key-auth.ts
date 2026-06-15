@@ -30,11 +30,7 @@ export async function requireApiKey(req: NextRequest): Promise<ApiKeyUser | null
     where: { keyHash: hash, status: 'active' },
     include: { user: { select: { id: true, email: true, name: true, role: true, creditBalance: true } } },
   })
-  if (!apiKey) {
-    // Debug: log key prefix so we can identify which key is being used
-    console.warn('[requireApiKey] auth failed — key prefix:', key.slice(0, 12))
-    return null
-  }
+  if (!apiKey) return null
 
   // Update last_used_at asynchronously
   prisma.userApiKey.update({
