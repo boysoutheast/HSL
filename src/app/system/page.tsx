@@ -10,6 +10,7 @@ import ConnectionsTab from './ConnectionsTab'
 import DocsPage from '../docs/page'
 import CpasTab from './CpasTab'
 import MetaConnectionsPage from '../meta-connections/page'
+import HashCheckerTab from './HashCheckerTab'
 
 export default function SystemPage() {
   const [role, setRole] = useState<string | null>(null)
@@ -30,7 +31,7 @@ export default function SystemPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const userRole = d?.user?.role ?? null
-        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas', 'meta']
+        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas', 'meta', 'hash-checker']
         const userTabs = ['connections', 'workers', 'docs']
         const validTabs = userRole === 'admin' ? adminTabs : userTabs
         if (urlTab && validTabs.includes(urlTab)) setInitialTab(urlTab)
@@ -64,6 +65,7 @@ export default function SystemPage() {
     { id: 'docs', label: 'Docs' },
     { id: 'cpas', label: 'CPAS' },
     { id: 'meta', label: 'Meta' },
+    { id: 'hash-checker', label: 'Hash Checker' },
   ]
 
   const tabs = isAdmin ? adminTabs : userTabs
@@ -82,6 +84,7 @@ export default function SystemPage() {
         docs: <DocsPage />,
         cpas: isAdmin ? <CpasTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         meta: isAdmin ? <MetaConnectionsPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
+        'hash-checker': isAdmin ? <HashCheckerTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
       }}
     />
   )
