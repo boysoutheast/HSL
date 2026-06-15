@@ -65,6 +65,15 @@ export async function POST(
   let mediaAssetId: string | null = null
 
   if (body.mediaAsset?.fileUrl && payload?.userId) {
+    // Guard: validate userId exists
+    const userExists = await prisma.adminUser.findUnique({
+      where: { id: payload.userId },
+      select: { id: true },
+    })
+    if (!userExists) {
+      return NextResponse.json({ error: 'Invalid payload.userId' }, { status: 400 })
+    }
+
     const ma = body.mediaAsset
     if (!ma.type || !['IMAGE', 'VIDEO'].includes(ma.type)) {
       return NextResponse.json({ error: 'mediaAsset.type must be IMAGE or VIDEO' }, { status: 400 })
