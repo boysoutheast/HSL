@@ -23,6 +23,16 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10) || 50, 100)
   const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0)
 
+  console.info(`[internal/actions] GET — campaignSessionId=${campaignSessionId ?? 'all'} at ${new Date().toISOString()}`)
+
+  if (campaignSessionId) {
+    const sessionExists = await prisma.campaignSession.findUnique({
+      where: { id: campaignSessionId },
+      select: { id: true },
+    })
+    if (!sessionExists) return NextResponse.json({ error: 'CampaignSession not found' }, { status: 404 })
+  }
+
   const where: Record<string, unknown> = {}
   if (campaignSessionId) where.campaignSessionId = campaignSessionId
   if (status) where.status = status
@@ -163,7 +173,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'payload is required' }, { status: 400 })
   }
 
+  console.info(`[internal/actions] POST — userId=${userId} actionType=${actionType} at ${new Date().toISOString()}`)
+
   try {
+    // Validate userId exists
+    const userExists = await prisma.adminUser.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!userExists) return NextResponse.json({ error: 'userId not found' }, { status: 400 })
     // Check for existing action with same idempotency key
     const existing = await prisma.automationAction.findUnique({
       where: { idempotencyKey },

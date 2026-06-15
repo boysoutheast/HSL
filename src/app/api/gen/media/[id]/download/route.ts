@@ -1,24 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { validateHermesApiKey, extractBearerToken } from '@/lib/auth'
+import { requireApiKey } from '@/lib/api-key-auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/gen/media/[id]/download — redirect to videoUrl
 // Scope: must be owner of the media
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const token = extractBearerToken(req.headers.get('authorization'))
-  if (!token) return NextResponse.json({ error: 'Missing authorization' }, { status: 401 })
-
-  const agent = await validateHermesApiKey(token)
-  if (!agent) return NextResponse.json({ error: 'Invalid or inactive API key' }, { status: 401 })
+  const user = await requireApiKey(req)
+  if (user instanceof NextResponse) return user
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const media = await prisma.generatedMedia.findUnique({
     where: { id: params.id },
     select: { id: true, userId: true, status: true, videoUrl: true },
   })
 
-  if (!media || media.userId !== agent.ownerUserId) {
+  if (!media || media.userId !== user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

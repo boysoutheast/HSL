@@ -33,6 +33,44 @@ export async function POST(req: NextRequest) {
   const notes = (formData.get('notes') as string) ?? undefined
   const uploadedBy = (formData.get('uploadedBy') as string) ?? undefined
 
+  if (characterId) {
+    const owns = await prisma.character.findFirst({
+      where: { id: characterId, instagramAccount: { createdByUserId: user.id } },
+      select: { id: true },
+    })
+    if (!owns) return NextResponse.json({ error: 'characterId not owned' }, { status: 403 })
+  }
+
+  if (topicId) {
+    const owns = await prisma.topic.findFirst({
+      where: {
+        id: topicId,
+        OR: [
+          { character: { instagramAccount: { createdByUserId: user.id } } },
+          { product: { createdByUserId: user.id } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (!owns) return NextResponse.json({ error: 'topicId not owned' }, { status: 403 })
+  }
+
+  if (productId) {
+    const owns = await prisma.product.findFirst({
+      where: { id: productId, createdByUserId: user.id },
+      select: { id: true },
+    })
+    if (!owns) return NextResponse.json({ error: 'productId not owned' }, { status: 403 })
+  }
+
+  if (instagramAccountId) {
+    const owns = await prisma.instagramAccount.findFirst({
+      where: { id: instagramAccountId, createdByUserId: user.id },
+      select: { id: true },
+    })
+    if (!owns) return NextResponse.json({ error: 'instagramAccountId not owned' }, { status: 403 })
+  }
+
   // Validate content type
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
   if (!allowedTypes.includes(file.type)) {
