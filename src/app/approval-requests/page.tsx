@@ -127,7 +127,6 @@ function ApprovalRequestsInner() {
   const handleTabChange = (tab: StatusTab) => {
     setActiveTab(tab)
     setCurrentPage(1)
-    router.replace(`/approval-requests${tab === 'all' ? '' : `?tab=${tab}`}`, { scroll: false })
   }
 
   const openReview = (request: ApprovalRequest, action: 'approve' | 'reject') => {
@@ -228,7 +227,9 @@ function ApprovalRequestsInner() {
       ) : (
         <Table
           headers={['Requester', 'Test Launch', 'Action', 'Tgl Request', 'Status', 'Actions']}
-          empty={`Tidak ada request dengan status "${activeTab}".`}
+          empty={activeTab === 'all'
+            ? 'Belum ada approval request. Buka Test Launch (status Draft) → klik "Submit for Approval".'
+            : `Tidak ada request dengan status "${activeTab}".`}
         >
           {filteredRequests.map((req) => (
             <tr key={req.id} className="hover:bg-stone-50 transition-colors">
