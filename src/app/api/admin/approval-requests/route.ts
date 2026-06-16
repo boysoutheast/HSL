@@ -12,9 +12,14 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)))
   const skip = (page - 1) * limit
+  const statusFilter = searchParams.get('status')
+  const where = statusFilter && ['pending', 'approved', 'rejected'].includes(statusFilter)
+    ? { status: statusFilter }
+    : {}
 
   const [requests, total] = await Promise.all([
     prisma.approvalRequest.findMany({
+      where,
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -39,7 +44,7 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    prisma.approvalRequest.count(),
+    prisma.approvalRequest.count({ where }),
   ])
 
   return NextResponse.json({

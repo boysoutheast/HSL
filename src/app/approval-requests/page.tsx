@@ -85,6 +85,7 @@ function ApprovalRequestsInner() {
   const [requests, setRequests] = useState<ApprovalRequest[]>([])
   const [pagination, setPagination] = useState<PaginationInfo>({ page: 1, limit: 20, total: 0, pages: 0 })
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<StatusTab>(tabParam)
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -98,24 +99,30 @@ function ApprovalRequestsInner() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const fetchRequests = useCallback(async (page: number) => {
+  const fetchRequests = useCallback(async (page: number, status: StatusTab = 'all') => {
     setLoading(true)
+    setFetchError(null)
     try {
-      const res = await fetch(`/api/admin/approval-requests?page=${page}&limit=20`, { credentials: 'include' })
-      if (!res.ok) throw new Error()
+      const statusParam = status !== 'all' ? `&status=${status}` : ''
+      const res = await fetch(`/api/admin/approval-requests?page=${page}&limit=20${statusParam}`, { credentials: 'include' })
+      if (res.status === 401) { router.push('/login'); return }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error ?? `Gagal memuat (${res.status})`)
+      }
       const data = await res.json()
       setRequests(data.requests ?? [])
       setPagination(data.pagination ?? { page, limit: 20, total: 0, pages: 0 })
-    } catch {
-      // silent
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Gagal memuat data')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
-    fetchRequests(currentPage)
-  }, [currentPage, fetchRequests])
+    fetchRequests(currentPage, activeTab)
+  }, [currentPage, activeTab, fetchRequests])
 
   const handleTabChange = (tab: StatusTab) => {
     setActiveTab(tab)
@@ -163,14 +170,7 @@ function ApprovalRequestsInner() {
     }
   }
 
-  const filteredRequests = requests.filter((r) => {
-    if (activeTab === 'all') return true
-    return r.status === activeTab
-  })
-
-  const pendingCount = requests.filter((r) => r.status === 'pending').length
-  const approvedCount = requests.filter((r) => r.status === 'approved').length
-  const rejectedCount = requests.filter((r) => r.status === 'rejected').length
+  const filteredRequests = requests
 
   return (
     <div>
@@ -192,11 +192,11 @@ function ApprovalRequestsInner() {
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 mb-5 bg-stone-100 rounded-lg p-1 w-fit">
         {[
-          { key: 'all', label: 'Semua', count: pagination.total },
-          { key: 'pending', label: 'Pending', count: pendingCount },
-          { key: 'approved', label: 'Approved', count: approvedCount },
-          { key: 'rejected', label: 'Rejected', count: rejectedCount },
-        ].map(({ key, label, count }) => (
+          { key: 'all', label: 'Semua' },
+          { key: 'pending', label: 'Pending' },
+          { key: 'approved', label: 'Approved' },
+          { key: 'rejected', label: 'Rejected' },
+        ].map(({ key, label }) => (
           <button
             key={key}
             onClick={() => handleTabChange(key as StatusTab)}
@@ -207,14 +207,20 @@ function ApprovalRequestsInner() {
             }`}
           >
             {label}
-            {count > 0 && (
-              <span className={`ml-1.5 text-xs ${activeTab === key ? 'text-violet-600' : 'text-stone-400'}`}>
-                {count}
-              </span>
+            {activeTab === key && pagination.total > 0 && (
+              <span className="ml-1.5 text-xs text-violet-600">{pagination.total}</span>
             )}
           </button>
         ))}
       </div>
+
+      {/* Error */}
+      {fetchError && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+          ⚠️ {fetchError}
+          <button onClick={() => fetchRequests(currentPage, activeTab)} className="ml-auto text-xs underline text-red-600">Coba lagi</button>
+        </div>
+      )}
 
       {/* Table */}
       {loading ? (

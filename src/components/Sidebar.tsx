@@ -129,7 +129,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         </>
       )}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-stone-200 safe-pb">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {visiblePillars.map((p) => {
             const active = isActive(p.href)
             const cls = `flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? 'text-violet-700 font-semibold' : 'text-stone-500'}`
