@@ -11,6 +11,15 @@ export const dynamic = 'force-dynamic'
  * Bypass admin middleware (whitelisted in middleware.ts).
  */
 export async function POST(req: NextRequest) {
+  // Telegram sends X-Telegram-Bot-Api-Secret-Token when set during setWebhook
+  const expected = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (expected) {
+    const provided = req.headers.get('x-telegram-bot-api-secret-token')
+    if (provided !== expected) {
+      return NextResponse.json({ ok: true }, { status: 200 }) // diamkan, jangan kasih sinyal
+    }
+  }
+
   let body: {
     message?: {
       chat?: { id: number }
