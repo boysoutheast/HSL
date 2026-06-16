@@ -187,6 +187,7 @@ export default function TestLaunchDetailPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
 
   const fetchTestLaunch = useCallback(async () => {
     setLoading(true)
@@ -210,7 +211,7 @@ export default function TestLaunchDetailPage() {
 
   const handleSubmitForApproval = async () => {
     if (!testLaunch) return
-    if (!confirm('Kirim Test Launch ini untuk approval?')) return
+    setConfirmSubmit(false)
     setSubmitting(true)
     setSubmitError(null)
     try {
@@ -331,18 +332,29 @@ export default function TestLaunchDetailPage() {
             <span className={`text-xs px-3 py-1.5 rounded-full font-semibold ${statusCls}`}>
               {statusLabel}
             </span>
-            {testLaunch.status === 'draft' && (
+            {testLaunch.status === 'draft' && !confirmSubmit && (
               <button
-                onClick={handleSubmitForApproval}
+                onClick={() => setConfirmSubmit(true)}
                 disabled={submitting}
                 className="btn-primary"
               >
-                {submitting ? 'Mengirim...' : 'Submit for Approval'}
+                Submit for Approval
               </button>
             )}
           </div>
         </div>
 
+        {confirmSubmit && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between gap-4">
+            <p className="text-sm text-amber-900 font-medium">Kirim Test Launch ini untuk approval admin?</p>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={() => setConfirmSubmit(false)} className="btn-ghost btn-sm">Batal</button>
+              <button onClick={handleSubmitForApproval} disabled={submitting} className="btn-primary btn-sm">
+                {submitting ? 'Mengirim...' : 'Ya, Kirim'}
+              </button>
+            </div>
+          </div>
+        )}
         {submitError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
             ⚠️ {submitError}
