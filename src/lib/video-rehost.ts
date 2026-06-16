@@ -6,12 +6,33 @@
 
 import { uploadFile } from '@/lib/storage'
 
+function assertSafePublicUrl(raw: string): URL {
+  let u: URL
+  try { u = new URL(raw) } catch { throw new Error('Invalid URL') }
+  if (u.protocol !== 'https:') throw new Error('Only https allowed')
+  const host = u.hostname.toLowerCase()
+  // Block private / loopback / link-local / metadata
+  const blocked = [
+    /^localhost$/, /^127\./, /^10\./, /^192\.168\./,
+    /^169\.254\./, /^::1$/, /^0\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+  ]
+  if (blocked.some((re) => re.test(host))) throw new Error('Blocked host')
+  // Allowlist domain GeminiGen CDN
+  const allowed = ['.geminigen.ai', '.googleapis.com', '.cloudfront.net']
+  if (!allowed.some((d) => host === d.replace(/^\./, '') || host.endsWith(d))) {
+    throw new Error(`Host not allowlisted: ${host}`)
+  }
+  return u
+}
+
 // Download video from CDN URL, upload to permanent Railway Volume.
 // Returns the public serving URL (via /api/photos/serve/...).
 export async function rehostVideo(
   sourceUrl: string,
   jobId: string,
 ): Promise<string> {
+  assertSafePublicUrl(sourceUrl)
   const res = await fetch(sourceUrl, {
     headers: { 'User-Agent': 'HSL/1.0' },
   })
@@ -37,6 +58,7 @@ export async function rehostThumbnail(
   jobId: string,
 ): Promise<string | null> {
   try {
+    assertSafePublicUrl(sourceUrl)
     const res = await fetch(sourceUrl)
     if (!res.ok) return null
     const buf = Buffer.from(await res.arrayBuffer())

@@ -25,12 +25,14 @@ function extractData(body: Record<string, any>) {
 }
 
 export async function POST(req: NextRequest) {
-  // Secret is OPTIONAL — GeminiGen does not send x-geminigen-secret header.
-  // Validate only if BOTH are configured.
+  // Secret validation — WAJIB kalau GEMINIGEN_WEBHOOK_SECRET di-set
   const expectedSecret = process.env.GEMINIGEN_WEBHOOK_SECRET
-  const providedSecret = req.headers.get('x-geminigen-secret')
-  if (expectedSecret && providedSecret && providedSecret !== expectedSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (expectedSecret) {
+    const url = new URL(req.url)
+    const providedSecret = req.headers.get('x-geminigen-secret') || url.searchParams.get('s')
+    if (providedSecret !== expectedSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   // Parse body
