@@ -87,7 +87,7 @@ async function run() {
 
 function checkAuth(req: NextRequest): boolean {
   const CRON_SECRET = process.env.CRON_SECRET
-  if (!CRON_SECRET) return true // not configured → allow all
+  if (!CRON_SECRET) return false // fail-closed: without secret, tolak semua
 
   // Accept secret via x-cron-secret header OR Authorization Bearer
   const xSecret = req.headers.get('x-cron-secret')

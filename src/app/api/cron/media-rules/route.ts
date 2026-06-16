@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 function checkCronAuth(req: NextRequest): boolean {
   const CRON_SECRET = process.env.CRON_SECRET
-  if (!CRON_SECRET) return true
+  if (!CRON_SECRET) return false
   const xSecret = req.headers.get('x-cron-secret')
   const bearer = req.headers.get('authorization')
   return xSecret === CRON_SECRET || bearer === `Bearer ${CRON_SECRET}`
