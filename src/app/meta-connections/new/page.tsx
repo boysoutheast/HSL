@@ -79,7 +79,7 @@ export default function NewMetaConnectionPage() {
         body: JSON.stringify({
           name: connectionName.trim() || testResult?.metaUserName || appId.trim(),
           appId: appId.trim(),
-          appSecretEncrypted: appSecret.trim(),
+          appSecret: appSecret.trim(),
           userAccessToken: userAccessToken.trim(),
         }),
       })
