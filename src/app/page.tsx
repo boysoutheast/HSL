@@ -140,7 +140,7 @@ export default async function DashboardPage() {
           <p className="mt-0.5 text-[11px] text-stone-400">status RUNNING</p>
         </Link>
         <Link
-          href="/ads?tab=actions"
+          href={d.pendingApprovals.length > 0 ? '/approval-requests' : '/ads?tab=actions'}
           className={`rounded-xl border p-5 transition-colors ${
             decisions > 0
               ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
               {d.pendingApprovals.map(a => (
                 <Link
                   key={a.id}
-                  href="/ads?tab=launch"
+                  href="/approval-requests"
                   className="flex items-center gap-3 p-3 rounded-lg border border-violet-100 bg-violet-50/60 hover:bg-violet-50 transition-colors"
                 >
                   <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
