@@ -90,6 +90,10 @@ export default function NewMetaConnectionPage() {
           router.push('/login')
           return
         }
+        if (res.status === 409 && data?.existingId) {
+          router.push(`/meta-connections/${data.existingId}`)
+          return
+        }
         throw new Error(data?.error ?? `Server error (${res.status})`)
       }
 
