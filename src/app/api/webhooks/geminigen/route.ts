@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { timingSafeEqual } from 'crypto'
 
 export const dynamic = 'force-dynamic'
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const ba = Buffer.from(a), bb = Buffer.from(b)
+  return timingSafeEqual(ba, bb)
+}
 
 // GeminiGen payload:
 // { event_name: "VIDEO_GENERATION_COMPLETED",
@@ -29,8 +36,8 @@ export async function POST(req: NextRequest) {
   const expectedSecret = process.env.GEMINIGEN_WEBHOOK_SECRET
   if (expectedSecret) {
     const url = new URL(req.url)
-    const providedSecret = req.headers.get('x-geminigen-secret') || url.searchParams.get('s')
-    if (providedSecret !== expectedSecret) {
+    const provided = req.headers.get('x-geminigen-secret') || url.searchParams.get('s')
+    if (!provided || !safeEqual(provided, expectedSecret)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
   }

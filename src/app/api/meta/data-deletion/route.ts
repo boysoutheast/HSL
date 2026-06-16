@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
+import crypto, { timingSafeEqual } from 'crypto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const ba = Buffer.from(a), bb = Buffer.from(b)
+  return timingSafeEqual(ba, bb)
+}
 
 function base64UrlDecode(str: string): string {
   const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
@@ -24,7 +30,7 @@ function parseSignedRequest(signedRequest: string, appSecret: string): { userId:
       .replace(/\//g, '_')
       .replace(/=+$/, '')
 
-    if (encodedSig !== expectedSig) return null
+    if (!safeEqual(encodedSig, expectedSig)) return null
 
     // Decode payload
     const payload = JSON.parse(base64UrlDecode(encodedPayload))
