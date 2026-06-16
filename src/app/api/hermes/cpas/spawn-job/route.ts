@@ -39,6 +39,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Cegah agent bikin job atas nama user lain
+  if (agent.ownerUserId && body.userId && body.userId !== agent.ownerUserId) {
+    return NextResponse.json({ error: 'userId does not match agent owner' }, { status: 403 })
+  }
+
   const [cep, workerTask] = await prisma.$transaction(async (tx) => {
     const newCep = await tx.cep.create({
       data: {
@@ -67,7 +72,7 @@ export async function POST(req: NextRequest) {
         payloadJson: JSON.stringify(payload),
         priority: 3,
         scope: 'internal',
-        ownerUserId: body.userId,
+        ownerUserId: agent.ownerUserId ?? body.userId,
       },
     })
 

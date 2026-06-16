@@ -25,10 +25,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const task = await prisma.workerTask.findUnique({
     where: { id },
-    select: { id: true, type: true, status: true, resultJson: true, createdAt: true, completedAt: true },
+    select: { id: true, type: true, status: true, resultJson: true, createdAt: true, completedAt: true, ownerUserId: true },
   })
 
   if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!agent.ownerUserId || task.ownerUserId !== agent.ownerUserId) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   return NextResponse.json({
     id: task.id,
@@ -55,6 +58,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const task = await prisma.workerTask.findUnique({ where: { id } })
   if (!task) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!agent.ownerUserId || task.ownerUserId !== agent.ownerUserId) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
   // Validate stage progression — only forward moves allowed
   if (body.stage) {
