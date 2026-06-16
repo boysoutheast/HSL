@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
     ])
 
     return NextResponse.json({
-      ads: pendingApprovals + pendingActions,
+      ads: pendingActions,
+      approvals: pendingApprovals,
       influencer: readyUpload,
     })
   } catch (e) {

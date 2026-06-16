@@ -11,6 +11,7 @@ const I = {
   ads: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0016.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.023 6.023 0 01-2.77.896m0 0a6.023 6.023 0 01-2.77-.896" /></svg>,
   infl: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>,
   studio: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>,
+  approve: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" /></svg>,
   sys: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>,
   plus: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>,
   logout: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>,
@@ -19,6 +20,7 @@ const I = {
 const pillars = [
   { label: 'Dashboard', href: '/', icon: I.dash },
   { label: 'Meta Ads', href: '/ads', icon: I.ads },
+  { label: 'Approvals', href: '/approval-requests', icon: I.approve },
   { label: 'Accounts', href: '/influencer', icon: I.infl },
   { label: 'Studio', href: '/media', icon: I.studio },
   { label: 'System', href: '/system', icon: I.sys },
@@ -29,7 +31,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
   const isAdmin = user?.role === 'admin'
   const initials = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
   const [showCreate, setShowCreate] = useState(false)
-  const [badges, setBadges] = useState<{ ads: number; influencer: number }>({ ads: 0, influencer: 0 })
+  const [badges, setBadges] = useState<{ ads: number; approvals: number; influencer: number }>({ ads: 0, approvals: 0, influencer: 0 })
   const [viewAsUser, setViewAsUser] = useState(false)
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         const res = await fetch('/api/admin/nav-badges', { credentials: 'include' })
         if (!res.ok) return
         const data = await res.json()
-        if (live) setBadges({ ads: Number(data.ads || 0), influencer: Number(data.influencer || 0) })
+        if (live) setBadges({ ads: Number(data.ads || 0), approvals: Number(data.approvals || 0), influencer: Number(data.influencer || 0) })
       } catch {}
     }
     load()
@@ -91,7 +93,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visiblePillars.map(p => {
             const active = isActive(p.href)
-            const badge = p.label === 'Meta Ads' ? badges.ads : p.label === 'Accounts' ? badges.influencer : 0
+            const badge = p.label === 'Meta Ads' ? badges.ads : p.label === 'Approvals' ? badges.approvals : p.label === 'Accounts' ? badges.influencer : 0
             const cls = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`
             return (
               <Link key={p.href} href={p.href} className={cls}>
