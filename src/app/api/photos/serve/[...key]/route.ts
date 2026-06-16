@@ -50,9 +50,6 @@ export async function GET(
     })
     if (media) {
       headers['X-Content-Job-Id'] = media.id
-      if (media.clientRef) {
-        headers['X-Content-Client-Ref'] = media.clientRef
-      }
     }
   }
 
