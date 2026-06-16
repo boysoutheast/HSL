@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +8,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { accountId: string } },
 ) {
+  const auth = await requireAdmin(req)
+  if (auth instanceof NextResponse) return auth
   let body: {
     status?: string
     reason?: string
