@@ -313,6 +313,33 @@ curl -H "x-api-key: hsk_xxx..." \\
               <Endpoint method="GET" path="/api/gen/media/[id]/download" desc="Download video — 302 redirect ke videoUrl. 409 jika belum selesai." />
             </Section>
 
+            <Section title="Serve Endpoint — Identity Headers">
+              <p className="text-sm text-stone-600 mb-2">
+                Saat download video dari <code className="text-xs bg-stone-100 px-1 rounded">videoUrl</code>, serve endpoint return
+                response headers yang bisa dipakai untuk verifikasi identitas content:
+              </p>
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="flex gap-3 p-3 bg-stone-50 border border-stone-200 rounded-lg">
+                  <span className="text-violet-600 font-mono font-bold shrink-0">X-Content-Job-Id</span>
+                  <div>
+                    <p className="font-semibold text-stone-800">ID GeneratedMedia — selalu ada untuk video</p>
+                    <p className="text-stone-500">Cocokkan dengan <code className="bg-stone-100 px-1 rounded">id</code> dari response GET job — jamin file yang didownload milik job yang dipoll.</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 p-3 bg-stone-50 border border-stone-200 rounded-lg">
+                  <span className="text-stone-600 font-mono font-bold shrink-0">X-Content-Client-Ref</span>
+                  <div>
+                    <p className="font-semibold text-stone-800">Client reference — hanya ada jika diset saat submit</p>
+                    <p className="text-stone-500">Sama dengan <code className="bg-stone-100 px-1 rounded">clientRef</code> dari POST request. Berguna untuk mapping parallel jobs ke creative slot.</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-stone-500 mt-3">
+                Contoh: <code className="bg-stone-100 px-1 rounded">curl -I &quot;{BASE}/api/photos/serve/videos/xxx.mp4&quot;</code> → lihat header response.
+                <br />Hanya untuk video (<code className="bg-stone-100 px-1 rounded">Content-Type: video/mp4</code>). File non-video tidak punya identity headers.
+              </p>
+            </Section>
+
             <Section title="Task Status Polling (Advanced)">
               <p className="text-sm text-stone-600 mb-2">
                 Untuk agen yang ingin track semua task (bukan hanya video):
