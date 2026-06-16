@@ -15,6 +15,7 @@ export async function GET(
     where: { id: params.id },
     select: {
       id: true,
+      userId: true,
       status: true,
       launchMode: true,
       approvalRequest: {
@@ -36,8 +37,13 @@ export async function GET(
   if (!testLaunch) {
     return NextResponse.json({ error: 'TestLaunch not found' }, { status: 404 })
   }
+  if (testLaunch.userId !== auth.id && auth.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
-  return NextResponse.json({ testLaunch })
+  // Hapus userId dari response — internal only
+  const { userId: _userId, ...safe } = testLaunch
+  return NextResponse.json({ testLaunch: safe })
 }
 
 export async function POST(
