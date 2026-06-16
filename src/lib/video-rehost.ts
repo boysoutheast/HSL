@@ -18,8 +18,9 @@ function assertSafePublicUrl(raw: string): URL {
     /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
   ]
   if (blocked.some((re) => re.test(host))) throw new Error('Blocked host')
-  // Allowlist domain GeminiGen CDN
-  const allowed = ['.geminigen.ai', '.googleapis.com', '.cloudfront.net']
+  // Allowlist domain CDN GeminiGen (terverifikasi dari rawWebhookJson prod):
+  // media/thumbnail dilayani dari iDrive e2 (idrivee2.com / e2-3.dev) + cdn.geminigen.ai
+  const allowed = ['.geminigen.ai', '.idrivee2.com', '.e2-3.dev']
   if (!allowed.some((d) => host === d.replace(/^\./, '') || host.endsWith(d))) {
     throw new Error(`Host not allowlisted: ${host}`)
   }
