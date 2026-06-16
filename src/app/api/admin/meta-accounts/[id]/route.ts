@@ -120,10 +120,18 @@ export async function DELETE(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  await prisma.metaAccount.findUnique({
+  const metaAccount = await prisma.metaAccount.findUnique({
     where: { id: params.id },
     select: { id: true, userId: true },
   })
+
+  if (!metaAccount) {
+    return NextResponse.json({ error: 'MetaAccount not found' }, { status: 404 })
+  }
+  // non-admin: verify ownership
+  if (auth.role !== 'admin' && metaAccount.userId !== auth.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   // soft delete — just set status to revoked
   await prisma.metaAccount.update({
