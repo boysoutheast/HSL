@@ -75,8 +75,10 @@ export async function submitVideoJob(params: GeminiGenSubmitParams): Promise<str
 }
 
 // Poll job status from GeminiGen.
+// Endpoint yang BENAR: GET /history/{uuid} (BUKAN /video-gen/history/{uuid}
+// yang selalu 404). Verified live dari API prod 2026-06-17.
 export async function pollJobStatus(uuid: string): Promise<GeminiGenJobStatus> {
-  const res = await fetch(`${BASE}/video-gen/history/${uuid}`, {
+  const res = await fetch(`${BASE}/history/${uuid}`, {
     headers: { 'x-api-key': apiKey() },
     signal: AbortSignal.timeout(15_000),
   })
@@ -87,10 +89,18 @@ export async function pollJobStatus(uuid: string): Promise<GeminiGenJobStatus> {
 
   const data = await res.json()
   const d = data?.data ?? data
+
+  // Video URL ada di generated_video[].video_url, BUKAN media_url (selalu null
+  // di response /history). Webhook pakai data.media_url, poll pakai ini.
+  const gv = Array.isArray(d.generated_video) ? d.generated_video : []
+  const videoUrl: string | null =
+    gv.find((v: { video_url?: string }) => v?.video_url)?.video_url
+    ?? d.media_url ?? d.mediaUrl ?? null
+
   return {
     uuid: d.uuid ?? uuid,
     status: typeof d.status === 'number' ? d.status : 1,
-    mediaUrl: d.media_url ?? d.mediaUrl ?? null,
+    mediaUrl: videoUrl,
     thumbnailUrl: d.thumbnail_url ?? d.thumbnailUrl ?? null,
   }
 }
