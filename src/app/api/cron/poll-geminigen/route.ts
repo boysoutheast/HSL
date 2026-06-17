@@ -7,7 +7,7 @@ import { refundCredits } from '@/lib/credits'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const TIMEOUT_MINUTES = 20
+const STALL_MINUTES = 30  // job marked stalled AFTER this (NOT failed — preserves "failed" for GeminiGen)
 const MAX_CONCURRENT = 10
 
 export async function GET(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const cutoff = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000)
+  const cutoff = new Date(Date.now() - STALL_MINUTES * 60 * 1000)
 
   // Cleanup queued jobs stuck with no externalJobId (submit silently failed)
   const stuckQueued = await prisma.generatedMedia.findMany({
@@ -46,19 +46,28 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  const results = { polled: 0, completed: 0, failed: 0, timeout: 0, errors: 0 }
+  const results = { polled: 0, completed: 0, failed: 0, stalled: 0, still_processing: 0, timeout_and_failed: 0, errors: 0 }
 
   for (const job of jobs) {
     results.polled++
 
     try {
       // Cek status GeminiGen DULU — kalau sudah jadi, selalu di-capture
-      // berapapun umur job. Timeout hanya berlaku untuk job yang BELUM kelar.
+      // berapapun umur job. Stalled hanya untuk job yang BELUM kelar.
       const status = await pollJobStatus(job.externalJobId!)
 
-      if (status.status === 2 && status.mediaUrl) {
-        // COMPLETED — download + rehost
-        const videoUrl = await rehostVideo(status.mediaUrl, job.id)
+      // Log non-terminal statuses for observability (Task 2)
+      if (status.status !== 2 && status.status !== 3) {
+        console.log(
+          `[poll-geminigen] job=${job.id} uuid=${job.externalJobId} ` +
+          `status=${status.status} desc="${status.statusDesc}" pct=${status.statusPercentage} ` +
+          `error_code="${status.errorCode}" error_msg="${status.errorMessage}"`
+        )
+      }
+
+      if (status.status === 2 && status.videoUrl) {
+        // COMPLETED — download + rehost (even if beyond stall window — GeminiGen was just slow)
+        const videoUrl = await rehostVideo(status.videoUrl, job.id)
         const thumbnailUrl = status.thumbnailUrl
           ? await rehostThumbnail(status.thumbnailUrl, job.id)
           : null
@@ -92,48 +101,59 @@ export async function GET(req: NextRequest) {
         }
         results.completed++
 
-      } else if (status.status === 3) {
-        // FAILED
+      } else if (status.status === 3 || status.errorCode || status.errorMessage) {
+        // GEMINIGEN REPORTED FAILED — this is a genuine failure, not a timeout
+        const errMsg = status.errorMessage || `GeminiGen reported status=${status.status}`
+
         await prisma.generatedMedia.update({
           where: { id: job.id },
           data: {
             status: 'failed',
-            errorMessage: 'GeminiGen generation failed — credits auto-refunded',
+            errorMessage: `GeminiGen generation failed: ${errMsg}`,
           },
         })
         await refundCredits(job.id)
         results.failed++
+
       } else {
-        // status === 1 (masih processing) — timeout HANYA kalau GeminiGen
+        // status === 1 (masih processing) — stalled HANYA kalau GeminiGen
         // belum kelar DAN job sudah lewat window. Job yang sudah jadi tidak
         // pernah jatuh ke sini (sudah di-handle cabang status === 2 di atas).
         if (job.createdAt < cutoff) {
-          results.timeout++
+          // Stalled: processing too long in GeminiGen. NOT failed — video may still complete.
+          console.log(
+            `[poll-geminigen] STALLED job=${job.id} uuid=${job.externalJobId} ` +
+            `created=${job.createdAt.toISOString()} ` +
+            `GeminiGen processing: status=${status.status} pct=${status.statusPercentage} desc="${status.statusDesc}"`
+          )
           await prisma.generatedMedia.update({
             where: { id: job.id },
             data: {
-              status: 'failed',
-              errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
+              status: 'stalled',
+              errorMessage: `Stalled: job exceeded ${STALL_MINUTES} minutes in GeminiGen. status=${status.status} (${status.statusPercentage}%). No auto-refund.`,
             },
           })
-          await refundCredits(job.id)
+          // NO auto-refund for stalled — let owner decide recovery
+          results.stalled++
+        } else {
+          // Still within patience window — let it cook
+          results.still_processing++
         }
-        // belum lewat window → biarkan processing, di-poll lagi tick berikutnya
       }
 
     } catch (err) {
       results.errors++
       console.error(`[poll-geminigen] Error polling job ${job.id}:`, err)
-      // Poll error (network/timeout ke GeminiGen) — JANGAN buang job.
+      // Network error ke GeminiGen — JANGAN auto-failed.
       // Refund hanya kalau sudah lewat window; selain itu retry tick berikutnya
       // supaya hasil GeminiGen yang sudah jadi tetap bisa ke-capture.
       if (job.createdAt < cutoff) {
-        results.timeout++
+        results.timeout_and_failed++
         await prisma.generatedMedia.update({
           where: { id: job.id },
           data: {
             status: 'failed',
-            errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
+            errorMessage: `Timeout: job exceeded ${STALL_MINUTES} minutes with no GeminiGen response — credits auto-refunded`,
           },
         }).catch(() => {})
         await refundCredits(job.id).catch(() => {})
