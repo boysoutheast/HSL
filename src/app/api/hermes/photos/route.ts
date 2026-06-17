@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
     where: { hermesAgentId: agent.id, status: 'active' },
   })
 
+  const accountIds = assignments
+    .filter(a => a.assignableType === 'instagram_account')
+    .map(a => a.assignableId)
+
   const characterIds = assignments
     .filter(a => a.assignableType === 'character')
     .map(a => a.assignableId)
@@ -37,10 +41,24 @@ export async function GET(req: NextRequest) {
     .filter(a => a.assignableType === 'product')
     .map(a => a.assignableId)
 
+  // Resolve character assignments → parent account IDs (backward compat),
+  // mirror logika /api/hermes/library agar foto yang di-tag ke instagramAccount
+  // (model persona-embedded) ikut kebawa.
+  let charParentAccountIds: string[] = []
+  if (characterIds.length > 0) {
+    const charAccounts = await prisma.character.findMany({
+      where: { id: { in: characterIds } },
+      select: { instagramAccountId: true },
+    })
+    charParentAccountIds = charAccounts.map(c => c.instagramAccountId)
+  }
+  const allAccountIds = [...new Set([...accountIds, ...charParentAccountIds])]
+
   const photos = await prisma.photoReference.findMany({
     where: {
       status: 'active',
       OR: [
+        { instagramAccountId: { in: allAccountIds } },
         { characterId: { in: characterIds } },
         { topicId: { in: topicIds } },
         { productId: { in: productIds } },
