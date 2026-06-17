@@ -51,21 +51,9 @@ export async function GET(req: NextRequest) {
   for (const job of jobs) {
     results.polled++
 
-    // Timeout check
-    if (job.createdAt < cutoff) {
-      results.timeout++
-      await prisma.generatedMedia.update({
-        where: { id: job.id },
-        data: {
-          status: 'failed',
-          errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
-        },
-      })
-      await refundCredits(job.id)
-      continue
-    }
-
     try {
+      // Cek status GeminiGen DULU — kalau sudah jadi, selalu di-capture
+      // berapapun umur job. Timeout hanya berlaku untuk job yang BELUM kelar.
       const status = await pollJobStatus(job.externalJobId!)
 
       if (status.status === 2 && status.mediaUrl) {
@@ -115,13 +103,41 @@ export async function GET(req: NextRequest) {
         })
         await refundCredits(job.id)
         results.failed++
+      } else {
+        // status === 1 (masih processing) — timeout HANYA kalau GeminiGen
+        // belum kelar DAN job sudah lewat window. Job yang sudah jadi tidak
+        // pernah jatuh ke sini (sudah di-handle cabang status === 2 di atas).
+        if (job.createdAt < cutoff) {
+          results.timeout++
+          await prisma.generatedMedia.update({
+            where: { id: job.id },
+            data: {
+              status: 'failed',
+              errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
+            },
+          })
+          await refundCredits(job.id)
+        }
+        // belum lewat window → biarkan processing, di-poll lagi tick berikutnya
       }
-      // status === 1 (still processing) → skip
 
     } catch (err) {
       results.errors++
       console.error(`[poll-geminigen] Error polling job ${job.id}:`, err)
-      // Don't fail on poll errors — timeout handler will cleanup
+      // Poll error (network/timeout ke GeminiGen) — JANGAN buang job.
+      // Refund hanya kalau sudah lewat window; selain itu retry tick berikutnya
+      // supaya hasil GeminiGen yang sudah jadi tetap bisa ke-capture.
+      if (job.createdAt < cutoff) {
+        results.timeout++
+        await prisma.generatedMedia.update({
+          where: { id: job.id },
+          data: {
+            status: 'failed',
+            errorMessage: `Timeout: job exceeded ${TIMEOUT_MINUTES} minutes — credits auto-refunded`,
+          },
+        }).catch(() => {})
+        await refundCredits(job.id).catch(() => {})
+      }
     }
   }
 
