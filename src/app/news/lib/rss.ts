@@ -14,7 +14,11 @@ const FEEDS: { source: string; url: string }[] = [
 function extractTag(text: string, tag: string): string | null {
   const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i')
   const m = text.match(regex)
-  return m ? m[1].trim() : null
+  if (!m) return null
+  let content = m[1].trim()
+  // Strip CDATA wrapping
+  content = content.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim()
+  return content
 }
 
 function extractAllTags(text: string, tag: string): string[] {
