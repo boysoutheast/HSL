@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
+import PhotoUploadModal from '@/components/PhotoUploadModal'
 
 interface PostingMonitor {
   id: string
@@ -129,6 +130,7 @@ export default function AccountDetailPage() {
   const [saveAccountError, setSaveAccountError] = useState<string | null>(null)
 
   const [lightbox, setLightbox] = useState<PhotoRef | null>(null)
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
   const fetchAccount = useCallback(async () => {
     try {
@@ -363,9 +365,21 @@ export default function AccountDetailPage() {
         {/* ── Tab: Photos ── */}
         {activeTab === 'photos' && (
           <div className="px-6 py-5">
-            {account.photoReferences.length === 0 ? (
-              <p className="text-sm text-stone-400 italic">Belum ada foto referensi.</p>
-            ) : (
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-stone-500">
+                {account.photoReferences.length > 0
+                  ? `${account.photoReferences.length} foto`
+                  : 'Belum ada foto referensi'}
+              </p>
+              <button
+                onClick={() => setShowPhotoUpload(true)}
+                className="btn-primary btn-sm"
+              >
+                ➕ Add Photo
+              </button>
+            </div>
+
+            {account.photoReferences.length > 0 && (
               <div className="flex flex-wrap gap-3">
                 {account.photoReferences.map(p => (
                   <button
@@ -411,6 +425,13 @@ export default function AccountDetailPage() {
           </div>
         )}
       </Modal>
+
+      <PhotoUploadModal
+        open={showPhotoUpload}
+        onClose={() => setShowPhotoUpload(false)}
+        onSuccess={fetchAccount}
+        instagramAccountId={accountId}
+      />
 
       {/* Edit Account Modal — tabbed */}
       <Modal
