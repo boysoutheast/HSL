@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashApiKey } from '@/lib/auth'
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 import { randomBytes } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
 
+  const where: Record<string, unknown> = {}
+  if (status) where.status = status
+  // admin sees all agents; non-admin sees only their own
+  if (auth.role !== 'admin') where.ownerUserId = auth.id
+
   const agents = await prisma.hermesAgent.findMany({
-    where: status ? { status } : undefined,
+    where,
     select: {
       id: true,
       name: true,
@@ -31,7 +36,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   let body: {
@@ -59,6 +64,7 @@ export async function POST(req: NextRequest) {
       apiKeyHash,
       status: body.status ?? 'active',
       notes: body.notes,
+      ownerUserId: auth.id,
     },
     select: {
       id: true,

@@ -41,6 +41,7 @@ export default function ConnectionsTab() {
   const [hermesNewKey, setHermesNewKey] = useState<{name: string; key: string} | null>(null)
   const [hermesRegenLoading, setHermesRegenLoading] = useState<string | null>(null)
   const [hermesKeyCopied, setHermesKeyCopied] = useState(false)
+  const [hermesError, setHermesError] = useState('')
 
   const fetchAll = useCallback(async () => {
     try {
@@ -86,7 +87,7 @@ export default function ConnectionsTab() {
 
   const handleHermesCreate = async () => {
     if (!hermesAgentName.trim()) return
-    setHermesCreating(true)
+    setHermesCreating(true); setHermesError('')
     try {
       const r = await fetch('/api/admin/hermes-agents', {
         method: 'POST', credentials: 'include',
@@ -100,19 +101,24 @@ export default function ConnectionsTab() {
         setHermesAgentNotes('')
         setHermesKeyCopied(false)
         await fetchAll()
+      } else {
+        setHermesError(d.error || 'Gagal membuat agent')
       }
-    } catch {}
+    } catch {
+      setHermesError('Network error — coba lagi')
+    }
     setHermesCreating(false)
   }
 
   const handleHermesRegen = async (agent: HermesAgent) => {
     if (!window.confirm(`Regenerate key untuk "${agent.name}"? Key lama langsung tidak berlaku.`)) return
-    setHermesRegenLoading(agent.id)
+    setHermesRegenLoading(agent.id); setHermesError('')
     try {
       const r = await fetch(`/api/admin/hermes-agents/${agent.id}/regenerate-key`, { method: 'POST', credentials: 'include' })
       const d = await r.json()
       if (r.ok) { setHermesNewKey({ name: agent.name, key: d.apiKey }); setHermesKeyCopied(false) }
-    } catch {}
+      else { setHermesError(d.error || 'Gagal regenerate key') }
+    } catch { setHermesError('Network error — coba lagi') }
     setHermesRegenLoading(null)
   }
 
@@ -175,16 +181,23 @@ export default function ConnectionsTab() {
         )}
 
         {/* Create Form */}
-        <div className="flex gap-3">
-          <input type="text" value={hermesAgentName} onChange={e => setHermesAgentName(e.target.value)}
-            placeholder="Agent name (required)"
-            className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm flex-1" />
-          <input type="text" value={hermesAgentNotes} onChange={e => setHermesAgentNotes(e.target.value)}
-            placeholder="Notes (optional)"
-            className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-48" />
-          <button onClick={handleHermesCreate} disabled={hermesCreating || !hermesAgentName.trim()} className="btn-primary whitespace-nowrap">
-            {hermesCreating ? 'Creating...' : 'Create Agent'}
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-3">
+            <input type="text" value={hermesAgentName} onChange={e => setHermesAgentName(e.target.value)}
+              placeholder="Agent name (required)"
+              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm flex-1" />
+            <input type="text" value={hermesAgentNotes} onChange={e => setHermesAgentNotes(e.target.value)}
+              placeholder="Notes (optional)"
+              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-48" />
+            <button onClick={handleHermesCreate} disabled={hermesCreating || !hermesAgentName.trim()} className="btn-primary whitespace-nowrap">
+              {hermesCreating ? 'Creating...' : 'Create Agent'}
+            </button>
+          </div>
+          {hermesError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {hermesError}
+            </div>
+          )}
         </div>
 
         {/* Agent List */}

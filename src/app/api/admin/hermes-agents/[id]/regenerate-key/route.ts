@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hashApiKey, requireAdmin } from '@/lib/auth'
+import { hashApiKey, requireAuth } from '@/lib/auth'
 import { randomBytes } from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/admin/hermes-agents/:id/regenerate-key
-// Admin-only. Returns the new raw key once — never stored.
+// Returns the new raw key once — never stored.
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   const agent = await prisma.hermesAgent.findUnique({
     where: { id: params.id },
-    select: { id: true, name: true },
+    select: { id: true, name: true, ownerUserId: true },
   })
 
   if (!agent) {
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 })
+  }
+
+  // admin can regen any agent; non-admin can only regen their own
+  if (auth.role !== 'admin' && agent.ownerUserId !== auth.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const rawKey   = randomBytes(32).toString('hex')
