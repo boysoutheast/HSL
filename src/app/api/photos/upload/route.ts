@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { uploadFile } from '@/lib/storage'
 import { requireApiKey } from '@/lib/api-key-auth'
+import { requireAuth } from '@/lib/auth'
 import { v4 as uuidv4 } from 'uuid'
 
 export const dynamic = 'force-dynamic'
 
+async function getUser(req: NextRequest) {
+  // Try API key auth first (for Hermes agent / programmatic uploads)
+  const apiUser = await requireApiKey(req)
+  if (apiUser) return apiUser
+
+  // Fallback: session auth (for web UI uploads)
+  const sessionUser = await requireAuth(req)
+  if (sessionUser instanceof NextResponse) return null
+  return sessionUser
+}
+
 export async function POST(req: NextRequest) {
-  const user = await requireApiKey(req)
+  const user = await getUser(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

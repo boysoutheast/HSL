@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +14,21 @@ const VALID_ASSIGNABLE_TYPES = [
 
 type AssignableType = (typeof VALID_ASSIGNABLE_TYPES)[number]
 
+/** Verify the user owns the hermes agent (admin can manage any) */
+async function assertOwnsAgent(agentId: string, userId: string, role: string): Promise<NextResponse | null> {
+  if (role === 'admin') return null
+  const agent = await prisma.hermesAgent.findFirst({
+    where: { id: agentId, ownerUserId: userId },
+    select: { id: true },
+  })
+  if (!agent) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  return null
+}
+
 export async function GET(req: NextRequest) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(req.url)
@@ -25,6 +38,15 @@ export async function GET(req: NextRequest) {
 
   if (!hermesAgentId) {
     return NextResponse.json({ error: 'hermesAgentId is required' }, { status: 400 })
+  }
+
+  // non-admin: verify agent ownership
+  if (auth.role !== 'admin') {
+    const agent = await prisma.hermesAgent.findFirst({
+      where: { id: hermesAgentId, ownerUserId: auth.id },
+      select: { id: true },
+    })
+    if (!agent) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const assignments = await prisma.assignment.findMany({
@@ -43,7 +65,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   let body: {
@@ -70,6 +92,12 @@ export async function POST(req: NextRequest) {
       { error: `assignableType must be one of: ${VALID_ASSIGNABLE_TYPES.join(', ')}` },
       { status: 400 },
     )
+  }
+
+  // non-admin: verify agent ownership
+  if (auth.role !== 'admin') {
+    const forbid = await assertOwnsAgent(body.hermesAgentId, auth.id, auth.role)
+    if (forbid) return forbid
   }
 
   // Verify entity exists
@@ -104,7 +132,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAdmin(req)
+  const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
   const { searchParams } = new URL(req.url)
@@ -114,6 +142,16 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get('id')
 
   if (id) {
+    // non-admin: verify agent ownership via the assignment
+    if (auth.role !== 'admin') {
+      const assignment = await prisma.assignment.findUnique({
+        where: { id },
+        include: { hermesAgent: { select: { ownerUserId: true } } },
+      })
+      if (!assignment || assignment.hermesAgent.ownerUserId !== auth.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
     await prisma.assignment.update({
       where: { id },
       data: { status: 'inactive' },
@@ -126,6 +164,12 @@ export async function DELETE(req: NextRequest) {
       { error: 'Either id or (hermesAgentId + assignableType + assignableId) are required' },
       { status: 400 },
     )
+  }
+
+  // non-admin: verify agent ownership
+  if (auth.role !== 'admin') {
+    const forbid = await assertOwnsAgent(hermesAgentId, auth.id, auth.role)
+    if (forbid) return forbid
   }
 
   await prisma.assignment.updateMany({
