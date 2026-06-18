@@ -5,6 +5,7 @@ import Link from 'next/link'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
 import Modal from '@/components/ui/Modal'
+import AddAccountModal from '@/components/AddAccountModal'
 
 interface Account {
   id: string
@@ -26,14 +27,6 @@ interface Account {
 }
 
 const PERSONA_KEYS = ['characterDescription', 'behavior', 'speakingStyle', 'expressionStyle', 'movementStyle', 'forbiddenRules'] as const
-
-const EMPTY_FORM = {
-  username: '',
-  accountName: '',
-  gender: '',
-  purpose: 'organic',
-  notes: '',
-}
 
 function formatDate(d: string | null) {
   if (!d) return '—'
@@ -58,16 +51,13 @@ function PersonaDots({ account }: { account: Account }) {
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editAccount, setEditAccount] = useState<Account | null>(null)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
   const [toggleError, setToggleError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [editTarget, setEditTarget] = useState<Account | null>(null)
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -105,55 +95,13 @@ export default function AccountsPage() {
   }
 
   const openAdd = () => {
-    setEditAccount(null)
-    setForm(EMPTY_FORM)
-    setShowModal(true)
+    setEditTarget(null)
+    setShowAddModal(true)
   }
 
   const openEdit = (account: Account) => {
-    setEditAccount(account)
-    setForm({
-      username: account.username,
-      accountName: account.accountName ?? '',
-      gender: account.gender ?? '',
-      purpose: account.purpose ?? 'organic',
-      notes: account.notes ?? '',
-    })
-    setShowModal(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.username.trim()) return
-    setSaving(true)
-    setSaveError(null)
-    try {
-      const url = editAccount ? `/api/admin/accounts/${editAccount.id}` : '/api/admin/accounts'
-      const method = editAccount ? 'PATCH' : 'POST'
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          username: form.username.trim(),
-          accountName: form.accountName.trim() || undefined,
-          gender: form.gender || null,
-          purpose: form.purpose || undefined,
-          notes: form.notes.trim() || undefined,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        if (res.status === 401) { window.location.href = '/login'; return }
-        throw new Error(data?.error ?? `Server error (${res.status})`)
-      }
-      setShowModal(false)
-      await fetchAccounts()
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setSaving(false)
-    }
+    setEditTarget(account)
+    setShowAddModal(true)
   }
 
   const toggleStatus = async (account: Account) => {
@@ -253,90 +201,12 @@ export default function AccountsPage() {
         </Table>
       )}
 
-      {/* Add / Edit Modal */}
-      <Modal
-        open={showModal}
-        onClose={() => { setShowModal(false); setSaveError(null) }}
-        title={editAccount ? `Edit @${editAccount.username}` : 'Add Account'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Username <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                placeholder="tanpa @ — contoh: mybrand_id"
-                required
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Account Name</label>
-              <input
-                type="text"
-                value={form.accountName}
-                onChange={(e) => setForm({ ...form, accountName: e.target.value })}
-                placeholder="Display name"
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Gender</label>
-              <select
-                value={form.gender}
-                onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="">— tidak ditentukan —</option>
-                <option value="M">♂ Male (M)</option>
-                <option value="F">♀ Female (F)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">Purpose</label>
-              <select
-                value={form.purpose}
-                onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="organic">organic</option>
-                <option value="cpas">cpas</option>
-                <option value="education">education</option>
-                <option value="soft_selling">soft_selling</option>
-                <option value="mixed">mixed</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">Notes</label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="Optional notes..."
-              rows={2}
-              className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
-            />
-          </div>
-          {!editAccount && (
-            <p className="text-xs text-stone-400">Persona bisa diisi dari halaman detail akun setelah dibuat.</p>
-          )}
-          {saveError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
-              ⚠️ {saveError}
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-1">
-            <button type="button" onClick={() => { setShowModal(false); setSaveError(null) }} className="btn-ghost">Cancel</button>
-            <button type="submit" disabled={saving || !form.username.trim()} className="btn-primary">
-              {saving ? 'Saving...' : editAccount ? 'Save Changes' : 'Add Account'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <AddAccountModal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={fetchAccounts}
+        editAccount={editTarget}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal

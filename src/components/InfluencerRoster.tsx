@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import AddAccountModal from '@/components/AddAccountModal'
 
 interface Account {
   id: string
@@ -51,6 +52,7 @@ export default function InfluencerRoster() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'ready' | 'incomplete'>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/accounts', { cache: 'no-store', credentials: 'include' })
@@ -93,7 +95,13 @@ export default function InfluencerRoster() {
             {label}
           </button>
         ))}
-        <Link href="/influencer?tab=roster" className="ml-auto text-xs font-semibold text-stone-400 hover:text-stone-600">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="ml-2 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-violet-600 text-white rounded-full hover:bg-violet-700 transition-colors"
+        >
+          ➕ Add Account
+        </button>
+        <Link href="/accounts" className="ml-auto text-xs font-semibold text-stone-400 hover:text-stone-600">
           tampilan tabel →
         </Link>
       </div>
@@ -154,6 +162,17 @@ export default function InfluencerRoster() {
       {visible.length === 0 && (
         <p className="text-center py-12 text-sm text-stone-400">Tidak ada akun yang cocok dengan filter.</p>
       )}
+
+      <AddAccountModal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          fetch('/api/admin/accounts', { cache: 'no-store', credentials: 'include' })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(d => setAccounts(d.accounts ?? []))
+            .catch(() => {})
+        }}
+      />
     </div>
   )
 }

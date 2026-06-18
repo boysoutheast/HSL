@@ -7,7 +7,6 @@ module.exports = {
       { source: '/media-library', destination: '/media?tab=library', permanent: false },
       { source: '/products', destination: '/media?tab=products', permanent: false },
       { source: '/characters', destination: '/influencer', permanent: false },
-      { source: '/accounts', destination: '/influencer?tab=roster', permanent: false },
       { source: '/topics', destination: '/influencer?tab=topics', permanent: false },
       { source: '/campaign-monitor', destination: '/ads?tab=monitor', permanent: false },
       { source: '/action-center', destination: '/ads?tab=actions', permanent: false },
