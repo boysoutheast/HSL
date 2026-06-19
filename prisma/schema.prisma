@@ -827,6 +827,10 @@ model CampaignSession {
   // CPAS slot management
   adsetCap               Int?      @map("adset_cap")        // max active adsets for this campaign
   metaCampaignId         String?   @map("meta_campaign_id") // actual Meta campaign ID for live slot count
+  // MVP2: floor + top-up
+  minActiveAds          Int       @default(0) @map("min_active_ads")
+  topupEnabled          Boolean   @default(false) @map("topup_enabled")
+  topupTargetAdsetId    String?   @map("topup_target_adset_id")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
@@ -843,8 +847,55 @@ model CampaignSession {
   creativeRotations    CreativeRotation[]
   RuleExecution        RuleExecution[]
   cpasGraveyard        CpasGraveyard[]
+  creativePool         CampaignCreativePool[]
+  topupLogs            CampaignTopupLog[]
 
   @@map("campaign_sessions")
+}
+
+model CampaignCreativePool {
+  id                String    @id @default(cuid())
+  campaignSessionId String    @map("campaign_session_id")
+  userId            String    @map("user_id")
+  primaryText       String    @map("primary_text")
+  headline          String?
+  description       String?
+  callToAction      String    @default("LEARN_MORE") @map("call_to_action")
+  linkUrl           String?   @map("link_url")
+  mediaAssetId      String?   @map("media_asset_id")
+  creativeUrl       String?   @map("creative_url")
+  format            String    @default("single")
+  sortOrder         Int       @default(0) @map("sort_order")
+  status            String    @default("available") // available|used|failed|archived
+  usedAt            DateTime? @map("used_at")
+  usedMetaAdId      String?   @map("used_meta_ad_id")
+  failedReason      String?   @map("failed_reason")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  campaignSession CampaignSession @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+
+  @@index([campaignSessionId, status])
+  @@index([userId])
+  @@map("campaign_creative_pool")
+}
+
+model CampaignTopupLog {
+  id                 String   @id @default(cuid())
+  campaignSessionId  String   @map("campaign_session_id")
+  triggeredAt        DateTime @default(now()) @map("triggered_at")
+  activeAdsBefore    Int      @map("active_ads_before")
+  minActiveAds       Int      @map("min_active_ads")
+  poolCreativeId     String?  @map("pool_creative_id")
+  automationActionId String?  @map("automation_action_id")
+  status             String   @default("pending") // pending|succeeded|failed|skipped_empty_pool
+  note               String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  campaignSession CampaignSession @relation(fields: [campaignSessionId], references: [id], onDelete: Cascade)
+
+  @@index([campaignSessionId, triggeredAt])
+  @@map("campaign_topup_log")
 }
 
 model MetaEntity {

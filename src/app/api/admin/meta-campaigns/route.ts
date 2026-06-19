@@ -86,11 +86,13 @@ export async function GET(req: NextRequest) {
   try {
     const fields = 'id,name,status,daily_budget,objective,adsets.limit(1){id}'
     const url = new URL(`${GRAPH_BASE}/act_${adAccount.adAccountId}/campaigns`)
-    url.searchParams.set('access_token', token)
     url.searchParams.set('fields', fields)
     url.searchParams.set('limit', '100')
 
-    const res = await fetch(url.toString(), { cache: 'no-store' })
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
     const data: MetaGraphResponse<MetaCampaign> = await res.json().catch(() => ({ data: [] }))
 
     if (!res.ok || data.error) {

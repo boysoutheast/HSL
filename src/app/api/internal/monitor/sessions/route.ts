@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
       userId: true,
       metaAdAccountId: true,
       monitorIntervalMinutes: true,
+      minActiveAds: true,
+      topupEnabled: true,
+      topupTargetAdsetId: true,
       metaAdAccount: {
         select: {
           id: true,

@@ -688,6 +688,20 @@ Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
               <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]" desc="Update: automationEnabled? (422 guard), monitorIntervalMinutes? (5-1440), status?, phase?" />
               <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/actions" desc="List automation actions (scan activity timeline)" />
             </Section>
+
+            <Section title="Campaign Top-Up & Creative Pool">
+              <p className="text-sm text-stone-600 mb-3">
+                Set a minimum active ad floor per campaign. When ads are paused below the floor, HSL auto top-up new ads from a campaign-specific creative pool.
+              </p>
+              <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]" desc="Set minActiveAds (0-50), topupEnabled, topupTargetAdsetId. Guard: 422 if topupEnabled without pool or minActiveAds=0" />
+              <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/creative-pool" desc="List pool creatives + counts (available/used/failed/archived)" />
+              <Endpoint method="POST" path="/api/admin/campaign-sessions/[id]/creative-pool" desc="Add single creative. Body: { primaryText*, headline?, description?, callToAction?, linkUrl?, mediaAssetId?, creativeUrl? }" />
+              <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]/creative-pool/[poolId]" desc="Edit copy/reorder. 409 if status=used (immutable)" />
+              <Endpoint method="DELETE" path="/api/admin/campaign-sessions/[id]/creative-pool/[poolId]" desc="Soft delete if used (archived); hard delete if available" />
+              <Endpoint method="POST" path="/api/admin/campaign-sessions/[id]/creative-pool/bulk" desc="Bulk add (max 50). Body: { items: [...] }" />
+              <Endpoint method="POST" path="/api/admin/campaign-sessions/[id]/topup/run" desc="Manual top-up trigger (for testing)" />
+              <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/topup-log" desc="List top-up history (newest first)" />
+            </Section>
           </>
         )}
       </div>
