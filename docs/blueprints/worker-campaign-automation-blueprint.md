@@ -31,23 +31,41 @@ Worker convention (carry dari memory): status **lowercase** (pending/processing/
 
 ---
 
-## PHASE 0 (HSL repo) — Companion endpoint: Action confirm
+## PHASE 0/1b/4b (HSL repo) — ✅ SUDAH DIBUAT (commit 7f2eb5d, di main)
 
-**GAP:** `/api/internal/actions` cuma GET+POST. Worker butuh tandai action SUCCEEDED/FAILED setelah apply ke Meta (UPDATE_BUDGET/PAUSE_ADSET/CREATE_AD). Topup-log PATCH handle pool, TAPI AutomationAction-nya sendiri gak ke-update.
+Companion endpoints udah live. Kontrak FINAL (worker tinggal pakai persis):
 
-Buat di HSL: `PATCH /api/internal/actions/[actionId]/route.ts`
+**1. Action confirm** — `PATCH /api/internal/actions/[actionId]`
 ```
-Auth: validateApiKey (x-api-key)
-Body: { status: 'SUCCEEDED'|'FAILED'|'UNCERTAIN', metaResponseJson?, errorCode?, errorMessage? }
-Flow:
-  1. Load action by id → 404 kalau gak ada
-  2. Kalau status sudah SUCCEEDED/FAILED → 409 (idempoten, jgn re-apply)
-  3. Update: status, executedAt=now (kalau belum), confirmedAt=now (kalau SUCCEEDED),
-     metaResponseJson, errorCode, errorMessage
-  4. Return { action }
+Body: { status: 'SUCCEEDED'|'FAILED'|'UNCERTAIN'|'CANCELLED', metaResponseJson?, errorCode?, errorMessage? }
+- status SUCCEEDED → set executedAt + confirmedAt = now
+- status FAILED/lain → executedAt = now, confirmedAt = null
+- action udah terminal (SUCCEEDED/FAILED/CANCELLED) → 409 (idempoten)
+Return: { action: { id, status, executedAt, confirmedAt } }
 ```
-Smoke: POST action → PATCH SUCCEEDED → GET cek status. Update `/docs` Admin tab.
-Commit di HSL, push main. BARU lanjut worker repo.
+
+**2. MetaEntity upsert** — `POST /api/internal/meta-entities/upsert`
+```
+Body: { campaignSessionId, userId, metaAdAccountId,
+        entities: [{ entityType, metaEntityId, parentMetaEntityId?, name,
+                     configuredStatus?, effectiveStatus?, deliveryStatus?, rawStateJson? }] }
+- Upsert by unique (metaAdAccountId, entityType, metaEntityId). Max 500/request.
+- Validasi session milik userId (fail-closed 404).
+Return: { upserted: <n> }
+```
+
+**3. Sync status** — `PATCH /api/internal/campaign-sessions/[id]/sync-status`
+```
+Body: { importStatus?: 'synced'|'sync_failed'|'pending_sync', dailyBudget?: number }
+Return: { session: { id, importStatus, dailyBudget } }
+```
+
+**4. Topup-log lookup** — `GET /api/internal/campaign-sessions/topup-log?automationActionId=<id>`
+```
+Return: { log: { id, status, poolCreativeId, campaignSessionId } }  // 404 kalau gak ada
+```
+
+Semua x-api-key (WORKER_API_KEY). Worker repo tinggal panggil — gak perlu nunggu HSL lagi.
 
 ---
 
@@ -75,11 +93,7 @@ Handler(payload = { campaignSessionId, metaCampaignId, metaAdAccountId }):
   6. Error → complete { status:'failed', error }, set importStatus='sync_failed'.
 ```
 
-### PHASE 1b (HSL repo) — endpoint pendukung sync
-HSL belum punya upsert MetaEntity dari worker + set importStatus. Buat:
-- `POST /api/internal/meta-entities/upsert` — body `{ campaignSessionId, userId, metaAdAccountId, entities:[{entityType, metaEntityId, parentMetaEntityId?, name, configuredStatus?, effectiveStatus?, deliveryStatus?, rawStateJson?}] }`. Upsert by unique (metaAdAccountId, entityType, metaEntityId). Set lastSyncedAt.
-- `PATCH /api/internal/campaign-sessions/[id]/sync-status` — body `{ importStatus, dailyBudget? }`.
-(2 endpoint kecil, x-api-key, scoped via session lookup. Commit HSL dulu.)
+### PHASE 1b — ✅ HSL endpoint sudah ada (lihat PHASE 0/1b/4b di atas: meta-entities/upsert + sync-status). Worker tinggal POST hasil sync.
 
 ---
 
@@ -178,8 +192,7 @@ Setelah eval rules + APPLY (ad mungkin baru ke-pause):
         → HSL auto balikin pool creative ke available/failed (logika sudah ada di topup-log PATCH)
 ```
 
-### PHASE 4b (HSL, opsional) — lookup log by action
-Kalau worker susah map action→log: `GET /api/internal/campaign-sessions/topup-log?automationActionId=<id>` return `{ id }`. Kecil, x-api-key.
+### PHASE 4b — ✅ HSL endpoint sudah ada: `GET /api/internal/campaign-sessions/topup-log?automationActionId=<id>` → `{ log: { id, status, poolCreativeId, campaignSessionId } }`.
 
 ---
 
@@ -199,12 +212,9 @@ Kalau worker susah map action→log: `GET /api/internal/campaign-sessions/topup-
 ## Execution Order
 
 ```
-HSL repo (commit + push main dulu):
-  P0.  PATCH /api/internal/actions/[actionId] (confirm) + /docs
-  P1b. POST meta-entities/upsert + PATCH sync-status
-  P4b. GET topup-log?automationActionId (opsional)
+HSL repo: ✅ SELESAI (commit 7f2eb5d) — P0 action-confirm, P1b meta-entities/upsert + sync-status, P4b topup-log lookup
 
-Worker repo (boysoutheast/hermes-worker):
+Worker repo (boysoutheast/hermes-worker) — MULAI DI SINI:
   P1.  sync_campaign_entities handler
   P2.  scan loop: insights → metrics/batch → rules eval → executions + actions
   P2.1 condition tree evaluator (unit test: AND/OR/NOT + operator)
