@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { getInsights, updateBudget, setStatus, TokenError, RateLimitError } from '@/lib/meta-client'
 import { evaluateRule, resolveAction, parseConditionTree, MetricsMap } from '@/lib/rule-engine'
 import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
+import { notify } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -185,6 +186,22 @@ async function run() {
             },
           })
 
+          // Notify rule fired
+          const budgetDesc = resolved.payload.dailyBudget
+            ? `Budget ${resolved.payload.dailyBudget > currentBudget ? 'naik' : 'turun'} ke Rp${Number(resolved.payload.dailyBudget).toLocaleString()}`
+            : ''
+          const statusDesc = resolved.payload.status
+            ? `Status jadi ${resolved.payload.status}`
+            : ''
+          await notify(session.userId, {
+            type: 'rule_fired',
+            severity: 'success',
+            title: `Rule "${rule.name ?? rule.id}" fired`,
+            body: [budgetDesc, statusDesc].filter(Boolean).join(' · ') || `Campaign ${metaCampaignId}`,
+            refType: 'campaign_session',
+            refId: session.id,
+          }).catch(() => {})
+
           // Update rule fire count
           await prisma.automationRule.update({
             where: { id: rule.id },
@@ -209,6 +226,16 @@ async function run() {
               executedAt: now,
             },
           })
+
+          // Notify write failed
+          await notify(session.userId, {
+            type: 'write_failed',
+            severity: 'error',
+            title: `Gagal terapkan rule "${rule.name ?? rule.id}"`,
+            body: String(applyErr).slice(0, 200),
+            refType: 'campaign_session',
+            refId: session.id,
+          }).catch(() => {})
         }
       }
 
@@ -226,6 +253,14 @@ async function run() {
       if (err instanceof TokenError) {
         console.warn(`[scan-campaigns] TokenError for session ${session.id}:`, (err as Error).message)
         await markAccountNeedsReconnect(metaAdAccountId)
+        await notify(session.userId, {
+          type: 'token_expired',
+          severity: 'error',
+          title: 'Token Meta Ads kadaluwarsa',
+          body: `Campaign ${metaCampaignId} tidak bisa discan. Hubungkan ulang akun Meta.`,
+          refType: 'meta_account',
+          refId: metaAdAccountId ?? undefined,
+        }).catch(() => {})
       } else {
         console.error(`[scan-campaigns] Session ${session.id} error:`, err)
       }
