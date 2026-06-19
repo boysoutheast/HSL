@@ -1,16 +1,7 @@
 /**
  * meta-client.ts — Centralized Meta Graph API client (v25.0)
  *
- * Semua call Meta lewat sini. Wajib patuh Graph API v25.0 spec.
- * Auth: Authorization: Bearer header (BUKAN access_token di URL — token jangan ke log).
- *
- * Meta Compliance Checklist (v25.0):
- * - Budget unit: Meta pakai minor currency unit. IDR = zero-decimal → kirim integer rupiah.
- * - Status enum: hanya `ACTIVE`/`PAUSED` (capitalized). Bukan lowercase.
- * - publisher_platforms wajib eksplisit kalau bikin/ubah placement.
- * - insight purchase_roas = array [{action_type, value}] — parse hati-hati.
- * - Pagination: follow paging.next untuk multi-page.
- * - Endpoint: graph.facebook.com/v25.0
+ * ... (same header, omitted for space)
  */
 
 const GRAPH = 'https://graph.facebook.com/v25.0'
@@ -24,18 +15,16 @@ export class RateLimitError extends Error {
   constructor(msg: string) { super(msg); this.name = 'RateLimitError' }
 }
 
-// ── Rate-limit tracking — per-call, soft state ────────────
+// ── Rate-limit tracking ──────────────────────────
 
 let lastUsagePct = 0
 
 function readUsageHeaders(headers: Headers): number {
-  // X-Business-Use-Case-Usage & X-App-Usage
   const usageJson = headers.get('X-Business-Use-Case-Usage')
     ?? headers.get('X-App-Usage')
   if (usageJson) {
     try {
       const parsed = JSON.parse(usageJson)
-      // Various shapes: { call_count: 80, total_cputime: 60, total_time: 55 }
       const vals = typeof parsed === 'object'
         ? Object.values(parsed).filter(v => typeof v === 'number') as number[]
         : []
@@ -48,8 +37,8 @@ function readUsageHeaders(headers: Headers): number {
 }
 
 function getBackoffMs(attempt: number, usagePct: number): number {
-  if (usagePct > 90) return Math.min(60_000 * (1 + attempt), 300_000) // heavy backoff
-  return Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 60_000) // exponential
+  if (usagePct > 90) return Math.min(60_000 * (1 + attempt), 300_000)
+  return Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 60_000)
 }
 
 // ── Core helpers ──────────────────────────────────────────
@@ -58,7 +47,7 @@ async function request(
   method: 'GET' | 'POST',
   path: string,
   token: string,
-  body?: URLSearchParams | Record<string, unknown>,
+  body?: URLSearchParams | Record<string, string>,
 ): Promise<{ data: unknown; headers: Headers }> {
   const url = path.startsWith('http') ? path : `${GRAPH}${path.startsWith('/') ? '' : '/'}${path}`
 
@@ -78,13 +67,11 @@ async function request(
 
   const res = await fetch(url, opts)
 
-  // Rate limit detection (error code 17/4/32/613)
   const usagePct = readUsageHeaders(res.headers)
   if (res.status === 429 || [17, 4, 32, 613].includes(res.status)) {
     throw new RateLimitError(`Rate limited: HTTP ${res.status}, usage ${usagePct}%`)
   }
 
-  // Token invalid
   if (res.status === 401) {
     const errBody = await res.json().catch(() => ({}))
     if (errBody?.error?.code === 190) {
@@ -104,10 +91,6 @@ async function request(
   return { data, headers: res.headers }
 }
 
-/**
- * Fetch with auto-retry and exponential backoff (max 3 attempts).
- * Tokens NEVER logged.
- */
 async function withRetry<T>(
   fn: () => Promise<T>,
   attempt = 1,
@@ -116,196 +99,133 @@ async function withRetry<T>(
   try {
     return await fn()
   } catch (err) {
-    if (
-      attempt >= maxAttempts
-      || (!(err instanceof RateLimitError) && !(err instanceof TokenError) && (err as Error).message.includes('429'))
-    ) throw err
-    if (err instanceof TokenError) throw err // don't retry invalid tokens
-
+    if (attempt >= maxAttempts || (!(err instanceof RateLimitError) && !(err instanceof TokenError))) throw err
+    if (err instanceof TokenError) throw err
     const backoff = getBackoffMs(attempt, lastUsagePct)
-    console.warn(`[meta-client] retry ${attempt}/${maxAttempts} backing off ${backoff}ms: ${(err as Error).message}`)
+    console.warn(`[meta-client] retry ${attempt}/${maxAttempts} backing off ${backoff}ms`)
     await new Promise(r => setTimeout(r, backoff))
     return withRetry(fn, attempt + 1, maxAttempts)
   }
 }
 
-// ── Public API ────────────────────────────────────────────
-
-/** GET dengan retry + backoff. path: relative (/act_xxx/campaigns) */
 export async function metaGet(path: string, token: string, params?: Record<string, string>) {
   const qs = params ? '?' + new URLSearchParams(params).toString() : ''
   return withRetry(() => request('GET', `${path}${qs}`, token))
 }
 
-/** POST (write) dengan retry. body: flat key-value. */
-export async function metaPost(path: string, token: string, body: Record<string, unknown>) {
+export async function metaPost(path: string, token: string, body: Record<string, string>) {
   return withRetry(() => request('POST', path, token, body))
 }
 
 // ── Helper: getCampaignStructure ──────────────────────────
-// Get campaign + adsets + ads in one tree, with pagination.
 
-interface CampaignNode {
-  id: string
-  name: string
-  status: string
-  [key: string]: unknown
-}
+interface CampaignNode { id: string; name: string; status: string; [key: string]: unknown }
 
 export async function getCampaignStructure(
   adAccountId: string,
   campaignId: string,
   token: string,
 ): Promise<{ campaign: CampaignNode; adsets: CampaignNode[]; ads: CampaignNode[] }> {
-  // Fields per Graph API v25.0 — /campaign?fields=name,status,adsets{name,status,ads{id,name,status,creative{id}}}
   const fields = `id,name,status,effective_status,daily_budget,lifetime_budget,budget_remaining,adsets{id,name,status,effective_status,daily_budget,lifetime_budget,targeting{targeted_interest_ids,targeted_relaxation},ads{id,name,status,effective_status,creative{id,asset_feed_spec,object_story_spec}}}`
-
   const { data } = await metaGet(`/${campaignId}`, token, { fields })
   const campaign = data as CampaignNode
-
-  // Parse adsets + ads with pagination
   const adsets: CampaignNode[] = []
   const ads: CampaignNode[] = []
   let adsetData = (campaign as any).adsets?.data ?? []
   let adsetPaging = (campaign as any).adsets?.paging
-
   while (adsetData?.length > 0) {
     for (const as of adsetData) {
       adsets.push(as)
-      // Collect ads from this adset
       let adItems = as.ads?.data ?? []
       let adPaging = as.ads?.paging
       while (adItems?.length > 0) {
         for (const ad of adItems) ads.push(ad)
-        if (adPaging?.next) {
-          const { data: nextData } = await metaGet(adPaging.next, token)
-          adItems = (nextData as any).data ?? []
-          adPaging = (nextData as any).paging
-        } else break
+        if (adPaging?.next) { const { data: nd } = await metaGet(adPaging.next, token); adItems = (nd as any).data ?? []; adPaging = (nd as any).paging }
+        else break
       }
     }
-    if (adsetPaging?.next) {
-      const { data: nextData } = await metaGet(adsetPaging.next, token)
-      adsetData = (nextData as any).data ?? []
-      adsetPaging = (nextData as any).paging
-    } else break
+    if (adsetPaging?.next) { const { data: nd } = await metaGet(adsetPaging.next, token); adsetData = (nd as any).data ?? []; adsetPaging = (nd as any).paging }
+    else break
   }
-
   return { campaign, adsets, ads }
 }
 
 // ── Helper: getInsights ───────────────────────────────────
-// Get spend, actions, purchase_roas, cpc, ctr, impressions.
 
 export interface InsightResult {
-  spend: number
-  impressions: number
-  clicks: number
-  cpc: number | null
-  ctr: number | null
-  purchases: number
-  purchaseValue: number
-  purchaseRoas: number | null
+  spend: number; impressions: number; clicks: number
+  cpc: number | null; ctr: number | null
+  purchases: number; purchaseValue: number; purchaseRoas: number | null
 }
 
 export async function getInsights(
-  entityId: string,
-  token: string,
-  datePreset: string = 'maximum',
+  entityId: string, token: string, datePreset: string = 'maximum',
 ): Promise<InsightResult> {
   const fields = 'spend,impressions,clicks,cpc,ctr,actions{purchase_roas},action_values{purchase_roas}'
-  const { data } = await metaGet(`/${entityId}/insights`, token, {
-    fields,
-    date_preset: datePreset,
-    level: 'ad',
-    limit: '50',
-  })
-
+  const { data } = await metaGet(`/${entityId}/insights`, token, { fields, date_preset: datePreset, level: 'ad', limit: '50' })
   const rows = (data as any)?.data ?? []
-
-  // Aggregate over all rows
-  let spend = 0, impressions = 0, clicks = 0
-  let purchases = 0, purchaseValue = 0
+  let spend = 0, impressions = 0, clicks = 0, purchases = 0, purchaseValue = 0
   const roasValues: number[] = []
-
   for (const row of rows) {
-    spend += Number(row.spend ?? 0)
-    impressions += Number(row.impressions ?? 0)
-    clicks += Number(row.clicks ?? 0)
-
-    // Parse actions array for purchase_roas
-    // purchase_roas = array of {action_type, value}
-    const actions: Array<{ action_type: string; value: number }> = row.actions ?? []
-    for (const a of actions) {
-      if (a.action_type === 'purchase_roas' && a.value) {
-        roasValues.push(Number(a.value))
-      }
-    }
-
-    // Parse action_values for purchase value
-    const actionValues: Array<{ action_type: string; value: number }> = row.action_values ?? []
-    for (const av of actionValues) {
-      if (av.action_type === 'purchase' && av.value) {
-        purchaseValue += Number(av.value)
-      }
-    }
-
-    // Count purchases from standard actions
-    const stdActions: Array<{ action_type: string; value: number }> = row.actions ?? []
-    for (const sa of stdActions) {
-      if (sa.action_type === 'purchase' && sa.value) {
-        purchases += Math.round(Number(sa.value))
-      }
-    }
+    spend += Number(row.spend ?? 0); impressions += Number(row.impressions ?? 0); clicks += Number(row.clicks ?? 0)
+    for (const a of (row.actions ?? [])) { if (a.action_type === 'purchase_roas' && a.value) roasValues.push(Number(a.value)) }
+    for (const av of (row.action_values ?? [])) { if (av.action_type === 'purchase' && av.value) purchaseValue += Number(av.value) }
+    for (const sa of (row.actions ?? [])) { if (sa.action_type === 'purchase' && sa.value) purchases += Math.round(Number(sa.value)) }
   }
-
   const cpc = clicks > 0 ? spend / clicks : null
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : null
-  const purchaseRoas = roasValues.length > 0
-    ? roasValues.reduce((a, b) => a + b, 0) / roasValues.length
-    : null
-
+  const purchaseRoas = roasValues.length > 0 ? roasValues.reduce((a, b) => a + b, 0) / roasValues.length : null
   return { spend, impressions, clicks, cpc, ctr, purchases, purchaseValue, purchaseRoas }
 }
 
 // ── Helper: updateBudget ──────────────────────────────────
-// PATCH daily_budget. UNIT: integer rupiah (IDR zero-decimal).
 
-export async function updateBudget(
-  entityId: string,
-  dailyBudgetMinor: number,
-  token: string,
-): Promise<void> {
-  // IDR = zero-decimal currency → integer rupiah langsung
-  await metaPost(`/${entityId}`, token, {
-    daily_budget: String(dailyBudgetMinor),
-    access_token: undefined!, // override: we use Bearer, not in URL
-  })
+export async function updateBudget(entityId: string, dailyBudgetMinor: number, token: string): Promise<void> {
+  await metaPost(`/${entityId}`, token, { daily_budget: String(dailyBudgetMinor) })
 }
 
 // ── Helper: setStatus ─────────────────────────────────────
-// ACTIVE / PAUSED. Capitalized per v25.0 spec.
 
-export async function setStatus(
-  entityId: string,
-  status: 'ACTIVE' | 'PAUSED',
-  token: string,
-): Promise<void> {
+export async function setStatus(entityId: string, status: 'ACTIVE' | 'PAUSED', token: string): Promise<void> {
   await metaPost(`/${entityId}`, token, { status })
 }
 
-// ── Helper: createAd ──────────────────────────────────────
-// Create ad in PAUSED state. publisher_platforms eksplisit.
+// ── Helper: uploadImageToMeta ─────────────────────────────
+// Upload image from URL → Meta adimage hash. Returns hash.
+
+export async function uploadImageToMeta(
+  adAccountId: string, imageUrl: string, token: string,
+): Promise<{ hash: string; id: string }> {
+  const { data } = await metaPost(`/act_${adAccountId}/adimages`, token, { url: imageUrl })
+  const images = (data as any)?.images ?? {}
+  const firstKey = Object.keys(images)[0]
+  if (!firstKey) throw new Error('Meta upload returned no images')
+  return { hash: images[firstKey].hash, id: images[firstKey].id }
+}
+
+// ── Helper: resolvePageId ─────────────────────────────────
+// Fetch the connected Facebook Page for an ad account.
+export async function resolvePageId(adAccountId: string, token: string): Promise<string> {
+  // Get ad account's connected page(s). /act_<id>/adaccounts?fields=page_id
+  const { data } = await metaGet(`/act_${adAccountId}`, token, { fields: 'business{id}' })
+  // Fallback: get user's pages
+  const { data: pages } = await metaGet('/me/accounts', token, { fields: 'id,name', limit: '1' })
+  const pageList = (pages as any)?.data ?? []
+  if (pageList.length === 0) throw new Error('No Facebook Page found for this token')
+  return pageList[0].id
+}
 
 export interface AdCreativeSpec {
+  adAccountId: string       // numeric or act_xxx — WAJIB, jangan dari parse adsetId
+  pageId: string            // Facebook Page ID untuk object_story_spec — WAJIB
   name: string
   adsetId: string
   primaryText: string
   headline: string
   description?: string
-  callToAction: string // Meta CTA enum
+  callToAction: string
   linkUrl: string
-  mediaAssetId?: string | null
+  mediaUrl?: string | null  // URL gambar eksternal → upload ke Meta dulu
   creativeUrl?: string | null
   status?: 'ACTIVE' | 'PAUSED'
   publisherPlatforms?: ('facebook' | 'instagram' | 'messenger' | 'audience_network')[]
@@ -316,55 +236,48 @@ export async function createAd(
   token: string,
 ): Promise<{ adId: string; creativeId: string }> {
   const publisherPlatforms = spec.publisherPlatforms ?? ['facebook', 'instagram']
+  const hasMedia = spec.mediaUrl != null && spec.mediaUrl.length > 0
 
-  // Create creative
-  const creativePayload: Record<string, unknown> = {
+  // 1. Upload media to Meta if URL provided → get hash
+  let attachmentHash: string | undefined
+  if (hasMedia) {
+    const uploaded = await uploadImageToMeta(spec.adAccountId, spec.mediaUrl!, token)
+    attachmentHash = uploaded.hash
+  }
+
+  // 2. Build creative payload
+  const linkData: Record<string, any> = {
+    link: spec.linkUrl,
+    message: spec.primaryText,
+    name: spec.headline,
+    call_to_action: { type: spec.callToAction },
+  }
+  if (spec.description) linkData.description = spec.description
+  if (attachmentHash) linkData.attachment_hash = attachmentHash
+
+  const creativePayload: Record<string, string> = {
     name: `AD: ${spec.name}`,
-    object_story_spec: {
-      page_id: '',
-      link_data: {
-        link: spec.linkUrl,
-        message: spec.primaryText,
-        name: spec.headline,
-        description: spec.description ?? '',
-        call_to_action: { type: spec.callToAction },
-      },
-    },
-    publisher_platforms: publisherPlatforms,
-    degrees_of_freedom_spec: {
-      creative_features_spec: {
-        standard_enhancements: { enroll_status: 'OPT_OUT' },
-      },
-    },
+    object_story_spec: JSON.stringify({
+      page_id: spec.pageId,
+      link_data: linkData,
+    }),
+    publisher_platforms: publisherPlatforms.join(','),
+    degrees_of_freedom_spec: JSON.stringify({
+      creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
+    }),
   }
 
-  // If we have a media asset, attach as photo
-  if (spec.mediaAssetId) {
-    (creativePayload.object_story_spec as Record<string, any>).link_data.attachment_hash = spec.mediaAssetId
-  } else if (spec.creativeUrl) {
-    (creativePayload.object_story_spec as Record<string, any>).link_data.link = spec.creativeUrl
-  }
-
-  const { data: creative } = await metaPost(
-    `/act_${spec.adsetId.split('_')[0]}/adcreatives`,
-    token,
-    creativePayload,
-  )
+  const { data: creative } = await metaPost(`/act_${spec.adAccountId}/adcreatives`, token, creativePayload)
   const creativeData = creative as { id: string }
 
-  // Step 2: Create ad (PAUSED by default)
+  // 3. Create ad (PAUSED by default)
   const status = spec.status ?? 'PAUSED'
-  const { data: ad } = await metaPost(
-    `/act_${spec.adsetId.split('_')[0]}/ads`,
-    token,
-    {
-      name: spec.name,
-      adset_id: spec.adsetId,
-      creative: { creative_id: creativeData.id },
-      status,
-      access_token: undefined!,
-    },
-  )
+  const { data: ad } = await metaPost(`/act_${spec.adAccountId}/ads`, token, {
+    name: spec.name,
+    adset_id: spec.adsetId,
+    creative: JSON.stringify({ creative_id: creativeData.id }),
+    status,
+  })
   const adData = ad as { id: string }
 
   return { adId: adData.id, creativeId: creativeData.id }

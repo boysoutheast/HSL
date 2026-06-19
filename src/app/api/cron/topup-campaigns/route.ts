@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { createAd, TokenError, RateLimitError } from '@/lib/meta-client'
+import { createAd, resolvePageId, TokenError, RateLimitError } from '@/lib/meta-client'
 
 export const dynamic = 'force-dynamic'
 
@@ -125,7 +125,11 @@ async function run() {
 
         // Create ad via Meta API (PAUSED)
         try {
+          const adAccountIdNum = adAccountId.replace(/^act_/, '')
+          const pageId = await resolvePageId(adAccountIdNum, token)
           const adResult = await createAd({
+            adAccountId: adAccountIdNum,
+            pageId,
             name: `Topup-${poolItem.headline?.slice(0, 30) ?? 'Ad'}-${Date.now()}`,
             adsetId: session.topupTargetAdsetId ?? '',
             primaryText: poolItem.primaryText,
@@ -133,8 +137,7 @@ async function run() {
             description: poolItem.description ?? '',
             callToAction: poolItem.callToAction ?? 'LEARN_MORE',
             linkUrl: poolItem.linkUrl ?? '',
-            mediaAssetId: poolItem.mediaAssetId,
-            creativeUrl: poolItem.creativeUrl,
+            mediaUrl: poolItem.creativeUrl ?? undefined,
             status: 'PAUSED',
           }, token)
 
