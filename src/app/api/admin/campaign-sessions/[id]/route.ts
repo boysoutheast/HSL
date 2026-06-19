@@ -47,7 +47,12 @@ export async function PATCH(
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  let body: { status?: string; phase?: string; automationEnabled?: boolean }
+  let body: {
+    status?: string
+    phase?: string
+    automationEnabled?: boolean
+    monitorIntervalMinutes?: number
+  }
 
   try {
     body = await req.json()
@@ -63,10 +68,38 @@ export async function PATCH(
     return NextResponse.json({ error: 'Campaign session not found' }, { status: 404 })
   }
 
+  // Guard: automationEnabled=true only if session has ≥1 ACTIVE AutomationRule
+  if (body.automationEnabled === true) {
+    const activeRuleCount = await prisma.automationRule.count({
+      where: {
+        campaignSessionId: params.id,
+        status: 'ACTIVE',
+      },
+    })
+    if (activeRuleCount === 0) {
+      return NextResponse.json({
+        error: 'Cannot enable automation. Attach at least 1 rule first.',
+      }, { status: 422 })
+    }
+  }
+
+  // Guard: monitorIntervalMinutes valid range 5–1440
+  if (body.monitorIntervalMinutes !== undefined) {
+    if (body.monitorIntervalMinutes < 5 || body.monitorIntervalMinutes > 1440) {
+      return NextResponse.json({
+        error: 'monitorIntervalMinutes must be between 5 and 1440',
+      }, { status: 400 })
+    }
+  }
+
   const updateData: Record<string, unknown> = {}
   if (body.status !== undefined) updateData.status = body.status
   if (body.phase !== undefined) updateData.phase = body.phase
   if (body.automationEnabled !== undefined) updateData.automationEnabled = body.automationEnabled
+  if (body.monitorIntervalMinutes !== undefined) {
+    updateData.monitorIntervalMinutes = body.monitorIntervalMinutes
+    updateData.nextMonitorAt = new Date() // reset so scan fires next cycle
+  }
 
   const session = await prisma.campaignSession.update({
     where: { id: params.id },
