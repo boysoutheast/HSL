@@ -62,9 +62,9 @@ export async function PATCH(
       })
     } else {
       // Failed — retryable or permanent based on error
-      const isPermanent = body.failedReason?.includes('CREATIVE_DISABLED') ||
+      const isPermanent = !!(body.failedReason?.includes('CREATIVE_DISABLED') ||
                           body.failedReason?.includes('DISAPPROVED') ||
-                          body.failedReason?.includes('POLICY') ?? false
+                          body.failedReason?.includes('POLICY'))
       await prisma.campaignCreativePool.update({
         where: { id: log.poolCreativeId },
         data: {
