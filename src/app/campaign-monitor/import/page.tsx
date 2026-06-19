@@ -140,7 +140,7 @@ export default function ImportCampaignPage() {
 
       <h1 className="text-2xl font-bold text-stone-900 mb-1">Import Meta Campaign</h1>
       <p className="text-sm text-stone-500 mb-6">
-        Bring an existing Meta Ads campaign under HSL management with automation rules.
+        Bring an existing Meta Ads campaign under AI Buddy management with automation rules.
       </p>
 
       <PageInfo
@@ -232,7 +232,7 @@ export default function ImportCampaignPage() {
       {step === 2 && selectedCampaign && (
         <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
           <h2 className="text-sm font-bold text-stone-900 mb-1">Campaign Settings</h2>
-          <p className="text-xs text-stone-500 mb-4">Configure how this campaign will be managed in HSL.</p>
+          <p className="text-xs text-stone-500 mb-4">Configure how this campaign will be managed in AI Buddy.</p>
 
           <div className="space-y-4">
             <div>

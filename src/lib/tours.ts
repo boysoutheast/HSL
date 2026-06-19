@@ -3,11 +3,11 @@ import type { TourDef } from './useTour'
 export const CAMPAIGN_TOUR: TourDef = {
   id: 'campaign', version: 1,
   steps: [
-    { element: '[data-tour="cm-import"]', popover: { title: 'Mulai dari sini', description: 'Import campaign Meta yang udah jalan biar bisa diatur otomatis di HSL.' } },
-    { element: '[data-tour="cm-auto"]',   popover: { title: 'Saklar Automation', description: 'Ini ngidupin/matiin automasi per campaign. Mati = HSL gak nyentuh sama sekali.' } },
+    { element: '[data-tour="cm-import"]', popover: { title: 'Mulai dari sini', description: 'Import campaign Meta yang udah jalan biar bisa diatur otomatis di AI Buddy.' } },
+    { element: '[data-tour="cm-auto"]',   popover: { title: 'Saklar Automation', description: 'Ini ngidupin/matiin automasi per campaign. Mati = AI Buddy gak nyentuh sama sekali.' } },
     { element: '[data-tour="cd-attach-rule"]', popover: { title: 'Pasang Rule', description: 'Tempel aturan: kapan budget naik, kapan ad dimatiin. Wajib minimal 1 rule aktif sebelum automation nyala.' } },
-    { element: '[data-tour="cd-scan-interval"]', popover: { title: 'Interval Cek', description: 'Atur tiap berapa menit HSL ngecek campaign ini. Default 5 menit.' } },
-    { element: '[data-tour="tu-enable"]', popover: { title: 'Auto Top-Up', description: 'Jaga jumlah ad aktif. Kalau turun di bawah batas, HSL nambah ad dari pool creative campaign ini.' } },
+    { element: '[data-tour="cd-scan-interval"]', popover: { title: 'Interval Cek', description: 'Atur tiap berapa menit AI Buddy ngecek campaign ini. Default 5 menit.' } },
+    { element: '[data-tour="tu-enable"]', popover: { title: 'Auto Top-Up', description: 'Jaga jumlah ad aktif. Kalau turun di bawah batas, AI Buddy nambah ad dari pool creative campaign ini.' } },
   ],
 }
 

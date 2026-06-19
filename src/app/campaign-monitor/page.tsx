@@ -228,7 +228,7 @@ export default function CampaignMonitorPage() {
         purpose="Monitor all Meta Ads campaign sessions. Toggle automation on/off, track spend, leads, and purchases per campaign."
         wiring={[
           { label: '→ Test Launches', desc: 'campaigns are launched from test launches' },
-          { label: '→ Import Campaign', desc: 'bring existing Meta campaigns under HSL management' },
+          { label: '→ Import Campaign', desc: 'bring existing Meta campaigns under AI Buddy management' },
           { label: '→ Automation Rules', desc: 'each campaign can have rules for automated actions' },
           { label: '→ Meta Structure', desc: 'campaign → adset → ad hierarchy visible per campaign' },
         ]}

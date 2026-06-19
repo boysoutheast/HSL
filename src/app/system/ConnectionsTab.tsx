@@ -416,12 +416,12 @@ export default function ConnectionsTab() {
             ['resolution', 'SD|HD', '—', 'Default: SD'],
             ['durationSeconds', '6|10', '—', 'Default: 10'],
           ], [
-            ['id', 'string', 'HSL job ID — simpan untuk polling'],
+            ['id', 'string', 'AI Buddy job ID — simpan untuk polling'],
             ['creditsCost', 'number', 'Credits terpotong'],
             ['balanceAfter', 'number', 'Sisa credits'],
           ]],
           ['GET', '/api/gen/video/:id', 'Poll status job spesifik.', [], [
-            ['id', 'string', 'HSL job ID'],
+            ['id', 'string', 'AI Buddy job ID'],
             ['clientRef', 'string|null', 'Referensi caller — sama persis dengan yang di-set saat submit'],
             ['status', 'string', 'queued → processing → completed | failed | stalled'],
             ['videoUrl', 'string|null', 'URL video (null sebelum completed)'],
