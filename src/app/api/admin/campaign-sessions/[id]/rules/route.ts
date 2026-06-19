@@ -118,18 +118,24 @@ export async function POST(
   }
 
   if (body.params && typeof body.params === 'object') {
-    // Override condition thresholds
-    if (conditionTree.conditions && Array.isArray(conditionTree.conditions)) {
-      conditionTree.conditions = conditionTree.conditions.map((cond: unknown) => {
-        const c = cond as Record<string, unknown>
-        const metric = c.metric as string
+    // Override condition thresholds — support both 'children' (rule-engine) and 'conditions' (legacy)
+    const conditionNodes = (conditionTree.children ?? conditionTree.conditions) as Array<Record<string, unknown>> | undefined
+    if (conditionNodes && Array.isArray(conditionNodes)) {
+      const updated = conditionNodes.map((node: Record<string, unknown>) => {
+        const metric = node.metric as string
         if (metric && body.params![metric] !== undefined) {
-          return { ...c, value: body.params![metric] }
+          return { ...node, value: body.params![metric] }
         }
-        return c
+        return node
       })
+      // Update the appropriate field
+      if (conditionTree.children) {
+        conditionTree.children = updated
+      } else {
+        conditionTree.conditions = updated
+      }
     }
-    // Override action params
+    // Override action params — support both rule-engine format (actionType, mode, amount) and legacy (params.percentage)
     if (actionSpec.params && typeof actionSpec.params === 'object') {
       const actionParams = actionSpec.params as Record<string, unknown>
       for (const [key, val] of Object.entries(body.params)) {
@@ -137,6 +143,13 @@ export async function POST(
           actionParams[key] = val
         }
       }
+    }
+    // Also handle rule-engine action format (actionType, mode, amount)
+    if (typeof actionSpec.amount === 'number' && body.params.percentage !== undefined) {
+      actionSpec.amount = body.params.percentage
+    }
+    if (typeof actionSpec.amount === 'number' && body.params.amount !== undefined) {
+      actionSpec.amount = body.params.amount
     }
   }
 

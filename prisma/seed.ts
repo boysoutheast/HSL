@@ -21,15 +21,16 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'roas', operator: '>', value: 2, type: 'number' },
-        { metric: 'spend', operator: '>', value: 50000, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'roas', operator: 'gt', value: 2 },
+        { metric: 'spend', operator: 'gt', value: 50000 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'update_budget',
-      params: { percentage: 20 },
+      actionType: 'UPDATE_BUDGET',
+      mode: 'increase_pct',
+      amount: 20,
     }),
   },
   {
@@ -38,15 +39,14 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'spend', operator: '>', value: 100000, type: 'number' },
-        { metric: 'purchases', operator: '==', value: 0, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'spend', operator: 'gt', value: 100000 },
+        { metric: 'purchases', operator: 'eq', value: 0 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'pause_adset',
-      params: {},
+      actionType: 'PAUSE',
     }),
   },
   {
@@ -55,15 +55,16 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'cpc', operator: '>', value: 5000, type: 'number' },
-        { metric: 'roas', operator: '<', value: 1, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'cpc', operator: 'gt', value: 5000 },
+        { metric: 'roas', operator: 'lt', value: 1 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'update_budget',
-      params: { percentage: -20 },
+      actionType: 'UPDATE_BUDGET',
+      mode: 'decrease_pct',
+      amount: 20,
     }),
   },
   {
@@ -72,15 +73,14 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'ctr', operator: '<', value: 1, type: 'number' },
-        { metric: 'impressions', operator: '>', value: 5000, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'ctr', operator: 'lt', value: 1 },
+        { metric: 'impressions', operator: 'gt', value: 5000 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'pause_adset',
-      params: {},
+      actionType: 'PAUSE',
     }),
   },
   {
@@ -89,14 +89,15 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'roas', operator: '>', value: 4, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'roas', operator: 'gt', value: 4 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'update_budget',
-      params: { percentage: 30 },
+      actionType: 'UPDATE_BUDGET',
+      mode: 'increase_pct',
+      amount: 30,
     }),
   },
   {
@@ -105,15 +106,14 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
-      operator: 'AND',
-      conditions: [
-        { metric: 'spend', operator: '>', value: 50000, type: 'number' },
-        { metric: 'impressions', operator: '<', value: 500, type: 'number' },
+      op: 'AND',
+      children: [
+        { metric: 'spend', operator: 'gt', value: 50000 },
+        { metric: 'impressions', operator: 'lt', value: 500 },
       ],
     }),
     actionSpecJson: JSON.stringify({
-      action: 'pause_adset',
-      params: {},
+      actionType: 'PAUSE',
     }),
   },
 ]
