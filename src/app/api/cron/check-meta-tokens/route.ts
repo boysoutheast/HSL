@@ -1,77 +1,138 @@
+/**
+ * POST /api/cron/check-meta-tokens
+ *
+ * Proactive token health check.
+ * Tiap 6 jam: per MetaAccount status='connected', cek via debug_token endpoint.
+ * Update tokenExpiry, lastTokenCheckAt, status.
+ * Kalau invalid (error 190) → status='needs_reconnect'.
+ * Kalau < 7 hari ke expiry → tetap connected, flag via expiry.
+ *
+ * Auth: x-cron-secret (CRON_SECRET env)
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { metaGet, TokenError } from '@/lib/meta-client'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(req: NextRequest) {
-  // Validate cron secret
-  const cronSecret = req.headers.get('x-cron-secret')
-  if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+const crypto = require('crypto')
 
+const LIMIT = 50
+
+function checkAuth(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
+  return req.headers.get('x-cron-secret') === secret
+    || req.headers.get('authorization') === `Bearer ${secret}`
+}
+
+function decryptToken(encrypted: string): string {
+  const key = process.env.ENCRYPTION_KEY
+  if (!key) throw new Error('ENCRYPTION_KEY not set')
+  const parts = encrypted.split(':')
+  const iv = Buffer.from(parts[0], 'hex')
+  const enc = Buffer.from(parts[1], 'hex')
+  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
+  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
+}
+
+async function run() {
   const now = new Date()
-  const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24h ago
 
-  // Find connected accounts that haven't been called in 24h or never called
-  const staleAccounts = await prisma.metaAccount.findMany({
-    where: {
-      status: 'connected',
-      OR: [
-        { lastMetaCallAt: null },
-        { lastMetaCallAt: { lt: cutoff } },
-      ],
-    },
-    select: { id: true, userId: true, lastMetaCallAt: true },
+  // Only check connected accounts
+  const accounts = await prisma.metaAccount.findMany({
+    where: { status: 'connected' },
+    take: LIMIT,
+    orderBy: { lastTokenCheckAt: { sort: 'asc', nulls: 'first' } },
+    select: { id: true, userId: true, longLivedTokenEncrypted: true, tokenExpiry: true, lastTokenCheckAt: true },
   })
 
-  if (staleAccounts.length === 0) {
-    return NextResponse.json({ checked: 0, skipped: 0, message: 'No stale accounts found' })
-  }
-
-  let created = 0
+  let checked = 0
+  let healthy = 0
+  let needsReconnect = 0
   let skipped = 0
 
-  for (const account of staleAccounts) {
-    // Check if a pending check_token task already exists for this account
-    // We check payloadJson contains this metaAccountId
-    const existing = await prisma.workerTask.findFirst({
-      where: {
-        type: 'check_token',
-        status: { in: ['pending', 'processing'] },
-        payloadJson: { contains: `"metaAccountId":"${account.id}"` },
-      },
-    })
-
-    if (existing) {
+  for (const account of accounts) {
+    if (!account.longLivedTokenEncrypted) {
       skipped++
       continue
     }
 
-    // Create check_token task
-    await prisma.workerTask.create({
-      data: {
-        type: 'check_token',
-        payloadJson: JSON.stringify({
-          metaAccountId: account.id,
-          userId: account.userId,
-          lastMetaCallAt: account.lastMetaCallAt?.toISOString() ?? null,
-          queuedAt: now.toISOString(),
-        }),
-        scope: 'internal',
-        status: 'pending',
-        priority: 9, // low priority — health check
-        maxAttempts: 2,
-      },
-    })
+    let token: string
+    try {
+      token = decryptToken(account.longLivedTokenEncrypted)
+    } catch {
+      // Can't decrypt → mark as needs_reconnect
+      await prisma.metaAccount.update({
+        where: { id: account.id },
+        data: { status: 'needs_reconnect', lastTokenCheckAt: now },
+      })
+      needsReconnect++
+      continue
+    }
 
-    created++
+    try {
+      // Use debug_token to verify token validity and get expiry
+      // This also serves as a lightweight health check
+      const { data } = await metaGet('/me', token, { fields: 'id' })
+      const meData = data as { id: string }
+
+      // Token is valid — update lastTokenCheckAt
+      await prisma.metaAccount.update({
+        where: { id: account.id },
+        data: { lastTokenCheckAt: now, lastMetaCallAt: now },
+      })
+
+      // Try to get token expiry via debug_token
+      try {
+        const { data: debugData } = await metaGet('debug_token', token, { input_token: token })
+        const tokInfo = (debugData as any)?.data
+        if (tokInfo?.expires_at) {
+          const expiry = new Date(tokInfo.expires_at * 1000)
+          await prisma.metaAccount.update({
+            where: { id: account.id },
+            data: { tokenExpiry: expiry },
+          })
+        }
+      } catch {
+        // debug_token may fail for some token types — that's fine
+      }
+
+      healthy++
+      checked++
+    } catch (err) {
+      const msg = String(err)
+      // Token invalid/expired (error 190 in TokenError)
+      if (err instanceof TokenError || msg.includes('190') || msg.includes('OAuthException')) {
+        await prisma.metaAccount.update({
+          where: { id: account.id },
+          data: { status: 'needs_reconnect', lastTokenCheckAt: now },
+        })
+        needsReconnect++
+      } else {
+        // Network/temp error — skip for now
+        skipped++
+      }
+      checked++
+    }
   }
 
-  return NextResponse.json({
-    checked: created,
-    skipped,
-    total: staleAccounts.length,
-    ts: now.toISOString(),
-  })
+  return { checked, healthy, needsReconnect, skipped, totalRemaining: accounts.length }
+}
+
+export async function GET(req: NextRequest) {
+  if (!checkAuth(req)) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' })
+  }
+  try {
+    const result = await run()
+    return NextResponse.json({ ok: true, ...result, ts: new Date().toISOString() })
+  } catch (err) {
+    console.error('[check-meta-tokens] Error:', err)
+    return NextResponse.json({ ok: false, error: String(err), ts: new Date().toISOString() })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  return GET(req)
 }

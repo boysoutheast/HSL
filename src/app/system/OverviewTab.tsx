@@ -63,7 +63,7 @@ export default function OverviewTab() {
       </div>
 
       {/* Alerts */}
-      {(data.alerts.pendingApprovals > 0 || data.alerts.zeroBalanceUsers > 0) && (
+      {(data.alerts.pendingApprovals > 0 || data.alerts.zeroBalanceUsers > 0 || (data.alerts as any).needsReconnect > 0 || (data.alerts as any).expiringSoon > 0) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
           <h3 className="text-sm font-bold text-amber-800">⚠️ Perlu tindakan</h3>
           {data.alerts.pendingApprovals > 0 && (
@@ -76,6 +76,20 @@ export default function OverviewTab() {
           {data.alerts.zeroBalanceUsers > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-sm text-amber-700">{data.alerts.zeroBalanceUsers} user saldo 0</span>
+            </div>
+          )}
+          {(data.alerts as any).needsReconnect > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-red-700">{(data.alerts as any).needsReconnect} akun Meta perlu reconnect</span>
+              <button onClick={() => window.dispatchEvent(new CustomEvent('hsl_system_tab', { detail: 'connections' }))}
+                className="text-xs font-medium text-red-700 underline">Lihat</button>
+            </div>
+          )}
+          {(data.alerts as any).expiringSoon > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-amber-700">{(data.alerts as any).expiringSoon} token Meta akan expire</span>
+              <button onClick={() => window.dispatchEvent(new CustomEvent('hsl_system_tab', { detail: 'connections' }))}
+                className="text-xs font-medium text-amber-700 underline">Lihat</button>
             </div>
           )}
         </div>

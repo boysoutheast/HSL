@@ -124,6 +124,21 @@ export async function GET(req: NextRequest) {
   activityFeed.sort((a, b) => b.at.getTime() - a.at.getTime())
   const recentActivity = activityFeed.slice(0, 20)
 
+  // Token health
+  const needsReconnect = await prisma.metaAccount.count({
+    where: { status: 'needs_reconnect' },
+  })
+
+  const expiringSoon = await prisma.metaAccount.count({
+    where: {
+      status: 'connected',
+      tokenExpiry: {
+        not: null,
+        lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 hari
+      },
+    },
+  })
+
   return NextResponse.json({
     users: {
       total: totalUsers,
@@ -150,6 +165,8 @@ export async function GET(req: NextRequest) {
     alerts: {
       pendingApprovals,
       zeroBalanceUsers,
+      needsReconnect,
+      expiringSoon,
     },
     recentActivity,
   })
