@@ -80,6 +80,16 @@ export async function POST(
   })
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
+  // ★ Validasi mediaAssetId kalau dikirim
+  if (body.mediaAssetId) {
+    const asset = await prisma.mediaAsset.findUnique({
+      where: { id: body.mediaAssetId },
+      select: { userId: true, type: true, status: true, fileUrl: true, publicUrl: true },
+    })
+    if (!asset || asset.userId !== auth.id || asset.type !== 'IMAGE' || asset.status !== 'READY' || (!asset.fileUrl && !asset.publicUrl)) {
+      return NextResponse.json({ error: 'Media asset tidak valid (harus gambar milik Anda yang sudah siap)' }, { status: 422 })
+    }
+  }
   // Auto sortOrder = max+1
   const maxOrder = await prisma.campaignCreativePool.aggregate({
     where: { campaignSessionId: params.id },
