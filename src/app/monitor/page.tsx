@@ -122,7 +122,7 @@ export default function MonitorPage() {
       </div>
 
       <PageInfo
-        purpose="Pantau status semua akun IG secara real-time. Hermes mengambil akun dari sini untuk tahu kapan harus upload video baru."
+        purpose="Pantau status semua akun IG secara real-time. AI Buddy mengambil akun dari sini untuk tahu kapan harus upload video baru."
         inputs={[
           'Tidak ada input manual — status dihitung otomatis tiap jam oleh cron',
           'Manual override: tombol \'Set Ready\' atau \'Lock\' untuk force status',
@@ -130,7 +130,7 @@ export default function MonitorPage() {
         wiring={[
           { label: '→ Hermes Agent', desc: 'GET /api/hermes/ready-upload — Hermes polling endpoint ini' },
           { label: '← Cron Job', desc: '/api/cron/posting-monitor jalan tiap jam update status ini' },
-          { label: '← Content Log', desc: 'setelah Hermes posting, status berubah ke MONITORING' },
+          { label: '← Content Log', desc: 'setelah AI Buddy posting, status berubah ke MONITORING' },
         ]}
       />
 
@@ -180,7 +180,7 @@ export default function MonitorPage() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-stone-50">
               <tr>
-                {['Account IG', 'Status', 'Last Post', 'Views', 'Growth/hr', 'Reason', 'Assigned Hermes', 'Last Check', 'Actions'].map((h) => (
+                {['Account IG', 'Status', 'Last Post', 'Views', 'Growth/hr', 'Reason', 'Assigned Agent', 'Last Check', 'Actions'].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>

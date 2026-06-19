@@ -90,7 +90,7 @@ export default function AdminUsersPage() {
       </div>
 
       <PageInfo
-        purpose="Kelola user yang punya akses ke dashboard Hermes. User baru harus di-approve dulu sebelum bisa login."
+        purpose="Kelola user yang punya akses ke dashboard AI Buddy. User baru harus di-approve dulu sebelum bisa login."
         inputs={[
           'User terdaftar otomatis via halaman Register',
           'Status: pending → perlu approve atau reject',

@@ -299,7 +299,7 @@ export default function TestLaunchDetailPage() {
           <div className="flex items-start gap-3">
             <span className="text-2xl">✅</span>
             <div>
-              <h3 className="font-semibold text-green-900 mb-1">Approved — siap diproses Hermes Worker</h3>
+              <h3 className="font-semibold text-green-900 mb-1">Approved — siap diproses AI Buddy worker</h3>
               <p className="text-sm text-green-800">
                 Test Launch ini sudah diapprove pada {formatDate(testLaunch.approvalRequest.reviewedAt)}.
                 <br />

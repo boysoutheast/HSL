@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import NotificationBell from './NotificationBell'
+import { LogoMark } from '@/components/Logo'
 
 interface User { id: string; name: string | null; email: string; role: 'admin' | 'user' }
 
@@ -74,12 +75,12 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
       <aside className="hidden md:flex flex-col w-56 shrink-0 h-screen sticky top-0 bg-white border-r border-stone-200">
         <div className="flex items-center justify-between px-4 h-14 border-b border-stone-100 shrink-0">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center shadow-sm shrink-0">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <div className="w-7 h-7 text-violet-600 shrink-0">
+              <LogoMark className="w-7 h-7" />
             </div>
             <div className="leading-tight min-w-0">
-              <p className="text-sm font-bold text-stone-900 tracking-tight">Hermes</p>
-              <p className="text-[10px] text-stone-400 font-medium">Support Library</p>
+              <p className="text-sm font-bold text-stone-900 tracking-tight">AI Buddy</p>
+              <p className="text-[10px] text-stone-400 font-medium">Ads Automation</p>
             </div>
           </Link>
           <div className="flex items-center gap-1">

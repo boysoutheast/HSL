@@ -75,7 +75,7 @@ export default function DocsPage() {
             <span className="text-white text-sm font-bold">H</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-stone-900">HSL API — Dokumentasi</h1>
+            <h1 className="text-lg font-bold text-stone-900">AI Buddy API — Dokumentasi</h1>
             <p className="text-xs text-stone-500">{BASE}</p>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function DocsPage() {
         {/* ── CONNECT ── */}
         {tab === 'connect' && (
           <>
-            <Section title="Cara Konek Agent ke HSL">
+            <Section title="Cara Konek Agent ke AI Buddy">
               <p className="text-sm text-stone-600 mb-4">
                 Semua agent eksternal konek via <strong>API key</strong> yang di-generate dari dashboard.
                 Satu key = satu agent = akses ke resource yang di-assign untuk agent tersebut.
@@ -196,7 +196,7 @@ curl -H "x-api-key: hsk_xxx..." \\
             </Section>
 
             <Section title="Tipe Key & Auth">
-              <p className="text-sm text-stone-600 mb-3">HSL punya 3 jenis auth — pastikan pakai key yang sesuai endpoint-nya:</p>
+              <p className="text-sm text-stone-600 mb-3">AI Buddy punya 3 jenis auth — pastikan pakai key yang sesuai endpoint-nya:</p>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-stone-400 uppercase border-b border-stone-100">
@@ -491,7 +491,7 @@ curl -H "x-api-key: hsk_xxx..." \\
               <p className="text-sm text-stone-600 mb-3">
                 Endpoint publik. Admin buat config di dashboard (pixel ID + access token, disimpan
                 terenkripsi) → dapat <code className="text-xs bg-stone-100 px-1 rounded">configId</code>.
-                Landing page tinggal POST event ke sini, HSL forward ke Meta CAPI (v25.0).
+                Landing page tinggal POST event ke sini, AI Buddy forward ke Meta CAPI (v25.0).
                 Rate limit 120 req/menit.
               </p>
               <Endpoint method="POST" path="/api/capi/events" desc="Body: { configId, events: [...] } — max 100 event/request" />
@@ -561,7 +561,7 @@ curl -H "x-api-key: hsk_xxx..." \\
           <>
             <Section title="Import Meta Campaign">
               <p className="text-sm text-stone-600 mb-3">
-                Bring an existing Meta Ads campaign under HSL management. Imported campaigns start with automation OFF — attach rules after import.
+                Bring an existing Meta Ads campaign under AI Buddy management. Imported campaigns start with automation OFF — attach rules after import.
                 Sync runs automatically via cron (every 5 min).
               </p>
               <Endpoint method="GET" path="/api/admin/meta-campaigns?metaAdAccountId=&lt;id&gt;" desc="List Meta campaigns that are not yet imported" />

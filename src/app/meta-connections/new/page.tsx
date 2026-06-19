@@ -121,7 +121,7 @@ export default function NewMetaConnectionPage() {
       </div>
 
       <PageInfo
-        purpose="Hubungkan akun Meta (Facebook Business + Ads) ke Hermes agar bisa launch campaign dan sinkronisasi aset."
+        purpose="Hubungkan akun Meta (Facebook Business + Ads) ke AI Buddy agar bisa launch campaign dan sinkronisasi aset."
         inputs={[
           'App ID — dari Meta Developer Console',
           'App Secret — dari Meta Developer Console',

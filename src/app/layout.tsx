@@ -5,8 +5,8 @@ import LayoutShell from '@/components/LayoutShell'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
-  title: 'Hermes Support Library',
-  description: 'Internal admin dashboard for managing Instagram accounts and Hermes AI agents',
+  title: 'AI Buddy',
+  description: 'Dashboard otomasi Meta Ads & generate konten — AI Buddy',
 }
 
 export default function RootLayout({

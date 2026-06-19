@@ -258,7 +258,7 @@ export default function AccountDetailPage() {
             <p className="text-stone-700 font-medium mt-0.5">{formatDate(account.lastPostAt)}</p>
           </div>
           <div>
-            <p className="text-xs text-stone-400 font-medium uppercase tracking-wide">Hermes Agents</p>
+            <p className="text-xs text-stone-400 font-medium uppercase tracking-wide">AI Buddy Agents</p>
             <p className="text-stone-700 font-medium mt-0.5">{account._count?.assignments ?? 0} assigned</p>
           </div>
           <div>
@@ -308,7 +308,7 @@ export default function AccountDetailPage() {
                     <p className="text-stone-800 font-semibold">{account.postingMonitor.growthPerHour.toFixed(1)}%</p>
                   </div>
                   <div>
-                    <p className="text-xs text-stone-400 uppercase tracking-wide font-medium mb-1">Hermes</p>
+                    <p className="text-xs text-stone-400 uppercase tracking-wide font-medium mb-1">AI Buddy</p>
                     <p className="text-stone-800">{account.postingMonitor.hermesAgent?.name ?? '—'}</p>
                   </div>
                   <div>

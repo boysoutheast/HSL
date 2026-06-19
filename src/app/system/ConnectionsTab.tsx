@@ -190,7 +190,7 @@ export default function ConnectionsTab() {
       {/* Hermes Agent Keys */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
         <div>
-          <h3 className="text-base font-semibold text-stone-800">🤖 Hermes Agent Keys</h3>
+          <h3 className="text-base font-semibold text-stone-800">🤖 AI Buddy Agent Keys</h3>
           <p className="text-sm text-stone-500 mt-0.5">Bearer token untuk Hermes AI agents akses <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> endpoints.</p>
         </div>
 
@@ -416,12 +416,12 @@ export default function ConnectionsTab() {
             ['resolution', 'SD|HD', '—', 'Default: SD'],
             ['durationSeconds', '6|10', '—', 'Default: 10'],
           ], [
-            ['id', 'string', 'HSL job ID — simpan untuk polling'],
+            ['id', 'string', 'AI Buddy job ID — simpan untuk polling'],
             ['creditsCost', 'number', 'Credits terpotong'],
             ['balanceAfter', 'number', 'Sisa credits'],
           ]],
           ['GET', '/api/gen/video/:id', 'Poll status job spesifik.', [], [
-            ['id', 'string', 'HSL job ID'],
+            ['id', 'string', 'AI Buddy job ID'],
             ['clientRef', 'string|null', 'Referensi caller — sama persis dengan yang di-set saat submit'],
             ['status', 'string', 'queued → processing → completed | failed | stalled'],
             ['videoUrl', 'string|null', 'URL video (null sebelum completed)'],

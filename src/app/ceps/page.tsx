@@ -107,7 +107,7 @@ function CepsPageInner() {
           <p className="text-sm text-stone-500 mt-0.5">{ceps.length} total CEPs</p>
         </div>
         <button
-          title="CEP baru dibuat oleh Hermes Agent — tidak dibuat manual via UI"
+          title="CEP baru dibuat oleh AI Buddy Agent — tidak dibuat manual via UI"
           disabled
           className="cursor-not-allowed rounded-lg border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-medium text-stone-400"
         >
@@ -116,7 +116,7 @@ function CepsPageInner() {
       </div>
 
       <PageInfo
-        purpose="Customer Entry Point — kalimat pembuka konten yang menyentuh pain point audiens. CEP dari Hermes masuk sebagai Pending dan butuh approval admin dulu."
+        purpose="Customer Entry Point — kalimat pembuka konten yang menyentuh pain point audiens. CEP dari AI Buddy masuk sebagai Pending dan butuh approval admin dulu."
         inputs={[
           'CEP text: kalimat pembuka (misal: Kulit kaki penderita diabetes makin kering saat malam.)',
           'Pain point: masalah spesifik yang disentuh',
@@ -124,9 +124,9 @@ function CepsPageInner() {
           'Relasi ke Topic atau Product',
         ]}
         wiring={[
-          { label: '← Hermes Agent', desc: 'Hermes submit CEP baru via POST /api/hermes/cep-feedback (status: pending_review)' },
-          { label: '→ Hermes Agent', desc: 'hanya CEP status \'active\' yang dikirim ke Hermes' },
-          { label: '→ Content Log', desc: 'cep_id dicatat di setiap konten yang dibuat Hermes' },
+          { label: '← AI Buddy Agent', desc: 'AI Buddy submit CEP baru via POST /api/hermes/cep-feedback (status: pending_review)' },
+          { label: '→ AI Buddy Agent', desc: "hanya CEP status 'active' yang dikirim ke AI Buddy" },
+          { label: '→ Content Log', desc: 'cep_id dicatat di setiap konten yang dibuat AI Buddy' },
         ]}
       />
 

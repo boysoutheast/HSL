@@ -192,8 +192,8 @@ function InfoTab({ product, productId, onSaved }: { product: Product; productId:
       </div>
       <div>
         <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
-        <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} className={textareaCls} placeholder="Deskripsi produk — ini yang dibaca Hermes untuk generate konten" />
-        <p className="text-xs text-stone-400 mt-1">Tulis selengkap mungkin. Hermes membaca ini sebagai referensi utama produk.</p>
+        <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} className={textareaCls} placeholder="Deskripsi produk — ini yang dibaca AI Buddy untuk generate konten" />
+        <p className="text-xs text-stone-400 mt-1">Tulis selengkap mungkin. AI Buddy membaca ini sebagai referensi utama produk.</p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -337,7 +337,7 @@ function PhotosTab({ productId }: { productId: string }) {
   return (
     <div>
       <PageInfo
-        purpose="Foto referensi produk ini. Hermes pakai URL foto ini untuk generate konten."
+        purpose="Foto referensi produk ini. AI Buddy pakai URL foto ini untuk generate konten."
         inputs={['File (JPG/PNG/WebP)', 'Label: deskripsi foto', 'Category']}
         wiring={[
           { label: '→ Railway Volume', desc: '/data/photos' },
@@ -548,7 +548,7 @@ function CepsTab({ productId }: { productId: string }) {
   return (
     <div>
       <PageInfo
-        purpose="Customer Entry Points untuk produk ini. Hermes bisa langsung tulis CEP baru yang otomatis aktif."
+        purpose="Customer Entry Points untuk produk ini. AI Buddy bisa langsung tulis CEP baru yang otomatis aktif."
         inputs={['CEP text: kalimat pembuka yang menyentuh pain point']}
         wiring={[
           { label: '→ Hermes /api/hermes/ready-upload', desc: 'CEP dipilih saat Hermes generate konten' },
@@ -575,7 +575,7 @@ function CepsTab({ productId }: { productId: string }) {
         <div className="flex items-center justify-center h-32 text-stone-400 text-sm">Loading CEPs...</div>
       ) : ceps.length === 0 ? (
         <div className="flex items-center justify-center h-32 text-stone-400 text-sm bg-white rounded-xl border border-stone-200">
-          No CEPs yet. Add one manually or let Hermes write one.
+          No CEPs yet. Add one manually or let AI Buddy write one.
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -804,10 +804,10 @@ function LandingPagesTab({ productId }: { productId: string }) {
   return (
     <div>
       <PageInfo
-        purpose="Landing Page variants untuk produk ini. Hermes menggunakan LP default saat generate konten. Tambah beberapa variant untuk A/B testing."
+        purpose="Landing Page variants untuk produk ini. AI Buddy menggunakan LP default saat generate konten. Tambah beberapa variant untuk A/B testing."
         inputs={['URL LP', 'Variant label (A/B/Control)', 'Type (Shopee/Custom/WhatsApp)']}
         wiring={[
-          { label: '→ Hermes /library', desc: 'LP list dikirim ke worker saat ambil library' },
+          { label: '→ AI Buddy /library', desc: 'LP list dikirim ke worker saat ambil library' },
           { label: '→ Content brief', desc: 'LP default dipakai saat worker generate caption & CTA' },
         ]}
       />

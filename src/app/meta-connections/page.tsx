@@ -139,7 +139,7 @@ export default function MetaConnectionsPage() {
       </div>
 
       <PageInfo
-        purpose="Kelola koneksi akun Meta (Business + Ads) yang terhubung ke sistem Hermes."
+        purpose="Kelola koneksi akun Meta (Business + Ads) yang terhubung ke sistem AI Buddy."
         wiring={[
           { label: '→ Businesses', desc: 'Business Manager yang terhubung' },
           { label: '→ Ad Accounts', desc: 'Akun Meta Ads yang bisa dipakai' },

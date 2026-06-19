@@ -1,4 +1,5 @@
-'use client'
+"use client"
+import { LogoMark } from '@/components/Logo'
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -53,9 +54,9 @@ function LoginForm() {
         {/* Logo / title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-violet-600 rounded-2xl mb-4">
-            <span className="text-2xl">⚡</span>
+            <LogoMark className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Hermes Support</h1>
+          <h1 className="text-2xl font-bold text-white">AI Buddy</h1>
           <p className="text-stone-400 text-sm mt-1">Admin Dashboard</p>
         </div>
 
@@ -143,7 +144,7 @@ function LoginForm() {
         )}
 
         <p className="text-center text-stone-500 text-xs mt-4">
-          Hermes Infrastructure · Internal Tool
+          AI Buddy Infrastructure · Internal Tool
         </p>
       </div>
     </div>
