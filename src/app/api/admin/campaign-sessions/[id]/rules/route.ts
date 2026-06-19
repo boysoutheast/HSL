@@ -54,7 +54,9 @@ export async function GET(
 /**
  * POST /api/admin/campaign-sessions/[id]/rules
  * Attach a RuleTemplate to this session — instantiates as ACTIVE AutomationRule.
- * Body: { templateId, overrides?: { cooldownMinutes?, evaluationWindowMinutes?, priority? } }
+ * Body: { templateId, params?: Record<string, number>, overrides?: { cooldownMinutes?, evaluationWindowMinutes?, priority? } }
+ *   params: key-value pairs to override condition thresholds and action amounts.
+ *     e.g. { roas: 3, percentage: 25 } replaces ROAS threshold and budget percentage.
  */
 export async function POST(
   req: NextRequest,
@@ -65,6 +67,7 @@ export async function POST(
 
   let body: {
     templateId: string
+    params?: Record<string, number>
     overrides?: {
       cooldownMinutes?: number
       evaluationWindowMinutes?: number
@@ -102,6 +105,54 @@ export async function POST(
     return NextResponse.json({ error: 'Rule template belongs to another user' }, { status: 403 })
   }
 
+  // ── Inject params override into conditionTreeJson ──
+  // Walks condition conditions; if a condition's metric matches a key in params, replaces its value.
+  // Also checks action params (percentage, fixedAmount).
+  let conditionTree: Record<string, unknown>
+  let actionSpec: Record<string, unknown>
+  try {
+    conditionTree = JSON.parse(template.conditionTreeJson)
+    actionSpec = JSON.parse(template.actionSpecJson)
+  } catch {
+    return NextResponse.json({ error: 'Template has invalid JSON' }, { status: 500 })
+  }
+
+  if (body.params && typeof body.params === 'object') {
+    // Override condition thresholds — support both 'children' (rule-engine) and 'conditions' (legacy)
+    const conditionNodes = (conditionTree.children ?? conditionTree.conditions) as Array<Record<string, unknown>> | undefined
+    if (conditionNodes && Array.isArray(conditionNodes)) {
+      const updated = conditionNodes.map((node: Record<string, unknown>) => {
+        const metric = node.metric as string
+        if (metric && body.params![metric] !== undefined) {
+          return { ...node, value: body.params![metric] }
+        }
+        return node
+      })
+      // Update the appropriate field
+      if (conditionTree.children) {
+        conditionTree.children = updated
+      } else {
+        conditionTree.conditions = updated
+      }
+    }
+    // Override action params — support both rule-engine format (actionType, mode, amount) and legacy (params.percentage)
+    if (actionSpec.params && typeof actionSpec.params === 'object') {
+      const actionParams = actionSpec.params as Record<string, unknown>
+      for (const [key, val] of Object.entries(body.params)) {
+        if (key in actionParams) {
+          actionParams[key] = val
+        }
+      }
+    }
+    // Also handle rule-engine action format (actionType, mode, amount)
+    if (typeof actionSpec.amount === 'number' && body.params.percentage !== undefined) {
+      actionSpec.amount = body.params.percentage
+    }
+    if (typeof actionSpec.amount === 'number' && body.params.amount !== undefined) {
+      actionSpec.amount = body.params.amount
+    }
+  }
+
   const cooldown = body.overrides?.cooldownMinutes ?? 60
   const evalWindow = body.overrides?.evaluationWindowMinutes ?? null
   const priority = body.overrides?.priority ?? 5
@@ -115,8 +166,8 @@ export async function POST(
       description: template.description,
       scope: template.scope,
       ruleCategory: template.ruleCategory,
-      conditionTreeJson: template.conditionTreeJson,
-      actionSpecJson: template.actionSpecJson,
+      conditionTreeJson: JSON.stringify(conditionTree),
+      actionSpecJson: JSON.stringify(actionSpec),
       sourceTemplateId: body.templateId,
       cooldownMinutes: cooldown,
       evaluationWindowMinutes: evalWindow,

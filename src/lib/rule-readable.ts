@@ -24,16 +24,24 @@ interface Condition {
   operator: string
   value: number | string
   type?: string
+  // Nested tree — some formats use 'conditions', others use 'children'
 }
 
 interface ConditionTree {
   operator?: string
+  op?: string
+  type?: string
   conditions?: Condition[] | ConditionTree[]
+  children?: Condition[] | ConditionTree[]
 }
 
 interface ActionSpec {
-  action: string
+  action?: string
+  actionType?: string
+  mode?: string
+  amount?: number
   params?: Record<string, unknown>
+  [key: string]: unknown
 }
 
 const METRIC_LABELS: Record<string, string> = {
@@ -105,20 +113,26 @@ function parseConditionTree(tree: ConditionTree | string): string {
     parsed = tree
   }
 
-  if (!parsed.conditions || parsed.conditions.length === 0) {
+  // Support multiple formats:
+  //   rule-engine: { op: 'AND', children: [...] }
+  //   builder:     { type: 'AND', conditions: [...] }
+  //   legacy:      { operator: 'AND', conditions: [...] }
+  const children = parsed.children ?? parsed.conditions
+  const op = parsed.op ?? parsed.type ?? parsed.operator ?? 'AND'
+
+  if (!children || children.length === 0) {
     return 'No conditions'
   }
 
-  const parts = parsed.conditions.map((c) => {
+  const parts = children.map((c) => {
     // Check if this is a nested condition tree
-    if ('conditions' in c && (c as ConditionTree).operator) {
+    if ('children' in c || ('conditions' in c && (c as ConditionTree).op) || ('type' in c && (c as ConditionTree).type)) {
       return parseConditionTree(c as ConditionTree)
     }
     return formatCondition(c as Condition)
   })
 
-  const operator = parsed.operator ?? 'AND'
-  return parts.join(` ${operator} `)
+  return parts.join(` ${op} `)
 }
 
 function parseActionSpec(spec: ActionSpec | string): string {
@@ -133,30 +147,47 @@ function parseActionSpec(spec: ActionSpec | string): string {
     parsed = spec
   }
 
-  const actionType = parsed.action ?? ''
+  const actionType = parsed.actionType ?? parsed.action ?? ''
+  // Support both formats:
+  //   rule-engine: { actionType, mode, amount }
+  //   legacy:      { action, params: { percentage, fixedAmount } }
   const params: Record<string, unknown> = parsed.params ?? {}
+
+  const mode = parsed.mode ?? ''
+  const amount = parsed.amount
 
   switch (actionType) {
     case 'update_budget':
-    case 'scale_budget': {
+    case 'scale_budget':
+    case 'UPDATE_BUDGET': {
+      // Legacy format: params.percentage
       const pct = params.percentage as number | undefined
-      const amount = params.fixedAmount as number | undefined
+      const amount_ = params.fixedAmount as number | undefined
+      // Rule-engine format: mode + amount
+      const engPct = mode === 'increase_pct' || mode === 'decrease_pct' ? amount : undefined
+      if (engPct !== undefined) {
+        return `Budget ${mode === 'increase_pct' ? '+' : '-'}${engPct}%`
+      }
       if (pct !== undefined) {
         return `Budget ${pct > 0 ? '+' : ''}${pct}%`
       }
-      if (amount !== undefined) {
-        return `Budget → Rp ${Number(amount).toLocaleString('id-ID')}`
+      if (amount_ !== undefined) {
+        return `Budget → Rp ${Number(amount_).toLocaleString('id-ID')}`
       }
       return 'Update Budget'
     }
     case 'pause_adset':
-      return 'Pause Ad Set'
+    case 'PAUSE':
+      return actionType === 'PAUSE' ? 'Pause' : 'Pause Ad Set'
     case 'pause_campaign':
+    case 'PAUSE_CAMPAIGN':
       return 'Pause Campaign'
     case 'resume_adset':
+    case 'RESUME_ADSET':
       return 'Resume Ad Set'
     case 'notify':
-      return `Notify: ${params.kind ?? 'alert'}`
+    case 'NOTIFY':
+      return `Notify: ${params.kind ?? (params.message as string) ?? 'alert'}`
     case 'replace_ad':
       return 'Replace Ad Creative'
     default:

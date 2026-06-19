@@ -41,7 +41,7 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function TopUpTab({ sessionId }: { sessionId: string }) {
+export default function TopUpTab({ sessionId, compact }: { sessionId: string; compact?: boolean }) {
   const [minActiveAds, setMinActiveAds] = useState(0)
   const [topupEnabled, setTopupEnabled] = useState(false)
   const [topupTargetAdsetId, setTopupTargetAdsetId] = useState('')
@@ -306,7 +306,8 @@ export default function TopUpTab({ sessionId }: { sessionId: string }) {
         )}
       </div>
 
-      {/* Top-Up Activity Log */}
+      {/* Top-Up Activity Log — hidden in compact mode (shown in Activity tab) */}
+      {!compact && (
       <div className="bg-white rounded-xl border border-stone-200 p-5">
         <h2 className="text-sm font-bold text-stone-900 mb-4">Riwayat Top-Up</h2>
         {logs.length === 0 ? (
@@ -328,6 +329,7 @@ export default function TopUpTab({ sessionId }: { sessionId: string }) {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
