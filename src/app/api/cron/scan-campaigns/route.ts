@@ -1,7 +1,7 @@
 /**
  * POST /api/cron/scan-campaigns
  * Batched cron: scan RUNNING sessions, fetch insights, evaluate rules, apply actions.
- * Allowlist guard: HSL_WRITE_ALLOWED_AD_ACCOUNTS env.
+ * Write gate: ownership-driven via canWriteToAdAccount() — NOT env allowlist.
  * Schedule: every 5 minutes
  * Auth: x-cron-secret (CRON_SECRET env)
  */
@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInsights, updateBudget, setStatus, TokenError, RateLimitError } from '@/lib/meta-client'
 import { evaluateRule, resolveAction, parseConditionTree, MetricsMap } from '@/lib/rule-engine'
+import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,29 +22,10 @@ function checkAuth(req: NextRequest): boolean {
     || req.headers.get('authorization') === `Bearer ${secret}`
 }
 
-/** Decrypt token (same logic as sync-campaigns) */
-function decryptToken(encrypted: string): string {
-  const crypto = require('crypto')
-  const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY not set')
-  const parts = encrypted.split(':')
-  const iv = Buffer.from(parts[0], 'hex')
-  const enc = Buffer.from(parts[1], 'hex')
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
-  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
-}
-
-/** Check if ad account ID (act_xxx or numeric) is in the allowlist */
-function isAllowed(adAccountId: string): boolean {
-  const allowlist = (process.env.HSL_WRITE_ALLOWED_AD_ACCOUNTS ?? '').split(',').map(s => s.trim()).filter(Boolean)
-  if (allowlist.length === 0) return true // no allowlist = allow all
-  const numericId = adAccountId.replace(/^act_/, '')
-  return allowlist.some(a => a === numericId || a === adAccountId)
-}
-
 async function run() {
   const now = new Date()
 
+  // Strict opt-in: HANYA proses automationEnabled=true + nextMonitorAt due
   const sessions = await prisma.campaignSession.findMany({
     where: {
       status: 'RUNNING',
@@ -55,12 +37,16 @@ async function run() {
     },
     take: LIMIT,
     orderBy: { nextMonitorAt: { sort: 'asc', nulls: 'first' } },
-    include: {
+    select: {
+      id: true,
+      userId: true,
+      metaCampaignId: true,
+      dailyBudget: true,
+      budgetMode: true,
+      primaryAdsetMetaId: true,
+      monitorIntervalMinutes: true,
       metaAdAccount: {
-        select: {
-          adAccountId: true,
-          metaAccount: { select: { longLivedTokenEncrypted: true } },
-        },
+        select: { id: true, adAccountId: true },
       },
       automationRules: {
         where: { status: 'ACTIVE' },
@@ -72,26 +58,41 @@ async function run() {
   let scanned = 0
   let rulesFired = 0
   let actionsApplied = 0
+  let skipped: { sessionId: string; reason: string }[] = []
 
   for (const session of sessions) {
     scanned++
-    const encryptedToken = session.metaAdAccount?.metaAccount?.longLivedTokenEncrypted
-    const adAccountId = session.metaAdAccount?.adAccountId
     const metaCampaignId = session.metaCampaignId
+    const metaAdAccountId = session.metaAdAccount?.id ?? null
 
-    if (!encryptedToken || !adAccountId || !metaCampaignId) {
+    if (!metaCampaignId || !metaAdAccountId) {
       await prisma.campaignSession.update({
         where: { id: session.id },
-        data: { nextMonitorAt: new Date(now.getTime() + 60 * 60 * 1000) }, // retry in 1h
+        data: { nextMonitorAt: new Date(now.getTime() + 60 * 60 * 1000) },
       })
       continue
     }
 
-    try {
-      const token = decryptToken(encryptedToken)
+    // ★ Write gate: ownership + token check (fail-closed)
+    const writeCheck = await canWriteToAdAccount(session.userId, metaAdAccountId)
+    if (!writeCheck.ok) {
+      skipped.push({ sessionId: session.id, reason: writeCheck.reason! })
+      // Don't error-fatal — just skip and retry later
+      await prisma.campaignSession.update({
+        where: { id: session.id },
+        data: { nextMonitorAt: new Date(now.getTime() + 15 * 60 * 1000) },
+      })
+      continue
+    }
 
+    const token = writeCheck.token!
+
+    try {
       // Fetch fresh insights from Meta
       const insights = await getInsights(metaCampaignId, token, 'maximum')
+
+      // Mark account healthy
+      await markAccountHealthy(metaAdAccountId)
 
       // Save metric snapshot
       const metricsMap: MetricsMap = {
@@ -116,11 +117,7 @@ async function run() {
 
         // Parse condition
         let conditionTree
-        try {
-          conditionTree = parseConditionTree(rule.conditionTreeJson)
-        } catch {
-          continue
-        }
+        try { conditionTree = parseConditionTree(rule.conditionTreeJson) } catch { continue }
 
         // Evaluate
         const evalResult = evaluateRule(conditionTree, metricsMap)
@@ -140,20 +137,12 @@ async function run() {
         })
 
         if (!evalResult.matched) continue
-        if (!isAllowed(adAccountId)) {
-          console.warn(`[scan-campaigns] Skip action on ${adAccountId} — not in allowlist`)
-          continue
-        }
 
         rulesFired++
 
         // Parse action spec
         let actionSpec
-        try {
-          actionSpec = JSON.parse(rule.actionSpecJson ?? '{}')
-        } catch {
-          continue
-        }
+        try { actionSpec = JSON.parse(rule.actionSpecJson ?? '{}') } catch { continue }
 
         const currentBudget = Number(session.dailyBudget)
         const resolved = resolveAction(actionSpec, currentBudget)
@@ -194,10 +183,7 @@ async function run() {
           // Update rule fire count
           await prisma.automationRule.update({
             where: { id: rule.id },
-            data: {
-              fireCount: { increment: 1 },
-              lastFiredAt: now,
-            },
+            data: { fireCount: { increment: 1 }, lastFiredAt: now },
           })
 
           actionsApplied++
@@ -221,25 +207,31 @@ async function run() {
         }
       }
 
-      // Update nextMonitorAt
-      const sessionSession = await prisma.campaignSession.findUnique({
+      // Update nextMonitorAt dengan interval per-user
+      const sess = await prisma.campaignSession.findUnique({
         where: { id: session.id }, select: { monitorIntervalMinutes: true },
       })
-      const interval = sessionSession?.monitorIntervalMinutes ?? 15
+      const interval = sess?.monitorIntervalMinutes ?? 5 // default 5 menit
       await prisma.campaignSession.update({
         where: { id: session.id },
         data: { nextMonitorAt: new Date(now.getTime() + interval * 60 * 1000) },
       })
     } catch (err) {
-      console.error(`[scan-campaigns] Session ${session.id} error:`, err)
+      // Handle TokenError → mark account needs_reconnect
+      if (err instanceof TokenError) {
+        console.warn(`[scan-campaigns] TokenError for session ${session.id}:`, (err as Error).message)
+        await markAccountNeedsReconnect(metaAdAccountId)
+      } else {
+        console.error(`[scan-campaigns] Session ${session.id} error:`, err)
+      }
       await prisma.campaignSession.update({
         where: { id: session.id },
-        data: { nextMonitorAt: new Date(now.getTime() + 15 * 60 * 1000) }, // retry in 15m
+        data: { nextMonitorAt: new Date(now.getTime() + 15 * 60 * 1000) },
       })
     }
   }
 
-  return { scanned, rulesFired, actionsApplied }
+  return { scanned, rulesFired, actionsApplied, skipped: skipped.length }
 }
 
 export async function GET(req: NextRequest) {
