@@ -59,11 +59,15 @@ interface AutomationAction {
 interface AutomationRule {
   id: string
   name: string
+  description: string | null
   status: string
   ruleCategory: string
+  scope: string
+  conditionTreeJson: string
+  actionSpecJson: string
+  sourceTemplateId: string | null
   lastFiredAt: string | null
   fireCount: number
-  scope: string
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -107,7 +111,7 @@ const ENTITY_TYPE_COLORS: Record<string, string> = {
   CREATIVE: 'bg-orange-100 text-orange-800',
 }
 
-type Tab = 'overview' | 'meta' | 'actions' | 'rules' | 'audit'
+type Tab = 'overview' | 'meta' | 'actions' | 'rules' | 'audit' | 'topup'
 
 function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_COLORS[status] ?? 'bg-stone-100 text-stone-600'
@@ -250,6 +254,41 @@ export default function CampaignDetailPage() {
     } catch { /* silent */ }
   }
 
+  const handleDetachRule = async (ruleId: string) => {
+    const confirmed = window.confirm('Detach this rule? It will be archived (history preserved).')
+    if (!confirmed) return
+    try {
+      const res = await fetch(`/api/admin/campaign-sessions/${id}/rules?ruleId=${ruleId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (res.ok) {
+        setRules((prev) => prev.filter((r) => r.id !== ruleId))
+      }
+    } catch { /* silent */ }
+  }
+
+  // Simple rule condition↔action parser for UI (client-side, no lib import needed)
+  const ruleSummary = (rule: AutomationRule): string => {
+    try {
+      const cond = JSON.parse(rule.conditionTreeJson)
+      const act = JSON.parse(rule.actionSpecJson)
+      const parts: string[] = []
+      if (cond.conditions) {
+        for (const c of cond.conditions) {
+          parts.push(`${c.metric} ${c.operator} ${c.value}`)
+        }
+      }
+      const condStr = cond.operator ? parts.join(` ${cond.operator} `) : parts.join(', ')
+      let actStr = act.action ?? ''
+      if (act.params?.percentage) actStr += ` ${act.params.percentage > 0 ? '+' : ''}${act.params.percentage}%`
+      if (act.params?.fixedAmount) actStr += ` → Rp ${Number(act.params.fixedAmount).toLocaleString('id-ID')}`
+      return `IF ${condStr || '?'} → ${actStr || '?'}`
+    } catch {
+      return rule.name
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-stone-400 text-sm">Loading...</div>
@@ -285,7 +324,7 @@ export default function CampaignDetailPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-stone-300 mb-6">
-        {(['overview', 'meta', 'actions', 'rules', 'audit'] as Tab[]).map((tab) => (
+        {(['overview', 'meta', 'actions', 'rules', 'audit', 'topup'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -475,46 +514,62 @@ export default function CampaignDetailPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-stone-500">{rules.length} rule{rules.length !== 1 ? 's' : ''}</p>
             <Link href={`/campaign-monitor/${id}/rules/new`} className="btn-primary btn-sm">
-              + Add Rule
+              + Attach Template
             </Link>
           </div>
           {rules.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-stone-400 text-sm gap-2">
               <p>No automation rules yet.</p>
-              <Link href={`/campaign-monitor/${id}/rules/new`} className="btn-ghost btn-sm">+ Add your first rule</Link>
+              <Link href={`/campaign-monitor/${id}/rules/new`} className="btn-ghost btn-sm">+ Attach a rule template</Link>
             </div>
           ) : (
             <div className="space-y-2">
               {rules.map((rule) => (
-                <div key={rule.id} className="bg-white rounded border border-stone-200 px-4 py-3 flex items-center gap-4 hover:border-violet-300 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-stone-800">{rule.name}</p>
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                        rule.status === 'ACTIVE' ? 'bg-green-100 text-green-700'
-                        : rule.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-stone-100 text-stone-600'
-                      }`}>
-                        {rule.status}
-                      </span>
+                <div key={rule.id} className="bg-white rounded border border-stone-200 px-4 py-3 hover:border-violet-300 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-stone-800">{rule.name}</p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                          rule.status === 'ACTIVE' ? 'bg-green-100 text-green-700'
+                          : rule.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-stone-100 text-stone-600'
+                        }`}>
+                          {rule.status}
+                        </span>
+                      </div>
+                      {/* Human-readable condition→action */}
+                      <p className="text-xs font-mono text-stone-600 mt-1.5 bg-stone-50 rounded px-2 py-1">
+                        {ruleSummary(rule)}
+                      </p>
+                      <p className="text-xs text-stone-400 mt-1">
+                        {rule.ruleCategory} &bull; {rule.scope} &bull; Fired {rule.fireCount}x
+                        {rule.lastFiredAt && ` • Last ${fmtDate(rule.lastFiredAt)}`}
+                      </p>
                     </div>
-                    <p className="text-xs text-stone-500 mt-0.5">
-                      {rule.ruleCategory} &bull; {rule.scope} &bull; Fired {rule.fireCount}x
-                      {rule.lastFiredAt && ` • Last fired ${fmtDate(rule.lastFiredAt)}`}
-                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleRuleToggle(rule.id, rule.status)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+                          rule.status === 'ACTIVE' ? 'bg-violet-600' : 'bg-stone-300'
+                        }`}
+                        title={rule.status === 'ACTIVE' ? 'Pause' : 'Activate'}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                            rule.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <button
+                        onClick={() => handleDetachRule(rule.id)}
+                        className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        title="Detach rule"
+                      >
+                        Detach
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleRuleToggle(rule.id, rule.status)}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 ${
-                      rule.status === 'ACTIVE' ? 'bg-violet-600' : 'bg-stone-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
-                        rule.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
                 </div>
               ))}
             </div>
@@ -531,6 +586,9 @@ export default function CampaignDetailPage() {
           <p>Audit log coming soon</p>
         </div>
       )}
+
+      {/* ── TOP-UP ── */}
+      {activeTab === 'topup' && <TopUpTab sessionId={id} />}
     </div>
   )
 }
