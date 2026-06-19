@@ -11,11 +11,10 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { decode } from '@/lib/crypto'
 import { metaGet, TokenError } from '@/lib/meta-client'
 
 export const dynamic = 'force-dynamic'
-
-const crypto = require('crypto')
 
 const LIMIT = 50
 
@@ -27,13 +26,7 @@ function checkAuth(req: NextRequest): boolean {
 }
 
 function decryptToken(encrypted: string): string {
-  const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY not set')
-  const parts = encrypted.split(':')
-  const iv = Buffer.from(parts[0], 'hex')
-  const enc = Buffer.from(parts[1], 'hex')
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
-  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
+  return decode(encrypted)
 }
 
 async function run() {
