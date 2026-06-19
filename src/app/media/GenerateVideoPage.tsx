@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { HelpHint } from '@/components/ui/HelpHint'
+import { startTour, hasSeenTour } from '@/lib/useTour'
+import { VIDEO_TOUR } from '@/lib/tours'
 
 /* ── types ── */
 interface IgAccount { id: string; username: string; accountName: string | null }
@@ -123,6 +126,14 @@ export default function GenerateVideoPage() {
     if (hasActive) pollRef.current = setInterval(fetchJobs, 12000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [jobs, fetchJobs])
+
+  // Auto-start tour sekali
+  useEffect(() => {
+    if (!loadingJobs && jobs.length > 0 && !hasSeenTour(VIDEO_TOUR)) {
+      const t = setTimeout(() => startTour(VIDEO_TOUR), 800)
+      return () => clearTimeout(t)
+    }
+  }, [loadingJobs, jobs.length])
 
   /* ── load picker data when opened ── */
   useEffect(() => {
@@ -309,13 +320,21 @@ export default function GenerateVideoPage() {
     <div className="space-y-6">
       {/* ── Form ── */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-5">
-        <h3 className="text-base font-semibold text-stone-800">Generate Video</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-stone-800">Generate Video</h3>
+          <button
+            onClick={() => startTour(VIDEO_TOUR, { force: true })}
+            className="btn-ghost flex items-center gap-1.5 text-xs"
+            title="Mulai tur panduan"
+          >🧑‍🏫 Tour</button>
+        </div>
 
         {/* PROMPT */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Prompt</p>
           <textarea
             ref={textareaRef}
+            data-tour="vg-prompt"
             className="w-full border border-stone-300 rounded-xl px-3.5 py-2.5 text-sm text-stone-800 resize-none h-28 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent"
             placeholder="Deskripsikan video. Klik chip @image di bawah untuk menambah referensi."
             value={prompt}
@@ -325,7 +344,7 @@ export default function GenerateVideoPage() {
           {/* Asset chips */}
           {assets.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-stone-400 mr-1">Referensi:</span>
+              <span className="text-[11px] text-stone-400 mr-1">Referensi: <HelpHint k="vg.mention" /></span>
               {assets.map((a, i) => {
                 const mentioned = mentionedIndices.has(i)
                 return (
@@ -361,11 +380,12 @@ export default function GenerateVideoPage() {
           {/* Add Asset button */}
           <button
             type="button"
+            data-tour="vg-add-asset"
             onClick={() => setShowPicker(true)}
             disabled={assets.length >= 5}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 disabled:text-stone-300 disabled:cursor-not-allowed transition-colors"
           >
-            <span className="text-base leading-none">+</span> Add Asset
+            <span className="text-base leading-none">+</span> Add Asset <HelpHint k="vg.addAsset" />
           </button>
           {assets.length >= 5 && (
             <span className="ml-2 text-[11px] text-stone-400">Maks 5 asset</span>
@@ -373,8 +393,8 @@ export default function GenerateVideoPage() {
         </div>
 
         {/* ORIENTATION */}
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Orientation</p>
+        <div data-tour="vg-format">
+          <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Orientation <HelpHint k="vg.orientation" /></p>
           <div className="flex flex-wrap gap-2">
             {ORIENTATIONS.map(o => (
               <button
@@ -401,7 +421,7 @@ export default function GenerateVideoPage() {
 
         {/* DURATION */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Duration</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-2">Duration <HelpHint k="vg.duration" /></p>
           <div className="flex gap-2">
             {([6, 10] as const).map(d => (
               <button
@@ -422,11 +442,11 @@ export default function GenerateVideoPage() {
 
         {/* SALDO & BIAYA */}
         {creditBalance != null && (
-          <div className={`rounded-xl px-4 py-3 text-sm ${insufficientBalance ? 'bg-red-50 border border-red-200' : 'bg-stone-50'}`}>
+          <div data-tour="vg-cost" className={`rounded-xl px-4 py-3 text-sm ${insufficientBalance ? 'bg-red-50 border border-red-200' : 'bg-stone-50'}`}>
             <span className="text-stone-500">Saldo: </span>
             <span className="font-semibold text-stone-800">{creditBalance.toLocaleString('id-ID')} credits</span>
             <span className="mx-2 text-stone-300">·</span>
-            <span className="text-stone-500">Generate ini: </span>
+            <span className="text-stone-500">Generate ini: </span><HelpHint k="vg.cost" />
             <span className="font-semibold text-stone-800">{cost.toLocaleString('id-ID')} credits</span>
             {balanceAfter != null && (
               <>
@@ -451,11 +471,12 @@ export default function GenerateVideoPage() {
         <div className="flex justify-end">
           <button
             type="button"
+            data-tour="vg-generate"
             disabled={!canSubmit}
             onClick={handleSubmit}
             className="px-6 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submitting ? 'Mengirim...' : 'Generate Video →'}
+            {submitting ? 'Mengirim...' : <>Generate Video → <HelpHint k="vg.generate" /></>}
           </button>
         </div>
       </div>
@@ -756,7 +777,7 @@ export default function GenerateVideoPage() {
                 rel="noopener noreferrer"
                 className="text-sm px-4 py-2 rounded-xl bg-white text-stone-800 font-medium hover:bg-stone-100 transition"
               >
-                Download
+                Download <HelpHint k="vg.download" />
               </a>
               {fullscreenJob.creditsCost && (
                 <span className="text-xs text-white/40 self-center">{fullscreenJob.creditsCost.toLocaleString('id-ID')} credits</span>

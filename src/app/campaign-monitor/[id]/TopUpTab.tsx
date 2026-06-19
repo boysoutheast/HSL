@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { HelpHint } from '@/components/ui/HelpHint'
 
 interface PoolItem {
   id: string
@@ -180,8 +181,8 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
       {/* Floor Settings */}
       <div className="bg-white rounded-xl border border-stone-200 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-stone-900">Auto Top-Up</h2>
-          <label className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer bg-stone-300"
+          <h2 className="text-sm font-bold text-stone-900">Auto Top-Up <HelpHint k="tu.enable" /></h2>
+          <label data-tour="tu-enable" className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer bg-stone-300"
             style={{ backgroundColor: topupEnabled ? '#7c3aed' : '#d4d4d8' }}>
             <input type="checkbox" className="sr-only" checked={topupEnabled}
               onChange={() => setTopupEnabled(!topupEnabled)} />
@@ -191,13 +192,13 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-xs text-stone-600 font-medium mb-1">Minimal Ads Aktif</label>
+            <label className="block text-xs text-stone-600 font-medium mb-1">Minimal Ads Aktif <HelpHint k="tu.minAds" /></label>
             <input type="number" min={0} max={50} value={minActiveAds}
               onChange={(e) => setMinActiveAds(Number(e.target.value))}
               className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
           </div>
           <div>
-            <label className="block text-xs text-stone-600 font-medium mb-1">Target Adset ID (opsional)</label>
+            <label className="block text-xs text-stone-600 font-medium mb-1">Target Adset ID (opsional) <HelpHint k="tu.targetAdset" /></label>
             <input type="text" value={topupTargetAdsetId}
               onChange={(e) => setTopupTargetAdsetId(e.target.value)}
               placeholder="Kosong = adset pertama aktif"
@@ -207,11 +208,11 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
 
         <div className="flex items-center gap-3">
           <button onClick={handleSaveSettings} disabled={saving} className="btn-primary btn-sm">
-            {saving ? 'Saving...' : 'Save Settings'}
+            {saving ? 'Saving...' : 'Save Settings'} <HelpHint k="tu.save" />
           </button>
           {topupEnabled && minActiveAds > 0 && (
             <button onClick={handleRunTopup} disabled={saving} className="btn-ghost btn-sm">
-              Run Top-Up Now
+              Run Top-Up Now <HelpHint k="tu.runNow" />
             </button>
           )}
           <span className="text-xs text-stone-500 ml-auto">
@@ -230,7 +231,7 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
             </span>
           </h2>
           <button onClick={() => setShowAddForm(!showAddForm)} className="btn-primary btn-sm">
-            + Tambah Creative
+            + Tambah Creative <HelpHint k="tu.addCreative" />
           </button>
         </div>
 
@@ -267,7 +268,7 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
                 className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
             </div>
             <button onClick={handleAddCreative} disabled={saving || !newCreative.primaryText} className="btn-primary btn-sm">
-              {saving ? 'Adding...' : 'Add to Pool'}
+              {saving ? 'Adding...' : 'Add to Pool'} <HelpHint k="tu.addToPool" />
             </button>
           </div>
         )}

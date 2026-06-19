@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import 'driver.js/dist/driver.css'
 import LayoutShell from '@/components/LayoutShell'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
