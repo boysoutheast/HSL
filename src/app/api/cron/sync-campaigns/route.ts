@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCampaignStructure, TokenError } from '@/lib/meta-client'
+import { decode } from '@/lib/crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -203,15 +204,7 @@ async function run() {
 }
 
 function decryptToken(encrypted: string): string {
-  const crypto = require('crypto')
-  const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY not set')
-  // Format: iv:encrypted (hex)
-  const parts = encrypted.split(':')
-  const iv = Buffer.from(parts[0], 'hex')
-  const enc = Buffer.from(parts[1], 'hex')
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
-  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
+  return decode(encrypted)
 }
 
 export async function GET(req: NextRequest) {

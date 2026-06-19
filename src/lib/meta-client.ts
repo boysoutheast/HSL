@@ -126,7 +126,7 @@ export async function getCampaignStructure(
   campaignId: string,
   token: string,
 ): Promise<{ campaign: CampaignNode; adsets: CampaignNode[]; ads: CampaignNode[] }> {
-  const fields = `id,name,status,effective_status,daily_budget,lifetime_budget,budget_remaining,adsets{id,name,status,effective_status,daily_budget,lifetime_budget,targeting{targeted_interest_ids,targeted_relaxation},ads{id,name,status,effective_status,creative{id,asset_feed_spec,object_story_spec}}}`
+  const fields = `id,name,status,effective_status,daily_budget,lifetime_budget,budget_remaining,adsets{id,name,status,effective_status,daily_budget,lifetime_budget,targeting{targeted_relaxation},ads{id,name,status,effective_status,creative{id,asset_feed_spec,object_story_spec}}}`
   const { data } = await metaGet(`/${campaignId}`, token, { fields })
   const campaign = data as CampaignNode
   const adsets: CampaignNode[] = []
