@@ -1,7 +1,6 @@
 /**
  * write-guard.ts — Multi-tenant write permission gate.
  *
- * Ganti env allowlist (HSL_WRITE_ALLOWED_AD_ACCOUNTS) dengan ownership + token check.
  * Fail-closed: ragu kepemilikan → JANGAN write.
  */
 
