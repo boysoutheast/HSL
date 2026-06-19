@@ -281,6 +281,12 @@ export default function CampaignMonitorPage() {
                     {session.metaAdAccount.accountName ?? session.metaAdAccount.adAccountId}
                   </p>
                 )}
+                {/* Setup status badge */}
+                {(!session.automationEnabled || (session._count?.automationRules ?? 0) === 0) && (
+                  <p className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-1 inline-block font-medium">
+                    ⚠️ Setup belum selesai
+                  </p>
+                )}
               </td>
               <td className="px-4 py-3 text-stone-600 text-sm">
                 {session.product?.name ?? '—'}
