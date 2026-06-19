@@ -91,6 +91,11 @@ async function run() {
       // Fetch fresh insights from Meta
       const insights = await getInsights(metaCampaignId, token, 'maximum')
 
+      // ★ Observability: log jika insights kosong (e.g. campaign paused/no data)
+      if (insights.spend === 0 && insights.impressions === 0 && insights.purchases === 0) {
+        console.warn(`[scan-campaigns] no_insight_data session=${session.id} campaign=${metaCampaignId}`)
+      }
+
       // Mark account healthy
       await markAccountHealthy(metaAdAccountId)
 
