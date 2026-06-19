@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin' | 'workers' | 'cpas'
+type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin' | 'workers' | 'cpas' | 'campaigns'
 
 function Code({ children }: { children: string }) {
   return (
@@ -64,6 +64,7 @@ export default function DocsPage() {
     { key: 'content',  label: '🛍️ Content' },
     { key: 'workers' as TabKey, label: '🤖 Workers' },
     { key: 'cpas' as TabKey,    label: '🛍️ CPAS' },
+    { key: 'campaigns' as TabKey, label: '🎯 Campaigns' },
     { key: 'capi',     label: '📡 CAPI' },
     { key: 'admin',    label: '🛠 Admin' },
   ]
@@ -652,6 +653,40 @@ Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
               <Endpoint method="GET" path="/api/hermes/cpas/lessons" desc="List lessons yang sudah diarsip" />
               <Endpoint method="POST" path="/api/hermes/cpas/lessons" desc="Submit lesson. Body: { productKey, lessonText, sourceType?, sourceId? }" />
               <Endpoint method="GET" path="/api/hermes/cpas/pain-library" desc="Ambil pain entries aktif. Query: productKey?" />
+            </Section>
+          </>
+        )}
+
+        {/* ── CAMPAIGNS ── */}
+        {tab === 'campaigns' && (
+          <>
+            <Section title="Import Meta Campaign">
+              <p className="text-sm text-stone-600 mb-3">
+                Bring an existing Meta Ads campaign under HSL management. Imported campaigns start with automation OFF — attach rules after import.
+              </p>
+              <Endpoint method="GET" path="/api/admin/meta-campaigns?metaAdAccountId=&lt;id&gt;" desc="List Meta campaigns that are not yet imported" />
+              <Endpoint method="POST" path="/api/admin/campaign-sessions/import" desc="Import campaign as session. Body: { metaAdAccountId, metaCampaignId, name, monitorIntervalMinutes? }" />
+            </Section>
+
+            <Section title="Attach Automation Rules">
+              <p className="text-sm text-stone-600 mb-3">
+                Attach rule templates to sessions. Rules become ACTIVE immediately. Detach = ARCHIVED (history preserved).
+              </p>
+              <Endpoint method="GET" path="/api/admin/rule-templates" desc="List built-in + user rule templates" />
+              <Endpoint method="POST" path="/api/admin/campaign-sessions/[id]/rules" desc="Attach template to session. Body: { templateId, overrides?: { cooldownMinutes? } }" />
+              <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/rules" desc="List rules attached to session" />
+              <Endpoint method="DELETE" path="/api/admin/campaign-sessions/[id]/rules?ruleId=&lt;id&gt;" desc="Detach rule (ARCHIVED soft-delete)" />
+              <Endpoint method="PATCH" path="/api/admin/automation-rules/[id]" desc="Toggle rule status (ACTIVE/PAUSED/ARCHIVED)" />
+            </Section>
+
+            <Section title="Scan Interval & Automation Guard">
+              <p className="text-sm text-stone-600 mb-3">
+                Configure how often the system scans for rule evaluation. automationEnabled=true requires ≥1 ACTIVE rule (422 if none).
+              </p>
+              <Endpoint method="GET" path="/api/admin/campaign-sessions" desc="List sessions. Query: status?, phase?" />
+              <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]" desc="Detail session + meta entities + metric snapshot" />
+              <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]" desc="Update: automationEnabled? (422 guard), monitorIntervalMinutes? (5-1440), status?, phase?" />
+              <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/actions" desc="List automation actions (scan activity timeline)" />
             </Section>
           </>
         )}
