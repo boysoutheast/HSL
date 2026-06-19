@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://ai.boytenggara.com'
 
-type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin' | 'workers' | 'cpas' | 'campaigns'
+type TabKey = 'connect' | 'generate' | 'credits' | 'library' | 'content' | 'capi' | 'admin' | 'campaigns'
 
 function Code({ children }: { children: string }) {
   return (
@@ -62,9 +62,7 @@ export default function DocsPage() {
     { key: 'credits',  label: '💳 Credits' },
     { key: 'library',  label: '📚 Library' },
     { key: 'content',  label: '🛍️ Content' },
-    { key: 'workers' as TabKey, label: '🤖 Workers' },
-    { key: 'cpas' as TabKey,    label: '🛍️ CPAS' },
-    { key: 'campaigns' as TabKey, label: '🎯 Campaigns' },
+    { key: 'campaigns', label: '🎯 Campaigns' },
     { key: 'capi',     label: '📡 CAPI' },
     { key: 'admin',    label: '🛠 Admin' },
   ]
@@ -558,111 +556,13 @@ curl -H "x-api-key: hsk_xxx..." \\
           </>
         )}
 
-        {/* ── WORKERS ── */}
-        {tab === 'workers' && (
-          <>
-            <Section title="Worker Task Queue">
-              <p className="text-sm text-stone-600 mb-3">
-                Untuk <strong>worker agent</strong> yang mengerjakan task async (generate video, photo, caption, post).
-                Auth: <strong>Bearer worker key</strong> (berbeda dari content agent key — minta ke admin).
-              </p>
-              <p className="text-xs text-stone-500 mb-3">
-                Task types yang tersedia: <code className="bg-stone-100 px-1 rounded">GENERATE_VIDEO</code>, <code className="bg-stone-100 px-1 rounded">GENERATE_PHOTO</code>, <code className="bg-stone-100 px-1 rounded">CAPTION_ONLY</code>, <code className="bg-stone-100 px-1 rounded">POST_CONTENT</code>, <code className="bg-stone-100 px-1 rounded">REFRESH_CREATIVE</code>, <code className="bg-stone-100 px-1 rounded">CEP_GENERATION</code>
-              </p>
-              <Endpoint method="GET" path="/api/hermes/tasks" desc="Ambil task pending. Query: ?types=GENERATE_VIDEO,GENERATE_PHOTO (opsional, filter tipe). Response: { tasks: [{id, type, payload, ...}] }" />
-              <Endpoint method="POST" path="/api/hermes/tasks" desc="Claim task (tandai sebagai processing). Body: { taskId }. Response: { task }" />
-              <Endpoint method="POST" path="/api/hermes/tasks/[id]" desc="Update hasil task. Body: { action: 'complete' | 'fail', result?: {...}, error?: string, mediaAsset?: {...} }" />
-            </Section>
-
-            <Section title="Flow Worker Agent">
-              <Code>{`# 1. Ambil task pending
-curl -H "Authorization: Bearer hsl_worker_xxx" \
-  ${BASE}/api/hermes/tasks?types=GENERATE_VIDEO
-
-# Response
-{ "tasks": [{ "id": "task_xxx", "type": "GENERATE_VIDEO", "payload": {...} }] }
-
-# 2. Claim task (tandai processing)
-curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{ "taskId": "task_xxx" }' \
-  ${BASE}/api/hermes/tasks
-
-# 3. Kerjakan task... lalu report hasilnya
-curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{ "action": "complete", "result": { "videoUrl": "https://..." } }' \
-  ${BASE}/api/hermes/tasks/task_xxx
-
-# Atau kalau gagal:
-curl -X POST -H "Authorization: Bearer hsl_worker_xxx" \
-  -H "Content-Type: application/json" \
-  -d '{ "action": "fail", "error": "GeminiGen timeout" }' \
-  ${BASE}/api/hermes/tasks/task_xxx`}</Code>
-            </Section>
-          </>
-        )}
-
-        {/* ── CPAS ── */}
-        {tab === 'cpas' && (
-          <>
-            <Section title="CPAS Agent — Overview">
-              <p className="text-sm text-stone-600 mb-2">
-                Endpoint untuk agent yang mengelola CPAS (Shopee collaborative ads): cek slot, spawn adset baru, log hasil kill, tulis diary & lesson.
-                Auth: <strong>Bearer content agent key</strong> (sama dengan /api/hermes/library).
-              </p>
-              <p className="text-xs text-stone-500">
-                Semua response difilter per agent. Campaign harus mengandung kata "hermes" (case-insensitive) agar bisa di-spawn.
-              </p>
-            </Section>
-
-            <Section title="Spawn Flow">
-              <Code>{`# 1. Cek slot tersedia di campaign
-GET /api/hermes/cpas/slot-count?campaignSessionId=sess_xxx
-→ { cap, activeAdsets, inProcess, freeSlots, metaCampaignId }
-
-# 2. Buat spawn job (buat CEP + WorkerTask sekaligus)
-POST /api/hermes/cpas/spawn-job
-Body: {
-  userId, productKey, campaignSessionId,
-  cepData: { painText, exchangeValue, deliveryStyle, hookDirection, adsetNaming, cepText },
-  referencePhotoUrl?, productId?
-}
-→ { jobId, cepId, taskId, stage: "plan" }
-
-# 3. Poll status
-GET /api/hermes/cpas/spawn-job/[jobId]
-→ { id, status, stage, resultJson, createdAt, completedAt }
-
-# Stages: plan → image_submitted → images_ready → adset_written
-
-# 4. Update stage saat progress
-PATCH /api/hermes/cpas/spawn-job/[jobId]
-Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
-# Stage hanya bisa maju, tidak bisa mundur`}</Code>
-            </Section>
-            <Section title="Knowledge Endpoints">
-              <Endpoint method="GET" path="/api/hermes/cpas/slot-count" desc="Cek slot spawn tersedia. Query: campaignSessionId (wajib). Response: { cap, activeAdsets, inProcess, freeSlots }" />
-              <Endpoint method="POST" path="/api/hermes/cpas/spawn-job" desc="Buat spawn job baru (CEP + WorkerTask atomik). Lihat flow di atas." />
-              <Endpoint method="GET" path="/api/hermes/cpas/spawn-job/[id]" desc="Poll status + stage label spawn job" />
-              <Endpoint method="PATCH" path="/api/hermes/cpas/spawn-job/[id]" desc="Update stage / status. Stage hanya maju (plan → image_submitted → images_ready → adset_written)" />
-              <Endpoint method="GET" path="/api/hermes/cpas/graveyard" desc="List adset yang pernah di-kill. Query: productKey?, killTier?, since?, limit?" />
-              <Endpoint method="POST" path="/api/hermes/cpas/graveyard" desc="Log adset yang baru di-kill. Body: { metaAdsetId, adsetName, productKey, killTier, killReason, spendAtKill, catalogROASAtKill?, cplcAtKill? }" />
-              <Endpoint method="GET" path="/api/hermes/cpas/diary" desc="List diary entry. Query: productKey?, limit?" />
-              <Endpoint method="POST" path="/api/hermes/cpas/diary" desc="Tulis diary entry. Body: { period, productKey?, killedThisRun?, spawnedThisRun?, avgROAS7d?, summaryText? }" />
-              <Endpoint method="GET" path="/api/hermes/cpas/lessons" desc="List lessons yang sudah diarsip" />
-              <Endpoint method="POST" path="/api/hermes/cpas/lessons" desc="Submit lesson. Body: { productKey, lessonText, sourceType?, sourceId? }" />
-              <Endpoint method="GET" path="/api/hermes/cpas/pain-library" desc="Ambil pain entries aktif. Query: productKey?" />
-            </Section>
-          </>
-        )}
-
         {/* ── CAMPAIGNS ── */}
         {tab === 'campaigns' && (
           <>
             <Section title="Import Meta Campaign">
               <p className="text-sm text-stone-600 mb-3">
                 Bring an existing Meta Ads campaign under HSL management. Imported campaigns start with automation OFF — attach rules after import.
+                Sync runs automatically via cron (every 5 min).
               </p>
               <Endpoint method="GET" path="/api/admin/meta-campaigns?metaAdAccountId=&lt;id&gt;" desc="List Meta campaigns that are not yet imported" />
               <Endpoint method="POST" path="/api/admin/campaign-sessions/import" desc="Import campaign as session. Body: { metaAdAccountId, metaCampaignId, name, monitorIntervalMinutes? }" />
@@ -681,7 +581,8 @@ Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
 
             <Section title="Scan Interval & Automation Guard">
               <p className="text-sm text-stone-600 mb-3">
-                Configure how often the system scans for rule evaluation. automationEnabled=true requires ≥1 ACTIVE rule (422 if none).
+                Automation runs via cron (every 5 min). Configure how often the system evaluates rules per session.
+                automationEnabled=true requires ≥1 ACTIVE rule (422 if none).
               </p>
               <Endpoint method="GET" path="/api/admin/campaign-sessions" desc="List sessions. Query: status?, phase?" />
               <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]" desc="Detail session + meta entities + metric snapshot" />
@@ -691,7 +592,7 @@ Body: { status: "processing", stage: "image_submitted", resultJson?: {...} }
 
             <Section title="Campaign Top-Up & Creative Pool">
               <p className="text-sm text-stone-600 mb-3">
-                Set a minimum active ad floor per campaign. When ads are paused below the floor, HSL auto top-up new ads from a campaign-specific creative pool.
+                Set a minimum active ad floor per campaign. When ads drop below the floor, the system auto-creates new ads from the creative pool via cron (every 10 min).
               </p>
               <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]" desc="Set minActiveAds (0-50), topupEnabled, topupTargetAdsetId. Guard: 422 if topupEnabled without pool or minActiveAds=0" />
               <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/creative-pool" desc="List pool creatives + counts (available/used/failed/archived)" />

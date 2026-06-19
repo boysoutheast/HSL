@@ -79,20 +79,5 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // Create a WorkerTask for the sync — single source of dispatch
-  await prisma.workerTask.create({
-    data: {
-      type: 'sync_campaign_entities',
-      payloadJson: JSON.stringify({
-        campaignSessionId: session.id,
-        metaCampaignId: body.metaCampaignId,
-        metaAdAccountId: body.metaAdAccountId,
-      }),
-      scope: 'internal',
-      status: 'pending',
-      priority: 1,
-    },
-  })
-
   return NextResponse.json({ session }, { status: 201 })
 }

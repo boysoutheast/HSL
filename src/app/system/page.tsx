@@ -2,21 +2,27 @@
 
 import { useEffect, useState } from 'react'
 import ClientTabs from '@/components/ClientTabs'
-import WorkersPage from '../workers/page'
-import DeadLettersPage from '../admin/dead-letters/page'
-import ObservabilityPage from '../observability/page'
-import AdminUsersPage from '../admin-users/page'
+import OverviewTab from './OverviewTab'
+import UsersTab from './UsersTab'
 import ConnectionsTab from './ConnectionsTab'
 import DocsPage from '../docs/page'
-import CpasTab from './CpasTab'
-import MetaConnectionsPage from '../meta-connections/page'
-import HashCheckerTab from './HashCheckerTab'
 
 export default function SystemPage() {
   const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [initialTab, setInitialTab] = useState<string>('connections')
+  const [initialTab, setInitialTab] = useState<string>('overview')
   const [viewAsUser, setViewAsUser] = useState(false)
+  const [sysTab, setSysTab] = useState<string>('overview')
+
+  useEffect(() => {
+    // Listen for tab switch from Overview alert
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail as string
+      if (tab) setSysTab(tab)
+    }
+    window.addEventListener('hsl_system_tab', handler)
+    return () => window.removeEventListener('hsl_system_tab', handler)
+  }, [])
 
   useEffect(() => {
     setViewAsUser(sessionStorage.getItem('hsl_viewAsUser') === '1')
@@ -31,8 +37,8 @@ export default function SystemPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const userRole = d?.user?.role ?? null
-        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas', 'meta', 'hash-checker']
-        const userTabs = ['connections', 'workers', 'docs']
+        const adminTabs = ['overview', 'users', 'connections']
+        const userTabs = ['connections']
         const validTabs = userRole === 'admin' ? adminTabs : userTabs
         if (urlTab && validTabs.includes(urlTab)) setInitialTab(urlTab)
         setRole(userRole)
@@ -42,49 +48,32 @@ export default function SystemPage() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
-        Loading...
-      </div>
-    )
+    return <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Loading...</div>
   }
 
   const isAdmin = role === 'admin' && !viewAsUser
 
   const userTabs = [
     { id: 'connections', label: 'Connections' },
-    { id: 'workers', label: 'Workers' },
-    { id: 'docs', label: 'Docs' },
   ]
   const adminTabs = [
-    { id: 'connections', label: 'Connections' },
-    { id: 'workers', label: 'Workers' },
+    { id: 'overview', label: 'Overview' },
     { id: 'users', label: 'Users' },
-    { id: 'dead-letters', label: 'Dead Letters' },
-    { id: 'observability', label: 'Observability' },
-    { id: 'docs', label: 'Docs' },
-    { id: 'cpas', label: 'CPAS' },
-    { id: 'meta', label: 'Meta' },
-    { id: 'hash-checker', label: 'Hash Checker' },
+    { id: 'connections', label: 'Connections' },
   ]
 
   const tabs = isAdmin ? adminTabs : userTabs
+  const activeTab = sysTab !== 'overview' && tabs.some(t => t.id === sysTab) ? sysTab : initialTab
 
   return (
     <ClientTabs
       tabs={tabs}
-      initial={initialTab}
+      initial={activeTab}
       basePath="/system"
       panels={{
+        overview: isAdmin ? <OverviewTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
+        users: isAdmin ? <UsersTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         connections: <ConnectionsTab />,
-        workers: <WorkersPage />,
-        users: isAdmin ? <AdminUsersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        'dead-letters': isAdmin ? <DeadLettersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        observability: isAdmin ? <ObservabilityPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        docs: <DocsPage />,
-        cpas: isAdmin ? <CpasTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        meta: isAdmin ? <MetaConnectionsPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        'hash-checker': isAdmin ? <HashCheckerTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
       }}
     />
   )
