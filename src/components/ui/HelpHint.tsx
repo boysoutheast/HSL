@@ -27,14 +27,18 @@ export function HelpHint({ k, side = 'bottom', className = '' }: HelpHintProps) 
 
   return (
     <span ref={ref} className={`relative inline-flex ${className}`}>
-      <button
-        type="button"
+      {/* Trigger = <span role=button> (BUKAN <button>) supaya aman di-nest dalam <button>/<a>.
+          stopPropagation+preventDefault: klik "?" gak bubbling ke parent (gak ikut submit/navigate). */}
+      <span
+        role="button"
+        tabIndex={0}
         aria-label={`Bantuan: ${entry.title}`}
-        onClick={() => setOpen(o => !o)}
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(o => !o) }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); setOpen(o => !o) } }}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-stone-400 text-stone-400 text-[10px] leading-none hover:border-violet-500 hover:text-violet-500 transition"
-      >?</button>
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-stone-400 text-stone-400 text-[10px] leading-none hover:border-violet-500 hover:text-violet-500 transition cursor-help align-middle select-none"
+      >?</span>
       {open && (
         <span
           role="tooltip"

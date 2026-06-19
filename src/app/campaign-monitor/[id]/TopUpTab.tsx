@@ -182,9 +182,9 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
       <div className="bg-white rounded-xl border border-stone-200 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-stone-900">Auto Top-Up <HelpHint k="tu.enable" /></h2>
-          <label className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer bg-stone-300"
+          <label data-tour="tu-enable" className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer bg-stone-300"
             style={{ backgroundColor: topupEnabled ? '#7c3aed' : '#d4d4d8' }}>
-            <input type="checkbox" className="sr-only" checked={topupEnabled} data-tour="tu-enable"
+            <input type="checkbox" className="sr-only" checked={topupEnabled}
               onChange={() => setTopupEnabled(!topupEnabled)} />
             <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${topupEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
           </label>
