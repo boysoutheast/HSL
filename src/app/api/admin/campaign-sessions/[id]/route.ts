@@ -52,6 +52,10 @@ export async function PATCH(
     phase?: string
     automationEnabled?: boolean
     monitorIntervalMinutes?: number
+    // MVP2: floor + topup
+    minActiveAds?: number
+    topupEnabled?: boolean
+    topupTargetAdsetId?: string | null
   }
 
   try {
@@ -92,6 +96,31 @@ export async function PATCH(
     }
   }
 
+  // Guard: minActiveAds range 0–50
+  if (body.minActiveAds !== undefined) {
+    if (body.minActiveAds < 0 || body.minActiveAds > 50) {
+      return NextResponse.json({ error: 'minActiveAds must be between 0 and 50' }, { status: 400 })
+    }
+  }
+
+  // Guard: topupEnabled=true requires minActiveAds > 0 AND ≥1 available pool creative
+  if (body.topupEnabled === true) {
+    const sessionCheck = await prisma.campaignSession.findFirst({
+      where: { id: params.id, userId: auth.id },
+      select: { minActiveAds: true },
+    })
+    const currentMinAds = body.minActiveAds ?? sessionCheck?.minActiveAds ?? 0
+    if (currentMinAds <= 0) {
+      return NextResponse.json({ error: 'Set minActiveAds > 0 before enabling top-up' }, { status: 422 })
+    }
+    const availableCount = await prisma.campaignCreativePool.count({
+      where: { campaignSessionId: params.id, status: 'available' },
+    })
+    if (availableCount === 0) {
+      return NextResponse.json({ error: 'Add at least 1 available creative to the pool before enabling top-up' }, { status: 422 })
+    }
+  }
+
   const updateData: Record<string, unknown> = {}
   if (body.status !== undefined) updateData.status = body.status
   if (body.phase !== undefined) updateData.phase = body.phase
@@ -100,6 +129,9 @@ export async function PATCH(
     updateData.monitorIntervalMinutes = body.monitorIntervalMinutes
     updateData.nextMonitorAt = new Date() // reset so scan fires next cycle
   }
+  if (body.minActiveAds !== undefined) updateData.minActiveAds = body.minActiveAds
+  if (body.topupEnabled !== undefined) updateData.topupEnabled = body.topupEnabled
+  if (body.topupTargetAdsetId !== undefined) updateData.topupTargetAdsetId = body.topupTargetAdsetId
 
   const session = await prisma.campaignSession.update({
     where: { id: params.id },
