@@ -187,8 +187,9 @@ async function run() {
           })
 
           // Notify rule fired
-          const budgetDesc = resolved.payload.dailyBudget
-            ? `Budget ${Number(resolved.payload.dailyBudget) > currentBudget ? 'naik' : 'turun'} ke Rp${Number(resolved.payload.dailyBudget).toLocaleString()}`
+          const newBudget = Number(resolved.payload.dailyBudget ?? 0)
+          const budgetDesc = newBudget > 0
+            ? `Budget ${newBudget > currentBudget ? 'naik' : 'turun'} ke Rp${newBudget.toLocaleString()}`
             : ''
           const statusDesc = resolved.payload.status
             ? `Status jadi ${resolved.payload.status}`
@@ -249,6 +250,7 @@ async function run() {
         data: { nextMonitorAt: new Date(now.getTime() + interval * 60 * 1000) },
       })
     } catch (err) {
+      console.error(`[scan-campaigns] session=${session.id} metaCampaignId=${metaCampaignId}:`, err)
       // Handle TokenError → mark account needs_reconnect
       if (err instanceof TokenError) {
         console.warn(`[scan-campaigns] TokenError for session ${session.id}:`, (err as Error).message)
