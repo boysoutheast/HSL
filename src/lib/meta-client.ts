@@ -84,8 +84,13 @@ async function request(
   if (!res.ok) {
     const code = data?.error?.code
     const msg = data?.error?.message ?? `Meta API error: HTTP ${res.status}`
-    if (code >= 17 && code <= 613) throw new RateLimitError(msg)
-    throw new Error(msg)
+    // Token errors → TokenError (memicu needs_reconnect). 190 + OAuth subcodes.
+    if (code === 190 || code === 102 || code === 463 || code === 467) throw new TokenError(msg)
+    // HANYA kode rate-limit Meta yang asli (BUKAN range 17–613 — itu nelan 100/148/200 dst).
+    const RATE_LIMIT_CODES = [4, 17, 32, 341, 613, 80000, 80001, 80002, 80003, 80004, 80014, 130429]
+    if (RATE_LIMIT_CODES.includes(code)) throw new RateLimitError(msg)
+    // Selain itu: lempar pesan ASLI (jangan di-masking jadi RateLimit) — mis. 100 Invalid parameter.
+    throw new Error(`Meta API error (code ${code}): ${msg}`)
   }
 
   return { data, headers: res.headers }
@@ -332,9 +337,8 @@ export async function createAd(
       link_data: linkData,
     }),
     publisher_platforms: publisherPlatforms.join(','),
-    degrees_of_freedom_spec: JSON.stringify({
-      creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
-    }),
+    // degrees_of_freedom_spec/standard_enhancements DIHAPUS — Meta v25 nolak
+    // ("Creative should not include standard enhancements", subcode 3858504).
   }
   // image_hash at top level (file-uploaded images require this, not attachment_hash in link_data)
   if (attachmentHash) {
