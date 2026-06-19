@@ -348,6 +348,7 @@ model AdminUser {
   status       String    @default("active")
   creditBalance Int      @default(0) @map("credit_balance")
   lastLoginAt  DateTime? @map("last_login_at")
+  telegramChatId String? @map("telegram_chat_id")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
@@ -380,8 +381,27 @@ model AdminUser {
   cpasDiary           CpasDiary[]
   cpasLessons         CpasLesson[]
   cpasPainEntries     CpasPainEntry[]
+  notifications       Notification[]
 
   @@map("admin_users")
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  type       String
+  severity   String    @default("info")
+  title      String
+  body       String?
+  refType    String?   @map("ref_type")
+  refId      String?   @map("ref_id")
+  readAt     DateTime? @map("read_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user AdminUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt], name: "idx_notif_user_unread")
+  @@map("notifications")
 }
 
 model Session {
