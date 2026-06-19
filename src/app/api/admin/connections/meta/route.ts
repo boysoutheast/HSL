@@ -10,26 +10,15 @@ import { requireAuth } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth(req)
-  if (auth instanceof NextResponse) return auth
-
-  const userId = auth.userId
+  const user = await requireAuth(req)
+  if (user instanceof NextResponse) return user
 
   const accounts = await prisma.metaAccount.findMany({
-    where: { userId },
+    where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      metaUserId: true,
-      metaUserName: true,
-      status: true,
-      tokenExpiry: true,
-      lastTokenCheckAt: true,
-      lastMetaCallAt: true,
-      createdAt: true,
+    include: {
       adAccounts: {
-        select: { adAccountId: true, name: true },
+        select: { id: true, adAccountName: true, adAccountId: true },
       },
     },
   })
@@ -51,7 +40,7 @@ export async function GET(req: NextRequest) {
       createdAt: a.createdAt.toISOString(),
       adAccounts: a.adAccounts.map(acc => ({
         id: acc.adAccountId,
-        name: acc.name ?? 'Ad Account',
+        name: acc.adAccountName ?? 'Ad Account',
       })),
     }
   })
