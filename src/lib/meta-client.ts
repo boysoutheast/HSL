@@ -317,11 +317,11 @@ export async function createAd(
 ): Promise<{ adId: string; creativeId: string }> {
   const publisherPlatforms = spec.publisherPlatforms ?? ['facebook', 'instagram']
 
-  // Step 1: Create creative
-  const creativeBody: Record<string, unknown> = {
+  // Create creative
+  const creativePayload: Record<string, unknown> = {
     name: `AD: ${spec.name}`,
     object_story_spec: {
-      page_id: '', // will be set by account context — we keep minimal
+      page_id: '',
       link_data: {
         link: spec.linkUrl,
         message: spec.primaryText,
@@ -340,15 +340,15 @@ export async function createAd(
 
   // If we have a media asset, attach as photo
   if (spec.mediaAssetId) {
-    creativeBody.object_story_spec.link_data.attachment_hash = spec.mediaAssetId
+    (creativePayload.object_story_spec as Record<string, any>).link_data.attachment_hash = spec.mediaAssetId
   } else if (spec.creativeUrl) {
-    creativeBody.object_story_spec.link_data.link = spec.creativeUrl
+    (creativePayload.object_story_spec as Record<string, any>).link_data.link = spec.creativeUrl
   }
 
   const { data: creative } = await metaPost(
     `/act_${spec.adsetId.split('_')[0]}/adcreatives`,
     token,
-    { ...creativeBody, access_token: undefined! },
+    creativePayload,
   )
   const creativeData = creative as { id: string }
 

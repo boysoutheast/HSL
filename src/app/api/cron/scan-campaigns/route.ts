@@ -2,7 +2,7 @@
  * POST /api/cron/scan-campaigns
  * Batched cron: scan RUNNING sessions, fetch insights, evaluate rules, apply actions.
  * Allowlist guard: HSL_WRITE_ALLOWED_AD_ACCOUNTS env.
- * Schedule: */5 * * * *
+ * Schedule: every 5 minutes
  * Auth: x-cron-secret (CRON_SECRET env)
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -55,12 +55,7 @@ async function run() {
     },
     take: LIMIT,
     orderBy: { nextMonitorAt: { sort: 'asc', nulls: 'first' } },
-    select: {
-      id: true,
-      userId: true,
-      dailyBudget: true,
-      metaCampaignId: true,
-      metaAdAccountId: true,
+    include: {
       metaAdAccount: {
         select: {
           adAccountId: true,
@@ -70,30 +65,6 @@ async function run() {
       automationRules: {
         where: { status: 'ACTIVE' },
         orderBy: { priority: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          conditionJson: true,
-          actionSpecJson: true,
-          cooldownMinutes: true,
-          maxFireCount: true,
-          fireCount: true,
-          lastFiredAt: true,
-          minimumDataAge: true,
-        },
-      },
-      metaEntities: {
-        where: { entityType: { in: ['CAMPAIGN', 'ADSET', 'AD'] } },
-        select: {
-          id: true,
-          metaEntityId: true,
-          entityType: true,
-          metricSnapshots: {
-            orderBy: { windowEnd: 'desc' },
-            take: 1,
-            select: { spend: true, roas: true, cpc: true, ctr: true, purchases: true, impressions: true, windowEnd: true },
-          },
-        },
       },
     },
   })
@@ -141,12 +112,12 @@ async function run() {
         }
 
         // Max fire count check
-        if (rule.maxFireCount > 0 && rule.fireCount >= rule.maxFireCount) continue
+        if (rule.maxFireCount != null && rule.maxFireCount > 0 && (rule.fireCount ?? 0) >= rule.maxFireCount) continue
 
         // Parse condition
         let conditionTree
         try {
-          conditionTree = parseConditionTree(rule.conditionJson)
+          conditionTree = parseConditionTree(rule.conditionTreeJson)
         } catch {
           continue
         }
@@ -160,8 +131,10 @@ async function run() {
           data: {
             ruleId: rule.id,
             campaignSessionId: session.id,
+            ruleVersion: rule.version,
             conditionResultJson: JSON.stringify(evalResult.results),
             matched: evalResult.matched,
+            evaluatedAt: now,
             deduplicationKey: dedupKey,
           },
         })
@@ -244,7 +217,6 @@ async function run() {
       }
 
       // Update nextMonitorAt
-      const existing = session.metaEntities?.[0]?.metricSnapshots?.[0]
       const sessionSession = await prisma.campaignSession.findUnique({
         where: { id: session.id }, select: { monitorIntervalMinutes: true },
       })

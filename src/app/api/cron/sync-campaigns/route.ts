@@ -1,7 +1,7 @@
 /**
  * POST /api/cron/sync-campaigns
  * Batched cron: pick up imported sessions pending sync, fetch from Meta, upsert entities.
- * Schedule: */5 * * * *
+ * Schedule: every 5 minutes
  * Auth: x-cron-secret (CRON_SECRET env)
  */
 import { NextRequest, NextResponse } from 'next/server'

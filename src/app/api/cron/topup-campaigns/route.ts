@@ -3,7 +3,7 @@
  * Batched cron: evaluate floor, atomic claim pool, create ad via Meta API.
  * Pertahankan inflight guard (MVP2).
  * Allowlist guard: HSL_WRITE_ALLOWED_AD_ACCOUNTS env.
- * Schedule: */10 * * * *
+ * Schedule: every 10 minutes
  * Auth: x-cron-secret (CRON_SECRET env)
  */
 import { NextRequest, NextResponse } from 'next/server'
@@ -196,7 +196,7 @@ async function run() {
               minActiveAds: session.minActiveAds,
               poolCreativeId: poolItem.id,
               status: 'failed',
-              failedReason: String(adErr),
+              note: String(adErr).slice(0, 500),
               triggeredAt: now,
             },
           })

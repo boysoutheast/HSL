@@ -562,6 +562,7 @@ curl -H "x-api-key: hsk_xxx..." \\
             <Section title="Import Meta Campaign">
               <p className="text-sm text-stone-600 mb-3">
                 Bring an existing Meta Ads campaign under HSL management. Imported campaigns start with automation OFF — attach rules after import.
+                Sync runs automatically via cron (every 5 min).
               </p>
               <Endpoint method="GET" path="/api/admin/meta-campaigns?metaAdAccountId=&lt;id&gt;" desc="List Meta campaigns that are not yet imported" />
               <Endpoint method="POST" path="/api/admin/campaign-sessions/import" desc="Import campaign as session. Body: { metaAdAccountId, metaCampaignId, name, monitorIntervalMinutes? }" />
@@ -580,7 +581,8 @@ curl -H "x-api-key: hsk_xxx..." \\
 
             <Section title="Scan Interval & Automation Guard">
               <p className="text-sm text-stone-600 mb-3">
-                Configure how often the system scans for rule evaluation. automationEnabled=true requires ≥1 ACTIVE rule (422 if none).
+                Automation runs via cron (every 5 min). Configure how often the system evaluates rules per session.
+                automationEnabled=true requires ≥1 ACTIVE rule (422 if none).
               </p>
               <Endpoint method="GET" path="/api/admin/campaign-sessions" desc="List sessions. Query: status?, phase?" />
               <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]" desc="Detail session + meta entities + metric snapshot" />
@@ -590,7 +592,7 @@ curl -H "x-api-key: hsk_xxx..." \\
 
             <Section title="Campaign Top-Up & Creative Pool">
               <p className="text-sm text-stone-600 mb-3">
-                Set a minimum active ad floor per campaign. When ads are paused below the floor, HSL auto top-up new ads from a campaign-specific creative pool.
+                Set a minimum active ad floor per campaign. When ads drop below the floor, the system auto-creates new ads from the creative pool via cron (every 10 min).
               </p>
               <Endpoint method="PATCH" path="/api/admin/campaign-sessions/[id]" desc="Set minActiveAds (0-50), topupEnabled, topupTargetAdsetId. Guard: 422 if topupEnabled without pool or minActiveAds=0" />
               <Endpoint method="GET" path="/api/admin/campaign-sessions/[id]/creative-pool" desc="List pool creatives + counts (available/used/failed/archived)" />
