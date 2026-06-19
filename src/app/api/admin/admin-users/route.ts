@@ -13,21 +13,55 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10) || 20))
   const skip = (page - 1) * limit
 
+  const status = url.searchParams.get('status')
+  const role = url.searchParams.get('role')
+  const q = url.searchParams.get('q')
+  const sort = url.searchParams.get('sort') || 'recent'
+
+  // Build where clause
+  const where: Record<string, unknown> = {}
+  if (status) where['status'] = status
+  if (role) where['role'] = role
+  if (q) {
+    where['OR'] = [
+      { email: { contains: q, mode: 'insensitive' } },
+      { name: { contains: q, mode: 'insensitive' } },
+    ]
+  }
+
+  // Build orderBy
+  let orderBy: Record<string, string>
+  switch (sort) {
+    case 'balance': orderBy = { creditBalance: 'desc' }; break
+    case 'recent': default: orderBy = { createdAt: 'desc' }; break
+  }
+
   const [users, total] = await Promise.all([
     prisma.adminUser.findMany({
+      where,
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
         status: true,
+        creditBalance: true,
+        lastLoginAt: true,
         createdAt: true,
+        _count: {
+          select: {
+            campaignSessions: true,
+            generatedMedia: true,
+            apiKeys: true,
+            metaAccounts: true,
+          },
+        },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       skip,
       take: limit,
     }),
-    prisma.adminUser.count(),
+    prisma.adminUser.count({ where }),
   ])
 
   return NextResponse.json({
