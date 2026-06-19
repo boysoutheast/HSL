@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createAd, resolvePageId, TokenError, RateLimitError } from '@/lib/meta-client'
 import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
+import { notify } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -181,6 +182,16 @@ async function run() {
           })
 
           sessionCreated++
+
+          // Notify topup created
+          await notify(session.userId, {
+            type: 'topup_created',
+            severity: 'success',
+            title: 'Ad baru ditambahkan',
+            body: `Ad ${adResult.adId} dibuat (PAUSED) untuk top-up campaign.`,
+            refType: 'campaign_session',
+            refId: session.id,
+          }).catch(() => {})
         } catch (adErr) {
           console.error(`[topup-campaigns] createAd failed for pool ${poolItem.id}:`, adErr)
 
@@ -234,6 +245,14 @@ async function run() {
           await prisma.campaignTopupLog.create({
             data: { campaignSessionId: session.id, activeAdsBefore: activeAds, minActiveAds: session.minActiveAds, status: 'skipped_empty_pool', note: 'Pool exhausted during cron top-up', triggeredAt: now },
           })
+          await notify(session.userId, {
+            type: 'pool_exhausted',
+            severity: 'warning',
+            title: 'Stok creative habis',
+            body: `Tidak ada creative tersisa di pool untuk top-up campaign. Tambahkan creative baru.`,
+            refType: 'campaign_session',
+            refId: session.id,
+          }).catch(() => {})
         }
       }
 

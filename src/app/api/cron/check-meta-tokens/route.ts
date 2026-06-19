@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { decode } from '@/lib/crypto'
 import { metaGet, TokenError } from '@/lib/meta-client'
+import { notify } from '@/lib/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,14 @@ async function run() {
         data: { status: 'needs_reconnect', lastTokenCheckAt: now },
       })
       needsReconnect++
+      await notify(account.userId, {
+        type: 'token_expired',
+        severity: 'error',
+        title: 'Token Meta Ads kadaluwarsa',
+        body: 'Token tidak bisa didekripsi. Hubungkan ulang akun Meta.',
+        refType: 'meta_account',
+        refId: account.id,
+      }).catch(() => {})
       continue
     }
 
@@ -102,6 +111,14 @@ async function run() {
           data: { status: 'needs_reconnect', lastTokenCheckAt: now },
         })
         needsReconnect++
+        await notify(account.userId, {
+          type: 'token_expired',
+          severity: 'error',
+          title: 'Token Meta Ads tidak valid',
+          body: 'Meta API menolak token. Hubungkan ulang akun Meta.',
+          refType: 'meta_account',
+          refId: account.id,
+        }).catch(() => {})
       } else {
         // Network/temp error — skip for now
         skipped++
