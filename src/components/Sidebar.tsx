@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import NotificationBell from '@/components/ui/NotificationBell'
+import NotificationBell from './NotificationBell'
 import { LogoMark } from '@/components/Logo'
 
 interface User { id: string; name: string | null; email: string; role: 'admin' | 'user' }

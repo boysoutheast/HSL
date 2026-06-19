@@ -125,7 +125,7 @@ function CepsPageInner() {
         ]}
         wiring={[
           { label: '← AI Buddy Agent', desc: 'AI Buddy submit CEP baru via POST /api/hermes/cep-feedback (status: pending_review)' },
-          { label: '→ AI Buddy Agent', desc: \"hanya CEP status 'active' yang dikirim ke AI Buddy\" },
+          { label: '→ AI Buddy Agent', desc: "hanya CEP status 'active' yang dikirim ke AI Buddy" },
           { label: '→ Content Log', desc: 'cep_id dicatat di setiap konten yang dibuat AI Buddy' },
         ]}
       />
