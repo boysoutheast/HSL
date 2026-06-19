@@ -11,9 +11,8 @@ interface HelpHintProps {
 export function HelpHint({ k, side = 'bottom', className = '' }: HelpHintProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLSpanElement>(null)
-  const entry = HELP[k]
-  if (!entry) return null   // fail-safe: key gak ada → jangan render apa-apa
 
+  // useEffect HARUS sebelum conditional return (rules-of-hooks — cegah React #310)
   useEffect(() => {
     if (!open) return
     const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
@@ -22,6 +21,9 @@ export function HelpHint({ k, side = 'bottom', className = '' }: HelpHintProps) 
     document.addEventListener('keydown', onEsc)
     return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onEsc) }
   }, [open])
+
+  const entry = HELP[k]
+  if (!entry) return null   // fail-safe: key gak ada → jangan render apa-apa
 
   return (
     <span ref={ref} className={`relative inline-flex ${className}`}>
