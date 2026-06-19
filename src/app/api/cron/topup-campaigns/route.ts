@@ -1,14 +1,15 @@
 /**
  * POST /api/cron/topup-campaigns
  * Batched cron: evaluate floor, atomic claim pool, create ad via Meta API.
- * Pertahankan inflight guard (MVP2).
- * Allowlist guard: HSL_WRITE_ALLOWED_AD_ACCOUNTS env.
- * Schedule: every 10 minutes
+ * Write gate: ownership-driven via canWriteToAdAccount() — NOT env allowlist.
+ * Strict opt-in: topupEnabled=true + nextMonitorAt due.
+ * Selaraskan interval ke monitorIntervalMinutes campaign.
  * Auth: x-cron-secret (CRON_SECRET env)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createAd, resolvePageId, TokenError, RateLimitError } from '@/lib/meta-client'
+import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,44 +22,32 @@ function checkAuth(req: NextRequest): boolean {
     || req.headers.get('authorization') === `Bearer ${secret}`
 }
 
-function decryptToken(encrypted: string): string {
-  const crypto = require('crypto')
-  const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY not set')
-  const parts = encrypted.split(':')
-  const iv = Buffer.from(parts[0], 'hex')
-  const enc = Buffer.from(parts[1], 'hex')
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
-  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
-}
-
-function isAllowed(adAccountId: string): boolean {
-  const allowlist = (process.env.HSL_WRITE_ALLOWED_AD_ACCOUNTS ?? '').split(',').map(s => s.trim()).filter(Boolean)
-  if (allowlist.length === 0) return true
-  const numericId = adAccountId.replace(/^act_/, '')
-  return allowlist.some(a => a === numericId || a === adAccountId)
-}
-
 async function run() {
   const now = new Date()
 
+  // Strict opt-in + nextMonitorAt gating
   const sessions = await prisma.campaignSession.findMany({
     where: {
       topupEnabled: true,
       minActiveAds: { gt: 0 },
+      OR: [
+        { nextMonitorAt: { lte: now } },
+        { nextMonitorAt: null },
+      ],
     },
     take: LIMIT,
-    orderBy: { lastMonitorAt: { sort: 'asc', nulls: 'first' } },
+    orderBy: { nextMonitorAt: { sort: 'asc', nulls: 'first' } },
     select: {
       id: true,
       userId: true,
       minActiveAds: true,
       topupTargetAdsetId: true,
       metaAdAccountId: true,
+      monitorIntervalMinutes: true,
       metaAdAccount: {
         select: {
+          id: true,
           adAccountId: true,
-          metaAccount: { select: { longLivedTokenEncrypted: true } },
         },
       },
     },
@@ -67,19 +56,30 @@ async function run() {
   let topped = 0
   let created = 0
   let poolEmpty = 0
+  let skipped: { sessionId: string; reason: string }[] = []
 
   for (const session of sessions) {
-    const encryptedToken = session.metaAdAccount?.metaAccount?.longLivedTokenEncrypted
+    const metaAdAccountId = session.metaAdAccount?.id ?? null
     const adAccountId = session.metaAdAccount?.adAccountId
 
-    if (!encryptedToken || !adAccountId) continue
-    if (!isAllowed(adAccountId)) {
-      console.warn(`[topup-campaigns] Skip ${adAccountId} — not in allowlist`)
+    if (!metaAdAccountId || !adAccountId) continue
+
+    // ★ Write gate: ownership + token check (fail-closed)
+    const writeCheck = await canWriteToAdAccount(session.userId, metaAdAccountId)
+    if (!writeCheck.ok) {
+      skipped.push({ sessionId: session.id, reason: writeCheck.reason! })
+      await prisma.campaignSession.update({
+        where: { id: session.id },
+        data: { nextMonitorAt: new Date(now.getTime() + 15 * 60 * 1000) },
+      })
       continue
     }
 
+    const token = writeCheck.token!
+
     try {
-      const token = decryptToken(encryptedToken)
+      // Mark account healthy
+      await markAccountHealthy(metaAdAccountId)
 
       // Count active ads (from MetaEntity)
       const activeAds = await prisma.metaEntity.count({
@@ -128,7 +128,7 @@ async function run() {
           const adAccountIdNum = adAccountId.replace(/^act_/, '')
           const pageId = await resolvePageId(adAccountIdNum, token, {
             sessionId: session.id,
-            metaAdAccountId: session.metaAdAccountId ?? undefined,
+            metaAdAccountId: metaAdAccountId,
           })
           const adResult = await createAd({
             adAccountId: adAccountIdNum,
@@ -150,7 +150,7 @@ async function run() {
             data: { usedMetaAdId: adResult.adId },
           })
 
-          // Create topup log (succeeded)
+          // Create topup log
           await prisma.campaignTopupLog.create({
             data: {
               campaignSessionId: session.id,
@@ -170,11 +170,7 @@ async function run() {
               campaignSessionId: session.id,
               source: 'SYSTEM',
               actionType: 'CREATE_AD',
-              payloadJson: JSON.stringify({
-                adId: adResult.adId,
-                creativeId: adResult.creativeId,
-                poolCreativeId: poolItem.id,
-              }),
+              payloadJson: JSON.stringify({ adId: adResult.adId, creativeId: adResult.creativeId, poolCreativeId: poolItem.id }),
               status: 'SUCCEEDED',
               idempotencyKey: `topup_cron_${session.id}_${poolItem.id}`,
               priority: 3,
@@ -188,7 +184,11 @@ async function run() {
         } catch (adErr) {
           console.error(`[topup-campaigns] createAd failed for pool ${poolItem.id}:`, adErr)
 
-          // Return pool item to available (transient error) or mark failed
+          // Handle TokenError → mark account needs_reconnect
+          if (adErr instanceof TokenError) {
+            await markAccountNeedsReconnect(metaAdAccountId)
+          }
+
           const isTransient = (adErr as Error).message.includes('rate') || (adErr as Error).message.includes('timeout')
           await prisma.campaignCreativePool.update({
             where: { id: poolItem.id },
@@ -212,13 +212,8 @@ async function run() {
       created += sessionCreated
       if (sessionPoolEmpty) {
         poolEmpty++
-        // NOTIFY via AutomationAction (cooldown 60m)
         const lastNotify = await prisma.campaignTopupLog.findFirst({
-          where: {
-            campaignSessionId: session.id,
-            status: 'skipped_empty_pool',
-            triggeredAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
-          },
+          where: { campaignSessionId: session.id, status: 'skipped_empty_pool', triggeredAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
           orderBy: { triggeredAt: 'desc' },
         })
         if (!lastNotify) {
@@ -237,29 +232,32 @@ async function run() {
             },
           })
           await prisma.campaignTopupLog.create({
-            data: {
-              campaignSessionId: session.id,
-              activeAdsBefore: activeAds,
-              minActiveAds: session.minActiveAds,
-              status: 'skipped_empty_pool',
-              note: 'Pool exhausted during cron top-up',
-              triggeredAt: now,
-            },
+            data: { campaignSessionId: session.id, activeAdsBefore: activeAds, minActiveAds: session.minActiveAds, status: 'skipped_empty_pool', note: 'Pool exhausted during cron top-up', triggeredAt: now },
           })
         }
       }
 
-      // Update lastMonitorAt
+      // Update nextMonitorAt dengan monitorIntervalMinutes
+      const interval = session.monitorIntervalMinutes ?? 5
       await prisma.campaignSession.update({
         where: { id: session.id },
-        data: { lastMonitorAt: now },
+        data: { nextMonitorAt: new Date(now.getTime() + interval * 60 * 1000) },
       })
     } catch (err) {
-      console.error(`[topup-campaigns] Session ${session.id} error:`, err)
+      if (err instanceof TokenError) {
+        console.warn(`[topup-campaigns] TokenError for session ${session.id}:`, (err as Error).message)
+        await markAccountNeedsReconnect(metaAdAccountId)
+      } else {
+        console.error(`[topup-campaigns] Session ${session.id} error:`, err)
+      }
+      await prisma.campaignSession.update({
+        where: { id: session.id },
+        data: { nextMonitorAt: new Date(now.getTime() + 15 * 60 * 1000) },
+      })
     }
   }
 
-  return { topped, created, poolEmpty }
+  return { topped, created, poolEmpty, skipped: skipped.length }
 }
 
 export async function GET(req: NextRequest) {
