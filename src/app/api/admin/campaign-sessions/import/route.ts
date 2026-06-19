@@ -79,27 +79,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // Create NOTIFY action for sync — worker will pick this up
-  const now = new Date()
-  await prisma.automationAction.create({
-    data: {
-      userId: auth.id,
-      campaignSessionId: session.id,
-      source: 'SYSTEM',
-      actionType: 'NOTIFY',
-      payloadJson: JSON.stringify({
-        kind: 'sync_campaign_entities',
-        metaCampaignId: body.metaCampaignId,
-        metaAdAccountId: body.metaAdAccountId,
-      }),
-      status: 'PENDING',
-      idempotencyKey: `${auth.id}-SYNC-${body.metaCampaignId}-${now.getTime()}`,
-      priority: 1, // P1 — high priority
-      requestedAt: now,
-    },
-  })
-
-  // Also create a WorkerTask for the sync
+  // Create a WorkerTask for the sync — single source of dispatch
   await prisma.workerTask.create({
     data: {
       type: 'sync_campaign_entities',
