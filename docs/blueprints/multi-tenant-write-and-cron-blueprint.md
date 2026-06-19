@@ -35,14 +35,15 @@ export async function canWriteToAdAccount(
   // 1. Ad account milik user ini? (fail-closed)
   const acc = await prisma.metaAdAccount.findFirst({
     where: { id: session.metaAdAccountId, metaAccount: { userId: session.userId } },
-    select: { adAccountId: true, metaAccount: { select: { longLivedTokenEncrypted: true, tokenExpiresAt: true } } },
+    select: { adAccountId: true, metaAccount: { select: { longLivedTokenEncrypted: true, tokenExpiry: true, status: true } } },
   })
   if (!acc) return { ok: false, reason: 'not_owned' }
 
-  // 2. Token ada + belum expired (lihat Bagian token — sinkron sama gap C nanti)
+  // 2. Token ada + akun sehat (field SUDAH ADA: tokenExpiry + status connected|expired|needs_reconnect|revoked)
   const enc = acc.metaAccount.longLivedTokenEncrypted
   if (!enc) return { ok: false, reason: 'no_token' }
-  if (acc.metaAccount.tokenExpiresAt && acc.metaAccount.tokenExpiresAt < new Date())
+  if (acc.metaAccount.status !== 'connected') return { ok: false, reason: `account_${acc.metaAccount.status}` }
+  if (acc.metaAccount.tokenExpiry && acc.metaAccount.tokenExpiry < new Date())
     return { ok: false, reason: 'token_expired' }
 
   return { ok: true, token: decode(enc) }
@@ -50,7 +51,7 @@ export async function canWriteToAdAccount(
 ```
 2. `scan-campaigns` + `topup-campaigns`: **ganti** `isAllowed(adAccountId)` → `canWriteToAdAccount(session)`. Kalau `!ok` → skip session + log reason (jangan apply, jangan error fatal). Reason `token_expired`/`not_owned` di-surface ke user nanti (gap C/E).
 3. **HAPUS** `HSL_WRITE_ALLOWED_AD_ACCOUNTS` + fungsi `isAllowed`. Dokumentasiin di /docs kalau perlu.
-4. ⚠️ `tokenExpiresAt` di `MetaAccount` — cek udah ada di schema; kalau belum, ini OVERLAP sama gap C (token lifecycle). Untuk blueprint ini: kalau field belum ada, pakai cek `longLivedTokenEncrypted != null` dulu, tambah expiry check pas gap C dikerjain. JANGAN bikin migration setengah di sini.
+4. ✅ Field token SUDAH ADA di `MetaAccount`: `tokenExpiry`, `status` (connected|expired|needs_reconnect|revoked), `lastTokenCheckAt`. GAK perlu migration. Write-guard tinggal baca. Pengisian/maintenance field ini = gap C (token lifecycle).
 
 ---
 
