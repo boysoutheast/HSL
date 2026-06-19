@@ -444,7 +444,7 @@ export default function GenerateVideoPage() {
         {creditBalance != null && (
           <div data-tour="vg-cost" className={`rounded-xl px-4 py-3 text-sm ${insufficientBalance ? 'bg-red-50 border border-red-200' : 'bg-stone-50'}`}>
             <span className="text-stone-500">Saldo: </span>
-            <span className="font-semibold text-stone-800">{creditBalance.toLocaleString('id-ID')} credits</span> <HelpHint k="vg.resolution" />
+            <span className="font-semibold text-stone-800">{creditBalance.toLocaleString('id-ID')} credits</span>
             <span className="mx-2 text-stone-300">·</span>
             <span className="text-stone-500">Generate ini: </span><HelpHint k="vg.cost" />
             <span className="font-semibold text-stone-800">{cost.toLocaleString('id-ID')} credits</span>

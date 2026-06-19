@@ -14,7 +14,7 @@ export const CAMPAIGN_TOUR: TourDef = {
 export const VIDEO_TOUR: TourDef = {
   id: 'video', version: 1,
   steps: [
-    { element: '[data-tour="vg-format"]',   popover: { title: 'Atur Format', description: 'Pilih orientasi, resolusi, dan durasi. Ngaruh ke biaya kredit.' } },
+    { element: '[data-tour="vg-format"]',   popover: { title: 'Atur Format', description: 'Pilih orientasi & durasi video. Durasi ngaruh ke biaya kredit.' } },
     { element: '[data-tour="vg-add-asset"]', popover: { title: 'Tambah Referensi', description: 'Masukin foto akun/produk biar AI ngikutin visualnya. Maks 5.' } },
     { element: '[data-tour="vg-prompt"]',    popover: { title: 'Tulis Prompt', description: 'Jelasin video yang lo mau. Klik chip @image buat nyebut asset tertentu.' } },
     { element: '[data-tour="vg-cost"]',      popover: { title: 'Cek Biaya', description: 'Estimasi kredit & sisa saldo muncul di sini sebelum generate.' } },
