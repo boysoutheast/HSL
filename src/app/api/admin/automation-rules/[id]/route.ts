@@ -3,20 +3,23 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
+/**
+ * GET /api/admin/automation-rules/[id]
+ * Get a single rule with details.
+ */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  const rule = await prisma.automationRule.findUnique({
-    where: { id: params.id },
+  const rule = await prisma.automationRule.findFirst({
+    where: { id: params.id, userId: auth.id },
     include: {
-      campaignSession: {
-        select: { id: true, name: true },
-      },
+      campaignSession: { select: { id: true, name: true } },
     },
   })
 
@@ -24,115 +27,45 @@ export async function GET(
     return NextResponse.json({ error: 'Rule not found' }, { status: 404 })
   }
 
-  if (rule.userId !== auth.id && auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   return NextResponse.json({ rule })
 }
 
+/**
+ * PATCH /api/admin/automation-rules/[id]
+ * Update rule status (ACTIVE / PAUSED / ARCHIVED).
+ * Body: { status }
+ */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
 
-  const existing = await prisma.automationRule.findUnique({
-    where: { id: params.id },
-  })
-
-  if (!existing) {
-    return NextResponse.json({ error: 'Rule not found' }, { status: 404 })
-  }
-
-  if (existing.userId !== auth.id && auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  let body: {
-    status?: string
-    name?: string
-    description?: string
-    scope?: string
-    ruleCategory?: string
-    conditionTreeJson?: Record<string, unknown>
-    actionSpecJson?: Record<string, unknown>
-    cooldownMinutes?: number
-    campaignSessionId?: string | null
-    fireCount?: number
-    lastFiredAt?: string
-  }
-
+  let body: { status?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const validStatuses = ['DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED']
-  if (body.status && !validStatuses.includes(body.status)) {
-    return NextResponse.json(
-      { error: `status must be one of: ${validStatuses.join(', ')}` },
-      { status: 400 }
-    )
+  if (!body.status || !['ACTIVE', 'PAUSED', 'ARCHIVED'].includes(body.status)) {
+    return NextResponse.json({ error: 'status must be ACTIVE, PAUSED, or ARCHIVED' }, { status: 400 })
   }
 
-  const updateData: Record<string, unknown> = {}
-  if (body.status) updateData.status = body.status
-  if (body.name) updateData.name = body.name
-  if (body.description !== undefined) updateData.description = body.description
-  if (body.conditionTreeJson) {
-    updateData.conditionTreeJson = JSON.stringify(body.conditionTreeJson)
-  }
-  if (body.actionSpecJson) {
-    updateData.actionSpecJson = JSON.stringify(body.actionSpecJson)
-  }
-  if (body.scope) updateData.scope = body.scope
-  if (body.ruleCategory) updateData.ruleCategory = body.ruleCategory
-  if (body.cooldownMinutes !== undefined) updateData.cooldownMinutes = body.cooldownMinutes
-  if (body.campaignSessionId !== undefined) updateData.campaignSessionId = body.campaignSessionId || null
-  // Allow worker to update fireCount and lastFiredAt
-  if (body.fireCount !== undefined) updateData.fireCount = body.fireCount
-  if (body.lastFiredAt !== undefined) updateData.lastFiredAt = new Date(body.lastFiredAt)
-
-  const updated = await prisma.automationRule.update({
-    where: { id: params.id },
-    data: updateData,
-    include: {
-      campaignSession: {
-        select: { id: true, name: true },
-      },
-    },
-  })
-
-  return NextResponse.json({ rule: updated })
-}
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const auth = await requireAuth(req)
-  if (auth instanceof NextResponse) return auth
-
-  const existing = await prisma.automationRule.findUnique({
-    where: { id: params.id },
+  const existing = await prisma.automationRule.findFirst({
+    where: { id: params.id, userId: auth.id },
+    select: { id: true },
   })
 
   if (!existing) {
     return NextResponse.json({ error: 'Rule not found' }, { status: 404 })
   }
 
-  if (existing.userId !== auth.id && auth.role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  // Soft-delete: set status to ARCHIVED
-  const updated = await prisma.automationRule.update({
+  const rule = await prisma.automationRule.update({
     where: { id: params.id },
-    data: { status: 'ARCHIVED' },
+    data: { status: body.status },
   })
 
-  return NextResponse.json({ rule: updated })
+  return NextResponse.json({ rule })
 }

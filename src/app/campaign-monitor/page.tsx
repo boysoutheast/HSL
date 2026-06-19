@@ -10,8 +10,12 @@ interface CampaignSession {
   name: string
   status: string
   phase: string
+  source: string
   automationEnabled: boolean
   dailyBudget: string
+  monitorIntervalMinutes: number
+  lastMonitorAt: string | null
+  _count: { automationRules: number }
   product: { id: string; name: string } | null
   metaAdAccount: { id: string; adAccountId: string; accountName: string | null } | null
   latestMetric: {
@@ -22,7 +26,6 @@ interface CampaignSession {
     cpc: number | null
     lastSyncedAt: string
   } | null
-  lastMonitorAt: string | null
   createdAt: string
 }
 
@@ -45,6 +48,11 @@ const PHASE_COLORS: Record<string, string> = {
   EXITED: 'bg-red-100 text-red-800',
 }
 
+const SOURCE_BADGES: Record<string, { label: string; cls: string }> = {
+  launch: { label: '🚀 Launch', cls: 'bg-violet-100 text-violet-800' },
+  imported: { label: '🔵 Imported', cls: 'bg-blue-100 text-blue-800' },
+}
+
 function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_COLORS[status] ?? 'bg-stone-100 text-stone-600'
   return <span className={`text-xs px-2 py-1 rounded-full font-medium ${cls}`}>{status}</span>
@@ -53,6 +61,11 @@ function StatusBadge({ status }: { status: string }) {
 function PhaseBadge({ phase }: { phase: string }) {
   const cls = PHASE_COLORS[phase] ?? 'bg-stone-100 text-stone-600'
   return <span className={`text-xs px-2 py-1 rounded-full font-medium ${cls}`}>{phase}</span>
+}
+
+function SourceBadge({ source }: { source: string }) {
+  const def = SOURCE_BADGES[source] ?? { label: source, cls: 'bg-stone-100 text-stone-600' }
+  return <span className={`text-xs px-2 py-1 rounded-full font-medium ${def.cls}`}>{def.label}</span>
 }
 
 function AutoToggle({
@@ -77,6 +90,9 @@ function AutoToggle({
       })
       if (res.ok) {
         onToggle(sessionId, !enabled)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error ?? 'Failed to toggle automation')
       }
     } finally {
       setLoading(false)
@@ -90,6 +106,7 @@ function AutoToggle({
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 ${
         enabled ? 'bg-violet-600' : 'bg-stone-300'
       }`}
+      title={enabled ? 'Automation ON' : 'Automation OFF'}
     >
       <span
         className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
@@ -145,6 +162,17 @@ export default function CampaignMonitorPage() {
     return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
   }
 
+  const fmtTimeAgo = (d: string | null) => {
+    if (!d) return ''
+    const diff = Date.now() - new Date(d).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -154,22 +182,37 @@ export default function CampaignMonitorPage() {
             {loading ? '...' : `${sessions.length} campaign${sessions.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="btn-ghost flex items-center gap-1.5"
-        >
-          <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <Link href="/ads?tab=campaigns&new=1" className="btn-ghost flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            New Launch
+          </Link>
+          <Link href="/campaign-monitor/import" className="btn-primary flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            + Import Campaign
+          </Link>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="btn-ghost flex items-center gap-1.5"
+          >
+            <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       <PageInfo
         purpose="Monitor all Meta Ads campaign sessions. Toggle automation on/off, track spend, leads, and purchases per campaign."
         wiring={[
           { label: '→ Test Launches', desc: 'campaigns are launched from test launches' },
+          { label: '→ Import Campaign', desc: 'bring existing Meta campaigns under HSL management' },
           { label: '→ Automation Rules', desc: 'each campaign can have rules for automated actions' },
           { label: '→ Meta Structure', desc: 'campaign → adset → ad hierarchy visible per campaign' },
         ]}
@@ -217,11 +260,12 @@ export default function CampaignMonitorPage() {
           <svg className="w-12 h-12 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <p>No campaigns yet. Launch one from Test Launches.</p>
+          <p>No campaigns yet. Launch one from Test Launches or import an existing campaign.</p>
+          <Link href="/campaign-monitor/import" className="btn-primary btn-sm">+ Import Campaign</Link>
         </div>
       ) : (
         <Table
-          headers={['Campaign Name', 'Product', 'Phase', 'Status', 'Daily Budget', 'Spend', 'Leads', 'Purchases', 'CPC', 'ROAS', 'Last Sync', 'Automation']}
+          headers={['Campaign', 'Product', 'Phase', 'Status', 'Source', 'Budget', 'Spend', 'Leads', 'Purchases', 'CPC', 'ROAS', 'Auto', 'Rules', 'Scan']}
           empty="No campaigns match the selected filters."
         >
           {sessions.map((session) => (
@@ -247,6 +291,9 @@ export default function CampaignMonitorPage() {
               <td className="px-4 py-3">
                 <StatusBadge status={session.status} />
               </td>
+              <td className="px-4 py-3">
+                <SourceBadge source={session.source} />
+              </td>
               <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
                 {fmtCurrency(Number(session.dailyBudget))}
               </td>
@@ -267,9 +314,6 @@ export default function CampaignMonitorPage() {
               <td className="px-4 py-3 text-stone-600 whitespace-nowrap">
                 {session.latestMetric?.roas != null ? `${Number(session.latestMetric.roas).toFixed(2)}x` : '—'}
               </td>
-              <td className="px-4 py-3 text-stone-500 text-sm whitespace-nowrap">
-                {fmtDate(session.latestMetric?.lastSyncedAt ?? session.lastMonitorAt)}
-              </td>
               <td className="px-4 py-3">
                 <div onClick={(e) => e.stopPropagation()}>
                   <AutoToggle
@@ -278,6 +322,21 @@ export default function CampaignMonitorPage() {
                     onToggle={handleToggle}
                   />
                 </div>
+              </td>
+              <td className="px-4 py-3 text-center">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  (session._count?.automationRules ?? 0) > 0
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'bg-stone-100 text-stone-400'
+                }`}>
+                  {(session._count?.automationRules ?? 0)} rules
+                </span>
+              </td>
+              <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">
+                <span className="text-stone-400">⏱</span> tiap {session.monitorIntervalMinutes}m
+                {session.lastMonitorAt && (
+                  <span className="block text-stone-400">🔄 {fmtTimeAgo(session.lastMonitorAt)}</span>
+                )}
               </td>
             </tr>
           ))}
