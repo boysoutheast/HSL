@@ -82,6 +82,11 @@ async function run() {
           name: structure.campaign.name ?? `Campaign ${metaCampaignId}`,
           effectiveStatus: structure.campaign.status ?? null,
           configuredStatus: structure.campaign.status ?? null,
+          rawStateJson: JSON.stringify({
+            dailyBudget: (structure.campaign as any).daily_budget ?? null,
+            lifetimeBudget: (structure.campaign as any).lifetime_budget ?? null,
+            budgetRemaining: (structure.campaign as any).budget_remaining ?? null,
+          }),
           lastSyncedAt: new Date(),
         },
         create: {
@@ -93,6 +98,11 @@ async function run() {
           name: structure.campaign.name ?? `Campaign ${metaCampaignId}`,
           effectiveStatus: structure.campaign.status ?? null,
           configuredStatus: structure.campaign.status ?? null,
+          rawStateJson: JSON.stringify({
+            dailyBudget: (structure.campaign as any).daily_budget ?? null,
+            lifetimeBudget: (structure.campaign as any).lifetime_budget ?? null,
+            budgetRemaining: (structure.campaign as any).budget_remaining ?? null,
+          }),
           lastSyncedAt: new Date(),
         },
       })
@@ -159,13 +169,22 @@ async function run() {
         })
       }
 
-      // Update session budget + status
-      const dailyBudget = Number((structure.campaign as any).daily_budget ?? 0)
+      // Update session budget + status + budget mode
+      const campaignDailyBudget = Number((structure.campaign as any).daily_budget ?? 0)
+      const isCBO = campaignDailyBudget > 0
+      // For ABO: find first adset with daily_budget
+      let primaryAdsetMetaId: string | null = null
+      if (!isCBO && structure.adsets.length > 0) {
+        const firstAdset = structure.adsets[0]
+        primaryAdsetMetaId = firstAdset.id
+      }
       await prisma.campaignSession.update({
         where: { id: session.id },
         data: {
           importStatus: 'synced',
-          dailyBudget: dailyBudget > 0 ? dailyBudget : 0,
+          dailyBudget: campaignDailyBudget > 0 ? campaignDailyBudget : 0,
+          budgetMode: isCBO ? 'CBO' : 'ABO',
+          primaryAdsetMetaId: isCBO ? null : primaryAdsetMetaId,
         },
       })
 

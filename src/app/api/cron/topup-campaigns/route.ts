@@ -126,7 +126,10 @@ async function run() {
         // Create ad via Meta API (PAUSED)
         try {
           const adAccountIdNum = adAccountId.replace(/^act_/, '')
-          const pageId = await resolvePageId(adAccountIdNum, token)
+          const pageId = await resolvePageId(adAccountIdNum, token, {
+            sessionId: session.id,
+            metaAdAccountId: session.metaAdAccountId ?? undefined,
+          })
           const adResult = await createAd({
             adAccountId: adAccountIdNum,
             pageId,

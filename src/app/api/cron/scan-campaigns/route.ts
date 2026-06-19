@@ -158,12 +158,17 @@ async function run() {
         const currentBudget = Number(session.dailyBudget)
         const resolved = resolveAction(actionSpec, currentBudget)
 
+        // Determine budget target level: CBO → campaign, ABO → adset
+        const budgetMode = session.budgetMode ?? 'CBO'
+        const entityId = budgetMode === 'ABO' && session.primaryAdsetMetaId
+          ? session.primaryAdsetMetaId
+          : metaCampaignId
+        const budgetLevel = budgetMode === 'ABO' ? 'ADSET' as const : 'CAMPAIGN' as const
+
         // Apply action via Meta API
         try {
-          const entityId = metaCampaignId // apply to campaign level
-
           if (resolved.payload.dailyBudget) {
-            await updateBudget(entityId, resolved.payload.dailyBudget as number, token)
+            await updateBudget(entityId, resolved.payload.dailyBudget as number, token, budgetLevel)
           }
           if (resolved.payload.status) {
             await setStatus(entityId, resolved.payload.status as 'ACTIVE' | 'PAUSED', token)

@@ -179,9 +179,16 @@ export async function getInsights(
 }
 
 // ── Helper: updateBudget ──────────────────────────────────
+// level: 'CAMPAIGN' → /{campaignId} (CBO), 'ADSET' → /{adsetId} (ABO)
 
-export async function updateBudget(entityId: string, dailyBudgetMinor: number, token: string): Promise<void> {
-  await metaPost(`/${entityId}`, token, { daily_budget: String(dailyBudgetMinor) })
+export async function updateBudget(
+  entityId: string,
+  dailyBudgetMinor: number,
+  token: string,
+  level: 'CAMPAIGN' | 'ADSET' = 'CAMPAIGN',
+): Promise<void> {
+  const field = level === 'ADSET' ? 'daily_budget' : 'daily_budget'
+  await metaPost(`/${entityId}`, token, { [field]: String(dailyBudgetMinor) })
 }
 
 // ── Helper: setStatus ─────────────────────────────────────
@@ -205,10 +212,51 @@ export async function uploadImageToMeta(
 
 // ── Helper: resolvePageId ─────────────────────────────────
 // Fetch the connected Facebook Page for an ad account.
-export async function resolvePageId(adAccountId: string, token: string): Promise<string> {
-  // Get ad account's connected page(s). /act_<id>/adaccounts?fields=page_id
-  const { data } = await metaGet(`/act_${adAccountId}`, token, { fields: 'business{id}' })
-  // Fallback: get user's pages
+// Priority: 1) TestLaunchAdset.identityPageId (via sessionId → testLaunch.campaignSessions)
+//           2) MetaPage linked to MetaAdAccount (DB)
+//           3) /me/accounts (Meta API fallback)
+
+export async function resolvePageId(
+  adAccountId: string,
+  token: string,
+  context?: { sessionId?: string; metaAdAccountId?: string },
+): Promise<string> {
+  // Priority 1: TestLaunchAdset.identityPageId
+  if (context?.sessionId) {
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      const session = await prisma.campaignSession.findUnique({
+        where: { id: context.sessionId },
+        select: {
+          testLaunch: {
+            select: {
+              adsets: {
+                select: { identityPageId: true },
+                take: 1,
+                orderBy: { sortOrder: 'asc' },
+              },
+            },
+          },
+        },
+      })
+      const tid = session?.testLaunch?.adsets?.[0]?.identityPageId
+      if (tid) return tid
+    } catch { /* fall through */ }
+  }
+
+  // Priority 2: MetaPage linked to MetaAdAccount
+  if (context?.metaAdAccountId) {
+    try {
+      const { prisma } = await import('@/lib/prisma')
+      const page = await prisma.metaPage.findFirst({
+        where: { metaAccountId: context.metaAdAccountId, isActive: true },
+        select: { pageId: true },
+      })
+      if (page?.pageId) return page.pageId
+    } catch { /* fall through */ }
+  }
+
+  // Priority 3: Meta API fallback — get user's pages
   const { data: pages } = await metaGet('/me/accounts', token, { fields: 'id,name', limit: '1' })
   const pageList = (pages as any)?.data ?? []
   if (pageList.length === 0) throw new Error('No Facebook Page found for this token')
