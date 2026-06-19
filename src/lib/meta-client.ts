@@ -198,13 +198,35 @@ export async function setStatus(entityId: string, status: 'ACTIVE' | 'PAUSED', t
 }
 
 // ── Helper: uploadImageToMeta ─────────────────────────────
-// Upload image from URL → Meta adimage hash. Returns hash.
+// Upload image from URL → Meta adimage hash.
+// IMPORTANT: File upload (multipart) works, URL-based upload returns #3 for this app.
+// Strategy: download → file upload
 
 export async function uploadImageToMeta(
   adAccountId: string, imageUrl: string, token: string,
 ): Promise<{ hash: string; id: string }> {
-  const { data } = await metaPost(`/act_${adAccountId}/adimages`, token, { url: imageUrl })
-  const images = (data as any)?.images ?? {}
+  // 1. Download image
+  const imgRes = await fetch(imageUrl)
+  if (!imgRes.ok) throw new Error(`Failed to download image: HTTP ${imgRes.status}`)
+  const imgBuffer = await imgRes.arrayBuffer()
+
+  // 2. Upload via multipart file upload (CPAS uses this approach — works ✅)
+  const formData = new FormData()
+  formData.append('access_token', token)
+  formData.append('published', 'false')
+  formData.append('file', new Blob([imgBuffer], { type: 'image/jpeg' }), 'ad_image.jpg')
+
+  const uploadRes = await fetch(`https://graph.facebook.com/v25.0/act_${adAccountId}/adimages`, {
+    method: 'POST',
+    body: formData,
+  })
+  const data = await uploadRes.json() as any
+
+  if (!uploadRes.ok || !data?.images) {
+    throw new Error(data?.error?.message ?? `HTTP ${uploadRes.status}: Meta upload failed`)
+  }
+
+  const images = data.images as Record<string, { hash: string; id: string }>
   const firstKey = Object.keys(images)[0]
   if (!firstKey) throw new Error('Meta upload returned no images')
   return { hash: images[firstKey].hash, id: images[firstKey].id }
