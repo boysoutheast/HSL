@@ -5,18 +5,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-
-const crypto = require('crypto')
-
-function decryptToken(encrypted: string): string {
-  const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY not set')
-  const parts = encrypted.split(':')
-  const iv = Buffer.from(parts[0], 'hex')
-  const enc = Buffer.from(parts[1], 'hex')
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key.padEnd(32, 'x').slice(0, 32)), iv)
-  return decipher.update(enc, undefined, 'utf8') + decipher.final('utf8')
-}
+import { decode } from '@/lib/crypto'
 
 export interface WriteCheckResult {
   ok: boolean
@@ -92,7 +81,7 @@ export async function canWriteToAdAccount(
 
   // All checks pass — decrypt and return
   try {
-    const token = decryptToken(meta.longLivedTokenEncrypted)
+    const token = decode(meta.longLivedTokenEncrypted)
     return {
       ok: true,
       token,
