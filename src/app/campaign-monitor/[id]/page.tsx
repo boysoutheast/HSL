@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import TopUpTab from './TopUpTab'
 
 interface Session {
   id: string

@@ -29,12 +29,18 @@ export async function POST(
     where: { campaignSessionId: params.id, entityType: 'AD', effectiveStatus: 'ACTIVE' },
   })
 
-  if (activeAds >= session.minActiveAds) {
-    return NextResponse.json({ action: 'skip', reason: 'floor_not_breached', activeAds, minActiveAds: session.minActiveAds })
+  // Count in-flight PENDING CREATE_AD — prevent floor overshoot on parallel calls
+  const inflightCreateAd = await prisma.automationAction.count({
+    where: { campaignSessionId: params.id, actionType: 'CREATE_AD', status: 'PENDING' },
+  })
+
+  const need = Math.max(0, session.minActiveAds - activeAds - inflightCreateAd)
+
+  if (need <= 0) {
+    return NextResponse.json({ action: 'skip', reason: 'floor_not_breached', activeAds, minActiveAds: session.minActiveAds, inflightCreateAd })
   }
 
   // Floor breached — claim
-  const need = session.minActiveAds - activeAds
   let created = 0
   let skippedEmptyPool = false
 
