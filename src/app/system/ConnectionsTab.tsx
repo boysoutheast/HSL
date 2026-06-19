@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { HelpHint } from '@/components/ui/HelpHint'
 
 // ─── Types ──────────────────────────────────────────────
 interface ApiKey {
@@ -350,7 +351,7 @@ export default function ConnectionsTab() {
 
       {/* Generate Key */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
-        <h3 className="text-base font-semibold text-stone-800">🔑 Generate API Key</h3>
+        <h3 className="text-base font-semibold text-stone-800">🔑 Generate API Key <HelpHint k="cn.apiKey" /></h3>
         <div className="flex gap-3">
           <input type="text" value={keyName} onChange={e => setKeyName(e.target.value)}
             placeholder="Key name (optional)"
@@ -390,7 +391,7 @@ export default function ConnectionsTab() {
                   </div>
                 </div>
                 <button onClick={() => handleRevoke(k.id)} disabled={revoking === k.id}
-                  className="btn-danger btn-sm">{revoking === k.id ? 'Revoking...' : 'Revoke'}</button>
+                  className="btn-danger btn-sm">{revoking === k.id ? 'Revoking...' : 'Revoke'} <HelpHint k="cn.revoke" /></button>
               </div>
             ))}
           </div>
