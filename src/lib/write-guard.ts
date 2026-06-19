@@ -93,12 +93,13 @@ export async function canWriteToAdAccount(
 }
 
 /**
- * Update MetaAccount status and lastTokenCheckAt.
- * Called when a token error is detected during Meta API calls.
+ * Update parent MetaAccount status + lastTokenCheckAt.
+ * Arg is the MetaAdAccount id (what callers have) — resolves parent via relation.
+ * updateMany: tidak throw P2025 kalau 0 row (resilient).
  */
-export async function markAccountNeedsReconnect(metaAccountId: string): Promise<void> {
-  await prisma.metaAccount.update({
-    where: { id: metaAccountId },
+export async function markAccountNeedsReconnect(metaAdAccountId: string): Promise<void> {
+  await prisma.metaAccount.updateMany({
+    where: { adAccounts: { some: { id: metaAdAccountId } } },
     data: {
       status: 'needs_reconnect',
       lastTokenCheckAt: new Date(),
@@ -107,11 +108,12 @@ export async function markAccountNeedsReconnect(metaAccountId: string): Promise<
 }
 
 /**
- * Mark Meta account as active (successful API call).
+ * Mark parent MetaAccount healthy (successful API call).
+ * Arg is the MetaAdAccount id — resolves parent via relation.
  */
-export async function markAccountHealthy(metaAccountId: string): Promise<void> {
-  await prisma.metaAccount.update({
-    where: { id: metaAccountId },
+export async function markAccountHealthy(metaAdAccountId: string): Promise<void> {
+  await prisma.metaAccount.updateMany({
+    where: { adAccounts: { some: { id: metaAdAccountId } } },
     data: {
       lastMetaCallAt: new Date(),
     },

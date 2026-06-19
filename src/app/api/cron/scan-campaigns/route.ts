@@ -188,7 +188,7 @@ async function run() {
 
           // Notify rule fired
           const budgetDesc = resolved.payload.dailyBudget
-            ? `Budget ${resolved.payload.dailyBudget > currentBudget ? 'naik' : 'turun'} ke Rp${Number(resolved.payload.dailyBudget).toLocaleString()}`
+            ? `Budget ${Number(resolved.payload.dailyBudget) > currentBudget ? 'naik' : 'turun'} ke Rp${Number(resolved.payload.dailyBudget).toLocaleString()}`
             : ''
           const statusDesc = resolved.payload.status
             ? `Status jadi ${resolved.payload.status}`
