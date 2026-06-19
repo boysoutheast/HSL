@@ -153,7 +153,7 @@ function LogsPageInner() {
       {activeTab === 'logs' && (
         <>
           <PageInfo
-            purpose="Riwayat semua konten yang dibuat dan diposting Hermes. Read-only — diisi otomatis oleh Hermes via API."
+            purpose="Riwayat semua konten yang dibuat dan diposting AI Buddy. Read-only — diisi otomatis oleh AI Buddy via API."
             wiring={[
               { label: '← Hermes Agent', desc: 'Hermes submit via POST /api/hermes/content-log' },
               { label: '← Character / Topic / CEP', desc: 'semua relasi dicatat untuk bisa lacak performa per CEP' },
@@ -188,7 +188,7 @@ function LogsPageInner() {
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-stone-50">
                   <tr>
-                    {['Date', 'Hermes', 'Account', 'Character', 'Topic', 'CEP', 'Status', 'Post URL', 'Prompt'].map((h) => (
+                    {['Date', 'AI Buddy', 'Account', 'Character', 'Topic', 'CEP', 'Status', 'Post URL', 'Prompt'].map((h) => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -251,7 +251,7 @@ function LogsPageInner() {
           <PageInfo
             purpose="Metrik performa per post Instagram. Data ini dipakai cron untuk hitung growth/jam dan putuskan kapan akun READY_UPLOAD."
             wiring={[
-              { label: '← Content Log', desc: "otomatis dibuat saat Hermes submit log dengan status 'posted'" },
+              { label: '← Content Log', desc: "otomatis dibuat saat AI Buddy submit log dengan status 'posted'" },
               { label: '← Cron Job', desc: '/api/cron/fetch-metrics update metrik tiap jam' },
               { label: '→ Posting Monitor', desc: 'growth/jam dari sini menentukan status MONITORING/GROWING/HOT/READY' },
             ]}

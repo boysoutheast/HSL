@@ -134,7 +134,7 @@ export default function MediaRulesPage() {
       </div>
 
       <PageInfo
-        purpose="Rules yang ngecek media library tiap jam (cron). Kalau kondisi kena (stok media kurang, konten kelamaan, nggak ada winner) → otomatis bikin task generate untuk Hermes worker."
+        purpose="Rules yang ngecek media library tiap jam (cron). Kalau kondisi kena (stok media kurang, konten kelamaan, nggak ada winner) → otomatis bikin task generate untuk AI Buddy worker."
         inputs={[
           'Trigger: MIN_COUNT / MAX_AGE_DAYS / NO_WINNER',
           'Threshold sesuai trigger',
@@ -143,7 +143,7 @@ export default function MediaRulesPage() {
         ]}
         wiring={[
           { label: '→ WorkerTask', desc: 'rule yang kena bikin task GENERATE_VIDEO/PHOTO' },
-          { label: '→ Hermes /tasks', desc: 'worker claim task lalu generate + upload hasil' },
+          { label: '→ AI Buddy /tasks', desc: 'worker claim task lalu generate + upload hasil' },
           { label: '← Cron /api/cron/media-rules', desc: 'evaluator jalan tiap jam' },
         ]}
       />

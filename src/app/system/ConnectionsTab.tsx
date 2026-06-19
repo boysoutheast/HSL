@@ -190,7 +190,7 @@ export default function ConnectionsTab() {
       {/* Hermes Agent Keys */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
         <div>
-          <h3 className="text-base font-semibold text-stone-800">🤖 Hermes Agent Keys</h3>
+          <h3 className="text-base font-semibold text-stone-800">🤖 AI Buddy Agent Keys</h3>
           <p className="text-sm text-stone-500 mt-0.5">Bearer token untuk Hermes AI agents akses <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> endpoints.</p>
         </div>
 

@@ -190,11 +190,11 @@ export default function ProductsPage() {
       </div>
 
       <PageInfo
-        purpose="Produk Shopee/CPAS yang dipromosikan Hermes. Klik Detail untuk kelola foto dan CEP produk."
+        purpose="Produk Shopee/CPAS yang dipromosikan AI Buddy. Klik Detail untuk kelola foto dan CEP produk."
         inputs={['Nama produk', 'Deskripsi', 'Foto produk (langsung upload)', 'Shopee URL', 'Harga']}
         wiring={[
           { label: '→ Photos', desc: 'foto bisa diupload langsung saat add, atau di tab Photos pada detail produk' },
-          { label: '→ CEP', desc: 'CEP dikelola di tab CEPs pada detail produk (review CEP dari Hermes + add manual)' },
+          { label: '→ CEP', desc: 'CEP dikelola di tab CEPs pada detail produk (review CEP dari AI Buddy + add manual)' },
           { label: '→ Hermes API', desc: 'produk + foto dikirim via /api/hermes/library' },
         ]}
       />

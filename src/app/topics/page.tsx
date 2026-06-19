@@ -60,7 +60,7 @@ export default function TopicsPage() {
           { label: '← Character', desc: 'topik terikat ke character tertentu' },
           { label: '← Product', desc: 'topik bisa terkait produk CPAS' },
           { label: '→ CEP', desc: 'tiap topik punya banyak CEP' },
-          { label: '→ Hermes API', desc: 'topik + CEP-nya dikirim dalam library response' },
+          { label: '→ AI Buddy API', desc: 'topik + CEP-nya dikirim dalam library response' },
         ]}
       />
 

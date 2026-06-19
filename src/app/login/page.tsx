@@ -144,7 +144,7 @@ function LoginForm() {
         )}
 
         <p className="text-center text-stone-500 text-xs mt-4">
-          Hermes Infrastructure · Internal Tool
+          AI Buddy Infrastructure · Internal Tool
         </p>
       </div>
     </div>

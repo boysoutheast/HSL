@@ -376,7 +376,7 @@ function PhotosTab({ charId }: { charId: string }) {
   return (
     <div>
       <PageInfo
-        purpose="Foto referensi untuk karakter ini. Hermes pakai URL foto ini untuk generate video."
+        purpose="Foto referensi untuk karakter ini. AI Buddy pakai URL foto ini untuk generate video."
         inputs={['File (JPG/PNG/WebP)', 'Label: deskripsi posisi foto', 'Category']}
         wiring={[
           { label: '→ Railway Volume', desc: '/data/photos' },
@@ -706,7 +706,7 @@ function TopicsTab({ charId }: { charId: string }) {
   return (
     <div>
       <PageInfo
-        purpose="Topik bahasan + CEP untuk karakter ini. Hermes pilih topik dan CEP dari sini untuk generate konten."
+        purpose="Topik bahasan + CEP untuk karakter ini. AI Buddy pilih topik dan CEP dari sini untuk generate konten."
         inputs={['Topic: nama + deskripsi', 'CEP: kalimat pembuka yang menyentuh pain point']}
         wiring={[
           { label: '→ Hermes /api/hermes/ready-upload', desc: 'topik dan CEP dipilih saat Hermes generate konten' },
@@ -798,7 +798,7 @@ function TopicsTab({ charId }: { charId: string }) {
                     {loadingCeps === topic.id ? (
                       <p className="text-xs text-stone-400 text-center py-4">Loading CEPs...</p>
                     ) : ceps.length === 0 ? (
-                      <p className="text-xs text-stone-400 text-center py-4">No CEPs yet. Add one manually or let Hermes write one.</p>
+                      <p className="text-xs text-stone-400 text-center py-4">No CEPs yet. Add one manually or let AI Buddy write one.</p>
                     ) : (
                       <div className="space-y-1.5">
                         {ceps.map((cep) => (

@@ -294,15 +294,15 @@ export default function AgentsPage() {
       {/* ── Agents Table ── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Hermes Agents</h1>
+          <h1 className="text-2xl font-bold text-stone-900">AI Buddy Agents</h1>
           <p className="text-sm text-stone-500 mt-0.5">{agents.length} total · {activeCount} active</p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="btn-primary">+ Add Agent</button>
       </div>
 
       <PageInfo
-        purpose="Kelola AI agent Hermes dan assign data yang boleh mereka akses."
-        inputs={['Nama agent (misal: Hermes 1)', 'Notes (opsional)']}
+        purpose="Kelola AI agent AI Buddy dan assign data yang boleh mereka akses."
+        inputs={['Nama agent (misal: Agent 1)', 'Notes (opsional)']}
         wiring={[
           { label: '→ Assignment', desc: 'agent harus di-assign ke akun/character/topic/produk sebelum bisa kerja' },
           { label: '→ Hermes API', desc: 'semua /api/hermes/* endpoint divalidasi pakai API key agent ini' },
@@ -315,7 +315,7 @@ export default function AgentsPage() {
       ) : (
         <Table
           headers={['Name', 'Status', 'Assignments', 'Content Logs', 'Created', 'Notes', 'Actions']}
-          empty="No Hermes agents found."
+          empty="No AI Buddy agents found."
         >
           {agents.map((agent) => (
             <tr
@@ -449,7 +449,7 @@ export default function AgentsPage() {
       </div>
 
       {/* Add Agent Modal */}
-      <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add Hermes Agent">
+      <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add AI Buddy Agent">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">Agent Name <span className="text-red-500">*</span></label>

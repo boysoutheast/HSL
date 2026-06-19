@@ -152,7 +152,7 @@ export default function PhotosPage() {
       </div>
 
       <PageInfo
-        purpose="Foto referensi yang dikirim ke Hermes sebagai bahan visual konten. Hermes pakai URL foto ini untuk generate video/image."
+        purpose="Foto referensi yang dikirim ke AI Buddy sebagai bahan visual konten. AI Buddy pakai URL foto ini untuk generate video/image."
         inputs={[
           'File foto (JPG/PNG/WebP)',
           'Label: deskripsi posisi/situasi foto (misal: ibu_duduk_pegang_betis)',

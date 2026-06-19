@@ -54,7 +54,7 @@ export default function CharactersPage() {
       </div>
 
       <PageInfo
-        purpose="Persona yang dimainkan Hermes saat bikin konten. Satu akun bisa punya beberapa karakter untuk variasi konten."
+        purpose="Persona yang dimainkan AI Buddy saat bikin konten. Satu akun bisa punya beberapa karakter untuk variasi konten."
         inputs={[
           'Nama karakter (misal: Ibu Caring)',
           'Deskripsi: usia, penampilan, background',
