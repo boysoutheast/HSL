@@ -1,0 +1,28 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "sh start.sh"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[cron.jobs.sync-campaigns]
+schedule = "*/5 * * * *"
+url = "https://ai.boytenggara.com/api/cron/sync-campaigns"
+method = "POST"
+headers = { x-cron-secret = "{{ CRON_SECRET }}" }
+
+[cron.jobs.scan-campaigns]
+schedule = "*/5 * * * *"
+url = "https://ai.boytenggara.com/api/cron/scan-campaigns"
+method = "POST"
+headers = { x-cron-secret = "{{ CRON_SECRET }}" }
+
+[cron.jobs.topup-campaigns]
+schedule = "*/10 * * * *"
+url = "https://ai.boytenggara.com/api/cron/topup-campaigns"
+method = "POST"
+headers = { x-cron-secret = "{{ CRON_SECRET }}" }
