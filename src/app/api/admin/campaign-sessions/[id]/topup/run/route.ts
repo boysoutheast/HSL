@@ -174,11 +174,14 @@ export async function POST(
     await prisma.metaEntity.create({
       data: {
         campaignSessionId: params.id,
+        userId: session.userId,
+        metaAdAccountId,
         entityType: 'AD',
         metaEntityId: adResult.adId,
         name: poolItem.headline ?? poolItem.primaryText.slice(0, 60),
         effectiveStatus: 'PAUSED',
         configuredStatus: 'PAUSED',
+        lastSyncedAt: new Date(),
       },
     })
 
