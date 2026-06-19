@@ -323,7 +323,7 @@ export async function createAd(
     call_to_action: { type: spec.callToAction },
   }
   if (spec.description) linkData.description = spec.description
-  if (attachmentHash) linkData.attachment_hash = attachmentHash
+  // Note: image_hash is set at top level (below), NOT inside link_data
 
   const creativePayload: Record<string, string> = {
     name: `AD: ${spec.name}`,
@@ -335,6 +335,10 @@ export async function createAd(
     degrees_of_freedom_spec: JSON.stringify({
       creative_features_spec: { standard_enhancements: { enroll_status: 'OPT_OUT' } },
     }),
+  }
+  // image_hash at top level (file-uploaded images require this, not attachment_hash in link_data)
+  if (attachmentHash) {
+    creativePayload.image_hash = attachmentHash
   }
 
   const { data: creative } = await metaPost(`/act_${spec.adAccountId}/adcreatives`, token, creativePayload)
