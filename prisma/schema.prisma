@@ -153,6 +153,7 @@ model Product {
   mediaAssets     MediaAsset[]
   CreativeVariant   CreativeVariant[]
   landingPages      LandingPage[]
+  campaignSessions  CampaignSession[]
   mediaLibraryRules MediaLibraryRule[]
   cpasPainEntries   CpasPainEntry[]
 
@@ -807,12 +808,14 @@ model CampaignSession {
   id                     String    @id @default(cuid())
   userId                 String    @map("user_id")
   testLaunchId           String?   @map("test_launch_id")
-  productId              String    @map("product_id")
+  productId              String?   @map("product_id")
   metaAdAccountId        String?   @map("meta_ad_account_id")
   name                   String
   objective              String    @default("OUTCOME_LEADS")
   status                 String    @default("DRAFT") // DRAFT | APPROVAL_REQUIRED | QUEUED | CREATING | RUNNING | PAUSED | KILLED | COMPLETED | ERROR
   phase                  String    @default("TESTING") // TESTING | SCALING | MAINTENANCE | EXITED
+  source                 String    @default("launch") @map("source") // 'launch' | 'imported'
+  importStatus           String?   @map("import_status")  // null | 'pending_sync' | 'synced' | 'sync_failed'
   automationEnabled      Boolean   @default(true) @map("automation_enabled")
   timezone               String    @default("Asia/Jakarta")
   currency               String    @default("IDR")
@@ -829,6 +832,7 @@ model CampaignSession {
 
   user                 AdminUser              @relation(fields: [userId], references: [id], onDelete: Cascade)
   testLaunch           TestLaunch?            @relation(fields: [testLaunchId], references: [id], onDelete: SetNull)
+  product              Product?               @relation(fields: [productId], references: [id], onDelete: SetNull)
   metaAdAccount        MetaAdAccount?         @relation(fields: [metaAdAccountId], references: [id], onDelete: SetNull)
   metaEntities         MetaEntity[]
   creativeLinks        CampaignCreativeLink[]
@@ -944,6 +948,7 @@ model AutomationRule {
   ruleCategory            String @map("rule_category") // THRESHOLD | SCHEDULE | PHASE_TRANSITION | CREATIVE_ROTATION | COMPOSITE
   conditionTreeJson       String    @map("condition_tree_json")
   actionSpecJson          String    @map("action_spec_json")
+  sourceTemplateId        String?   @map("source_template_id")
   evaluationWindowMinutes Int?      @map("evaluation_window_minutes")
   minimumDataAgeMinutes   Int?      @map("minimum_data_age_minutes")
   cooldownMinutes         Int       @default(60) @map("cooldown_minutes")
@@ -959,6 +964,7 @@ model AutomationRule {
   campaignSession CampaignSession? @relation(fields: [campaignSessionId], references: [id], onDelete: SetNull)
   ruleExecutions  RuleExecution[]
 
+  @@index([sourceTemplateId])
   @@map("automation_rules")
 }
 
