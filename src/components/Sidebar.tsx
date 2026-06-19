@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import NotificationBell from './NotificationBell'
 
 interface User { id: string; name: string | null; email: string; role: 'admin' | 'user' }
 
@@ -81,7 +82,10 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
               <p className="text-[10px] text-stone-400 font-medium">Support Library</p>
             </div>
           </Link>
-          <button onClick={() => setShowCreate(v => !v)} className="w-7 h-7 rounded-lg bg-violet-100 hover:bg-violet-200 flex items-center justify-center transition-colors" title="Buat">{I.plus}</button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button onClick={() => setShowCreate(v => !v)} className="w-7 h-7 rounded-lg bg-violet-100 hover:bg-violet-200 flex items-center justify-center transition-colors" title="Buat">{I.plus}</button>
+          </div>
           {showCreate && (
             <div className="absolute left-48 top-3 z-20 w-48 bg-white border border-stone-200 rounded-xl shadow-xl py-1.5">
               <Link href="/ads?tab=launch&new=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">New Launch</Link>
