@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
+import { HelpHint } from '@/components/ui/HelpHint'
 
 interface MetaAdAccount {
   id: string
@@ -154,7 +155,7 @@ export default function ImportCampaignPage() {
 
       {/* Step 1: Pick Ad Account + Campaign */}
       <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
-        <h2 className="text-sm font-bold text-stone-900 mb-1">Step 1: Pick Ad Account</h2>
+        <h2 className="text-sm font-bold text-stone-900 mb-1">Step 1: Pick Ad Account <HelpHint k="im.adAccount" /></h2>
         <p className="text-xs text-stone-500 mb-4">Choose which Meta ad account contains the campaign.</p>
 
         <select
@@ -175,7 +176,7 @@ export default function ImportCampaignPage() {
       {selectedAdAccountId && (
         <div className="bg-white rounded-xl border border-stone-200 p-5 mb-4">
           <h2 className="text-sm font-bold text-stone-900 mb-1">
-            Step 2: Pick Campaign
+            Step 2: Pick Campaign <HelpHint k="im.pickCampaign" />
           </h2>
           <p className="text-xs text-stone-500 mb-4">
             {campaignsLoading ? 'Loading campaigns from Meta...' :
@@ -282,7 +283,7 @@ export default function ImportCampaignPage() {
                   Importing...
                 </>
               ) : (
-                'Import & Sync'
+                <>Import & Sync <HelpHint k="im.confirm" /></>
               )}
             </button>
             <button onClick={cancelImport} disabled={importing} className="btn-ghost">

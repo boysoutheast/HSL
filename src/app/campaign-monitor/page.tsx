@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import { HelpHint } from '@/components/ui/HelpHint'
+import { startTour, hasSeenTour } from '@/lib/useTour'
+import { CAMPAIGN_TOUR } from '@/lib/tours'
 
 interface CampaignSession {
   id: string
@@ -143,6 +146,14 @@ export default function CampaignMonitorPage() {
 
   useEffect(() => { fetchSessions() }, [fetchSessions])
 
+  // Auto-start tour sekali
+  useEffect(() => {
+    if (!loading && sessions.length > 0 && !hasSeenTour(CAMPAIGN_TOUR)) {
+      const t = setTimeout(() => startTour(CAMPAIGN_TOUR), 800)
+      return () => clearTimeout(t)
+    }
+  }, [loading, sessions.length])
+
   const handleRefresh = () => {
     setRefreshing(true)
     fetchSessions()
@@ -183,13 +194,18 @@ export default function CampaignMonitorPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => startTour(CAMPAIGN_TOUR, { force: true })}
+            className="btn-ghost flex items-center gap-1.5 text-xs"
+            title="Mulai tur panduan"
+          >🧑‍🏫 Tour</button>
           <Link href="/ads?tab=campaigns&new=1" className="btn-ghost flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            New Launch
+            New Launch <HelpHint k="cm.newLaunch" />
           </Link>
-          <Link href="/campaign-monitor/import" className="btn-primary flex items-center gap-1.5">
+          <Link href="/campaign-monitor/import" data-tour="cm-import" className="btn-primary flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
             </svg>
@@ -203,7 +219,7 @@ export default function CampaignMonitorPage() {
             <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Refresh
+            Refresh <HelpHint k="cm.refresh" />
           </button>
         </div>
       </div>
@@ -221,7 +237,7 @@ export default function CampaignMonitorPage() {
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-stone-600 font-medium">Status:</label>
+          <label className="text-sm text-stone-600 font-medium">Status: <HelpHint k="cm.statusFilter" /></label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -238,7 +254,7 @@ export default function CampaignMonitorPage() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-stone-600 font-medium">Phase:</label>
+          <label className="text-sm text-stone-600 font-medium">Phase: <HelpHint k="cm.phaseFilter" /></label>
           <select
             value={phaseFilter}
             onChange={(e) => setPhaseFilter(e.target.value)}
@@ -250,6 +266,9 @@ export default function CampaignMonitorPage() {
             <option value="MAINTENANCE">MAINTENANCE</option>
             <option value="EXITED">EXITED</option>
           </select>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-stone-500">
+          Auto: <HelpHint k="cm.autoToggle" />
         </div>
       </div>
 
@@ -268,7 +287,7 @@ export default function CampaignMonitorPage() {
           headers={['Campaign', 'Product', 'Phase', 'Status', 'Source', 'Budget', 'Spend', 'Leads', 'Purchases', 'CPC', 'ROAS', 'Auto', 'Rules', 'Scan']}
           empty="No campaigns match the selected filters."
         >
-          {sessions.map((session) => (
+          {sessions.map((session, i) => (
             <tr
               key={session.id}
               className="hover:bg-stone-50 transition-colors cursor-pointer"
@@ -321,7 +340,7 @@ export default function CampaignMonitorPage() {
                 {session.latestMetric?.roas != null ? `${Number(session.latestMetric.roas).toFixed(2)}x` : '—'}
               </td>
               <td className="px-4 py-3">
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()} data-tour={i === 0 ? "cm-auto" : undefined}>
                   <AutoToggle
                     enabled={session.automationEnabled}
                     sessionId={session.id}

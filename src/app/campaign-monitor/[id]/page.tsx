@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import TopUpTab from './TopUpTab'
 import { ruleToReadable } from '@/lib/rule-readable'
+import { HelpHint } from '@/components/ui/HelpHint'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -242,15 +243,15 @@ export default function CampaignDetailPage() {
             </div>
             <div className="flex flex-wrap items-center gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-600 font-medium">Auto:</span>
+                <span className="text-xs text-stone-600 font-medium">Auto: <HelpHint k="cd.autoToggle" /></span>
                 <button onClick={handleAutoToggle} disabled={togglingAuto}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 ${session.automationEnabled?'bg-violet-600':'bg-stone-300'}`}>
                   <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${session.automationEnabled?'translate-x-4':'translate-x-1'}`} />
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-stone-600 font-medium">Scan:</span>
-                <select value={intervalVal} onChange={(e)=>handleIntervalChange(Number(e.target.value))} disabled={savingInterval}
+                <span className="text-xs text-stone-600 font-medium">Scan: <HelpHint k="cd.scanInterval" /></span>
+                <select value={intervalVal} onChange={(e)=>handleIntervalChange(Number(e.target.value))} disabled={savingInterval} data-tour="cd-scan-interval"
                   className="border border-stone-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500">
                   {INTERVAL_OPTIONS.map(v => <option key={v} value={v}>tiap {v}m</option>)}
                 </select>
@@ -270,7 +271,7 @@ export default function CampaignDetailPage() {
           {/* Raw Meta State (accordion) */}
           <details className="bg-white rounded-xl border border-stone-200 overflow-hidden">
             <summary className="px-5 py-3 text-sm font-medium text-stone-700 cursor-pointer hover:bg-stone-50 transition-colors">
-              📦 Meta Campaign Structure ({session.metaEntities.length} entities)
+              📦 Meta Campaign Structure <HelpHint k="cd.structure" /> ({session.metaEntities.length} entities)
             </summary>
             <div className="px-5 pb-4 pt-2 space-y-4">
               {session.metaEntities.length===0 ? (
@@ -315,7 +316,7 @@ export default function CampaignDetailPage() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-stone-900">📋 Aturan ({rules.length})</h2>
-              <Link href={`/campaign-monitor/${id}/rules/new`} className="btn-primary btn-sm">+ Pasang Template</Link>
+              <Link href={`/campaign-monitor/${id}/rules/new`} data-tour="cd-attach-rule" className="btn-primary btn-sm">+ Pasang Template <HelpHint k="cd.attachRule" /></Link>
             </div>
             {rules.length===0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-stone-400 text-sm gap-2 bg-white rounded-xl border border-stone-200">
@@ -340,11 +341,12 @@ export default function CampaignDetailPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
+                        <span><HelpHint k="cd.ruleToggle" /></span>
                         <button onClick={()=>handleRuleToggle(rule.id,rule.status)}
                           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${rule.status==='ACTIVE'?'bg-violet-600':'bg-stone-300'}`} title={rule.status==='ACTIVE'?'Pause':'Activate'}>
                           <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${rule.status==='ACTIVE'?'translate-x-4':'translate-x-1'}`} />
                         </button>
-                        <button onClick={()=>handleDetachRule(rule.id)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50">Lepas</button>
+                        <button onClick={()=>handleDetachRule(rule.id)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50">Lepas <HelpHint k="cd.ruleDetach" /></button>
                       </div>
                     </div>
                   </div>
