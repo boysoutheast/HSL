@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import ClientTabs from '@/components/ClientTabs'
-import WorkersPage from '../workers/page'
-import DeadLettersPage from '../admin/dead-letters/page'
-import ObservabilityPage from '../observability/page'
 import AdminUsersPage from '../admin-users/page'
 import ConnectionsTab from './ConnectionsTab'
 import DocsPage from '../docs/page'
-import CpasTab from './CpasTab'
 import MetaConnectionsPage from '../meta-connections/page'
 import HashCheckerTab from './HashCheckerTab'
 
@@ -31,8 +27,8 @@ export default function SystemPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const userRole = d?.user?.role ?? null
-        const adminTabs = ['connections', 'workers', 'users', 'dead-letters', 'observability', 'docs', 'cpas', 'meta', 'hash-checker']
-        const userTabs = ['connections', 'workers', 'docs']
+        const adminTabs = ['connections', 'users', 'docs', 'meta', 'hash-checker']
+        const userTabs = ['connections', 'docs']
         const validTabs = userRole === 'admin' ? adminTabs : userTabs
         if (urlTab && validTabs.includes(urlTab)) setInitialTab(urlTab)
         setRole(userRole)
@@ -53,17 +49,12 @@ export default function SystemPage() {
 
   const userTabs = [
     { id: 'connections', label: 'Connections' },
-    { id: 'workers', label: 'Workers' },
     { id: 'docs', label: 'Docs' },
   ]
   const adminTabs = [
     { id: 'connections', label: 'Connections' },
-    { id: 'workers', label: 'Workers' },
     { id: 'users', label: 'Users' },
-    { id: 'dead-letters', label: 'Dead Letters' },
-    { id: 'observability', label: 'Observability' },
     { id: 'docs', label: 'Docs' },
-    { id: 'cpas', label: 'CPAS' },
     { id: 'meta', label: 'Meta' },
     { id: 'hash-checker', label: 'Hash Checker' },
   ]
@@ -77,12 +68,8 @@ export default function SystemPage() {
       basePath="/system"
       panels={{
         connections: <ConnectionsTab />,
-        workers: <WorkersPage />,
         users: isAdmin ? <AdminUsersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        'dead-letters': isAdmin ? <DeadLettersPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
-        observability: isAdmin ? <ObservabilityPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         docs: <DocsPage />,
-        cpas: isAdmin ? <CpasTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         meta: isAdmin ? <MetaConnectionsPage /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
         'hash-checker': isAdmin ? <HashCheckerTab /> : <div className="text-sm text-stone-400 p-6">Admin only.</div>,
       }}
