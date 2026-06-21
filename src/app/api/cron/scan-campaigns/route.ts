@@ -95,8 +95,11 @@ async function run() {
     const token = writeCheck.token!
 
     try {
-      // Fetch fresh insights from Meta
+      // Fetch fresh insights from Meta (for rule evaluation — uses session insightWindow)
       const insights = await getInsights(metaCampaignId, token, session.insightWindow ?? 'maximum')
+
+      // ★ Fetch SEPARATE daily insights for metric snapshot (always 'today', never lifetime)
+      const snapshotInsights = await getInsights(metaCampaignId, token, 'today')
 
       // ★ Observability: log jika insights kosong (e.g. campaign paused/no data)
       if (insights.spend === 0 && insights.impressions === 0 && insights.purchases === 0) {
@@ -106,8 +109,9 @@ async function run() {
       // Mark account healthy
       await markAccountHealthy(metaAdAccountId)
 
-      // Save metric snapshot
+      // Save metric snapshot (from daily window — rule eval tetap pakai insights di atas)
       const cpa = insights.purchases > 0 ? insights.spend / insights.purchases : null
+      const snapCpa = snapshotInsights.purchases > 0 ? snapshotInsights.spend / snapshotInsights.purchases : null
       const metricsMap: MetricsMap = {
         spend: insights.spend,
         roas: insights.purchaseRoas ?? 0,
@@ -119,11 +123,11 @@ async function run() {
         cpa,
       }
 
-      // ⏺ Save MetricSnapshot (idempotent per bucket jam)
+      // ⏺ Save MetricSnapshot (idempotent per HARI — windowEnd = awal hari)
       const campaignEntity = session.metaEntities?.[0]
       if (campaignEntity) {
         const windowEnd = new Date()
-        windowEnd.setMinutes(0, 0, 0) // bucket per jam
+        windowEnd.setHours(0, 0, 0, 0) // bucket per HARI (ganti dari per-jam PR-1)
         await prisma.metricSnapshot.upsert({
           where: {
             campaignSessionId_metaEntityId_windowEnd: {
@@ -133,13 +137,13 @@ async function run() {
             },
           },
           update: {
-            spend: insights.spend,
-            roas: insights.purchaseRoas ?? null,
-            frequency: insights.frequency ?? null,
-            purchases: insights.purchases,
-            cpa,
-            cpc: insights.cpc ?? null,
-            ctr: insights.ctr ?? null,
+            spend: snapshotInsights.spend,
+            roas: snapshotInsights.purchaseRoas ?? null,
+            frequency: snapshotInsights.frequency ?? null,
+            purchases: snapshotInsights.purchases,
+            cpa: snapCpa,
+            cpc: snapshotInsights.cpc ?? null,
+            ctr: snapshotInsights.ctr ?? null,
           },
           create: {
             userId: session.userId,
@@ -149,16 +153,16 @@ async function run() {
             windowStart: windowEnd,
             windowEnd,
             attributionWindow: 'scan',
-            spend: insights.spend,
-            impressions: insights.impressions,
-            clicks: insights.clicks ?? 0,
-            purchases: insights.purchases,
-            purchaseValue: insights.purchaseValue ?? 0,
-            roas: insights.purchaseRoas ?? null,
-            frequency: insights.frequency ?? null,
-            cpa,
-            cpc: insights.cpc ?? null,
-            ctr: insights.ctr ?? null,
+            spend: snapshotInsights.spend,
+            impressions: snapshotInsights.impressions,
+            clicks: snapshotInsights.clicks ?? 0,
+            purchases: snapshotInsights.purchases,
+            purchaseValue: snapshotInsights.purchaseValue ?? 0,
+            roas: snapshotInsights.purchaseRoas ?? null,
+            frequency: snapshotInsights.frequency ?? null,
+            cpa: snapCpa,
+            cpc: snapshotInsights.cpc ?? null,
+            ctr: snapshotInsights.ctr ?? null,
           },
         })
       }
