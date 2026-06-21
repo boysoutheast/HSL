@@ -92,7 +92,6 @@ export async function POST(req: NextRequest) {
 
     if (rule.actionType === 'CREATE_TASK') {
       // Dedup: jangan buat task baru kalau masih ada task pending dari rule ini.
-      // Match string lengkap dengan quote penutup supaya tidak kena substring rule lain.
       const dedupeKey = `media_rule:${rule.id}`
       const existing = await prisma.workerTask.findFirst({
         where: {
@@ -108,31 +107,9 @@ export async function POST(req: NextRequest) {
         continue
       }
 
-      let extraPayload: Record<string, unknown> = {}
-      if (rule.taskPayloadJson) {
-        try { extraPayload = JSON.parse(rule.taskPayloadJson) } catch { /* payload corrupt — lanjut tanpa extra */ }
-      }
-      const task = await prisma.workerTask.create({
-        data: {
-          type: rule.taskType ?? 'GENERATE_VIDEO',
-          capability: 'content_generation',
-          payloadJson: JSON.stringify({
-            dedupeKey,
-            mediaRuleId: rule.id,
-            mediaType: rule.mediaType,
-            productId: rule.productId,
-            productName: rule.product?.name,
-            characterId: rule.characterId,
-            characterName: rule.character?.name,
-            userId: rule.userId,
-            triggerReason: reason,
-            ...extraPayload,
-          }),
-          priority: 5,
-          scope: 'internal',
-        },
-      })
-      taskId = task.id
+      // [DECOMMISSIONED] Worker is dead — enqueue skipped.
+      // Dulu di sini ada prisma.workerTask.create. Tanpa consumer, task numpuk pending.
+      console.info(`[cron/media-rules] worker decommissioned — enqueue skipped for rule=${rule.id} (${rule.name}) dedupe=${dedupeKey} reason=${reason}`)
     }
 
     await prisma.mediaLibraryRule.update({
