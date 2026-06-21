@@ -61,6 +61,60 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Verify topic, product, cep, character assignments (mirror cep-feedback pattern)
+  if (body.topicId) {
+    const topicAssignment = await prisma.assignment.findFirst({
+      where: {
+        hermesAgentId: agent.id,
+        assignableType: 'topic',
+        assignableId: body.topicId,
+        status: 'active',
+      },
+    })
+    if (!topicAssignment) {
+      return NextResponse.json({ error: 'Topic not assigned to this agent' }, { status: 403 })
+    }
+  }
+  if (body.productId) {
+    const productAssignment = await prisma.assignment.findFirst({
+      where: {
+        hermesAgentId: agent.id,
+        assignableType: 'product',
+        assignableId: body.productId,
+        status: 'active',
+      },
+    })
+    if (!productAssignment) {
+      return NextResponse.json({ error: 'Product not assigned to this agent' }, { status: 403 })
+    }
+  }
+  if (body.cepId) {
+    const cepAssignment = await prisma.assignment.findFirst({
+      where: {
+        hermesAgentId: agent.id,
+        assignableType: 'cep',
+        assignableId: body.cepId,
+        status: 'active',
+      },
+    })
+    if (!cepAssignment) {
+      return NextResponse.json({ error: 'CEP not assigned to this agent' }, { status: 403 })
+    }
+  }
+  if (body.characterId) {
+    const charAssignment = await prisma.assignment.findFirst({
+      where: {
+        hermesAgentId: agent.id,
+        assignableType: 'character',
+        assignableId: body.characterId,
+        status: 'active',
+      },
+    })
+    if (!charAssignment) {
+      return NextResponse.json({ error: 'Character not assigned to this agent' }, { status: 403 })
+    }
+  }
+
   const status = body.status ?? 'generated'
   const postedAt = status === 'posted' ? new Date() : undefined
 
