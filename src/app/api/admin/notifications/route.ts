@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, data: notifications })
   } catch (err) {
     console.error('[notifications] GET error:', err)
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+    return NextResponse.json({ ok: false, error: 'Internal error' }, { status: 500 })
   }
 }
 
@@ -66,6 +66,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, updated: result.count })
   } catch (err) {
     console.error('[notifications] PATCH error:', err)
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+    return NextResponse.json({ ok: false, error: 'Internal error' }, { status: 500 })
   }
 }

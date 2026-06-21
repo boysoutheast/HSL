@@ -110,6 +110,7 @@ export async function POST(req: NextRequest) {
         existingId: existing?.id ?? null,
       }, { status: 409 })
     }
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to connect Meta account' }, { status: 400 })
+    console.error('[meta-connections] OAuth exchange failed:', e)
+    return NextResponse.json({ error: 'Failed to connect Meta account' }, { status: 400 })
   }
 }

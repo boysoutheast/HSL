@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, processed: results.length, results, ts: new Date().toISOString() })
   } catch (err) {
     console.error('[posting-monitor] Error:', err)
-    return NextResponse.json({ ok: false, error: String(err), ts: new Date().toISOString() })
+    return NextResponse.json({ ok: false, error: 'Internal error', ts: new Date().toISOString() })
   }
 }
 

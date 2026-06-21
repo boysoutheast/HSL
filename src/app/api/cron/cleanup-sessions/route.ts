@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, deleted, ts: new Date().toISOString() })
   } catch (err) {
     console.error('[cleanup-sessions] Error:', err)
-    return NextResponse.json({ ok: false, error: String(err), ts: new Date().toISOString() })
+    return NextResponse.json({ ok: false, error: 'Internal error', ts: new Date().toISOString() })
   }
 }
 
