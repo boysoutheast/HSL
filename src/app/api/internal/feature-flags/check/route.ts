@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateApiKey, unauthorizedResponse } from '../../_lib/api-key-auth'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/internal/feature-flags/check?key=creative_topup&scope=user&targetId=xxx
  * Returns { enabled: bool, config: {} }
- * No auth required — internal service call only.
+ * Auth: x-api-key header matching WORKER_API_KEY (internal service call only).
  */
 export async function GET(req: NextRequest) {
+  if (!validateApiKey(req)) return unauthorizedResponse()
+
   const { searchParams } = new URL(req.url)
   const key = searchParams.get('key')
   const scope = searchParams.get('scope') || 'global'

@@ -53,6 +53,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'WorkerTask not found' }, { status: 404 })
   }
 
+  // IDOR guard: worker key hanya boleh mutate task yang dia claim sendiri.
+  // Admin (session cookie, tanpa x-api-key) tetap boleh override semua task.
+  const viaWorkerKey = !!req.headers.get('x-api-key')
+  if (viaWorkerKey && task.workerId && task.workerId !== agent.id) {
+    return NextResponse.json({ error: 'Task not claimed by this worker' }, { status: 403 })
+  }
+
   const now = new Date()
   const newAttempts = task.attempts + 1
   const shouldFail = body.status === 'failed' || newAttempts >= task.maxAttempts

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { runSaasResponder } from '@/lib/saas-responder'
+import { validateApiKey } from '../../_lib/api-key-auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,13 +9,12 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/internal/worker/events
  * Worker reports task completion/failure/input-needed.
- * Auth: x-api-key header matching WORKER_API_KEY env.
+ * Auth: x-api-key header matching WORKER_API_KEY env (timing-safe).
  * Idempotent via unique event_id.
  */
 export async function POST(req: NextRequest) {
   // 1. Auth
-  const apiKey = req.headers.get('x-api-key')
-  if (!apiKey || apiKey !== process.env.WORKER_API_KEY) {
+  if (!validateApiKey(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

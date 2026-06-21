@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateApiKey } from '../../_lib/api-key-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-async function validateApiKey(req: NextRequest): Promise<boolean> {
-  const apiKey = req.headers.get('x-api-key')
-  return apiKey === process.env.WORKER_API_KEY
-}
-
 export async function GET(req: NextRequest) {
-  if (!(await validateApiKey(req))) {
+  if (!validateApiKey(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

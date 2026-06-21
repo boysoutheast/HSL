@@ -11,9 +11,10 @@ const STALL_MINUTES = 30  // job marked stalled AFTER this (NOT failed — prese
 const MAX_CONCURRENT = 10
 
 export async function GET(req: NextRequest) {
-  // Auth via cron secret
+  // Auth via cron secret — fail closed kalau env belum diset
+  const expected = process.env.CRON_SECRET
   const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  if (!expected || secret !== expected) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
