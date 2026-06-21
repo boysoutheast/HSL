@@ -101,6 +101,7 @@ async function run() {
       await markAccountHealthy(metaAdAccountId)
 
       // Save metric snapshot
+      const cpa = insights.purchases > 0 ? insights.spend / insights.purchases : null
       const metricsMap: MetricsMap = {
         spend: insights.spend,
         roas: insights.purchaseRoas ?? 0,
@@ -108,6 +109,8 @@ async function run() {
         ctr: insights.ctr ?? 0,
         purchases: insights.purchases,
         impressions: insights.impressions,
+        frequency: insights.frequency ?? null,
+        cpa,
       }
 
       // Evaluate each rule

@@ -161,18 +161,20 @@ export interface InsightResult {
   spend: number; impressions: number; clicks: number
   cpc: number | null; ctr: number | null
   purchases: number; purchaseValue: number; purchaseRoas: number | null
+  frequency: number | null
 }
 
 export async function getInsights(
   entityId: string, token: string, datePreset: string = 'maximum',
 ): Promise<InsightResult> {
-  const fields = 'spend,impressions,clicks,cpc,ctr,actions{purchase_roas},action_values{purchase_roas}'
+  const fields = 'spend,impressions,clicks,cpc,ctr,frequency,actions{purchase_roas},action_values{purchase_roas}'
   const { data } = await metaGet(`/${entityId}/insights`, token, { fields, date_preset: datePreset, level: 'ad', limit: '50' })
   const rows = (data as any)?.data ?? []
-  let spend = 0, impressions = 0, clicks = 0, purchases = 0, purchaseValue = 0
+  let spend = 0, impressions = 0, clicks = 0, purchases = 0, purchaseValue = 0, frequency = 0
   const roasValues: number[] = []
   for (const row of rows) {
     spend += Number(row.spend ?? 0); impressions += Number(row.impressions ?? 0); clicks += Number(row.clicks ?? 0)
+    if (row.frequency != null) frequency = Math.max(frequency, Number(row.frequency))
     for (const a of (row.actions ?? [])) { if (a.action_type === 'purchase_roas' && a.value) roasValues.push(Number(a.value)) }
     for (const av of (row.action_values ?? [])) { if (av.action_type === 'purchase' && av.value) purchaseValue += Number(av.value) }
     for (const sa of (row.actions ?? [])) { if (sa.action_type === 'purchase' && sa.value) purchases += Math.round(Number(sa.value)) }
@@ -180,7 +182,7 @@ export async function getInsights(
   const cpc = clicks > 0 ? spend / clicks : null
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : null
   const purchaseRoas = roasValues.length > 0 ? roasValues.reduce((a, b) => a + b, 0) / roasValues.length : null
-  return { spend, impressions, clicks, cpc, ctr, purchases, purchaseValue, purchaseRoas }
+  return { spend, impressions, clicks, cpc, ctr, purchases, purchaseValue, purchaseRoas, frequency: frequency > 0 ? frequency : null } as InsightResult
 }
 
 // ── Helper: updateBudget ──────────────────────────────────
