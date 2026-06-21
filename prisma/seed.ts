@@ -116,6 +116,95 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
       actionType: 'PAUSE',
     }),
   },
+  // ── PR-2: Research-aligned templates (Fase 6) ──
+  {
+    name: '📈 Scale Winner (Vertical 20%)',
+    description: 'Naikkan budget 20% kalau ROAS ≥1.5x, minimal 5 purchase, dan campaign udah jalan ≥7 hari. Cooldown 48 jam biar gak naik terlalu sering.',
+    scope: 'ADSET',
+    ruleCategory: 'THRESHOLD',
+    conditionTreeJson: JSON.stringify({
+      op: 'AND',
+      children: [
+        { metric: 'roas', operator: 'gte', value: 1.5 },
+        { metric: 'purchases', operator: 'gte', value: 5 },
+        { metric: 'adset_age_days', operator: 'gte', value: 7 },
+      ],
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'UPDATE_BUDGET',
+      mode: 'increase_pct',
+      amount: 20,
+      cooldownMinutes: 2880,
+    }),
+  },
+  {
+    name: '🔋 Fatigue Guard',
+    description: 'Turunkan budget 20% kalau frequency iklan >3.5x. Frequency tinggi = audience udah bosen.',
+    scope: 'ADSET',
+    ruleCategory: 'THRESHOLD',
+    conditionTreeJson: JSON.stringify({
+      children: [
+        { metric: 'frequency', operator: 'gt', value: 3.5 },
+      ],
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'UPDATE_BUDGET',
+      mode: 'decrease_pct',
+      amount: 20,
+    }),
+  },
+  {
+    name: '✅ Scale-Ready Gate (TARACARE)',
+    description: 'Notifikasi kalau campaign siap di-scale: ROAS stabil ≥1.5x 7 hari, frequency <3.5x, CPA stabil naik <20%. Cocok buat TARACARE body care.',
+    scope: 'CAMPAIGN',
+    ruleCategory: 'THRESHOLD',
+    conditionTreeJson: JSON.stringify({
+      op: 'AND',
+      children: [
+        { metric: 'roas_min_7d', operator: 'gte', value: 1.5 },
+        { metric: 'purchases', operator: 'gte', value: 5 },
+        { metric: 'frequency', operator: 'lt', value: 3.5 },
+        { metric: 'cpa_change_pct_3d', operator: 'lte', value: 20 },
+      ],
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'NOTIFY',
+      title: 'Campaign siap di-scale',
+      body: 'Semua gate terpenuhi: ROAS sustain, frequency rendah, CPA stabil.',
+    }),
+  },
+  {
+    name: '🪓 Kill Loser (Screening)',
+    description: 'Matikan adset screening yang udah keluar Rp10.000+ tapi belum ada pembelian. Cocok buat fase testing awal.',
+    scope: 'ADSET',
+    ruleCategory: 'THRESHOLD',
+    conditionTreeJson: JSON.stringify({
+      op: 'AND',
+      children: [
+        { metric: 'spend', operator: 'gt', value: 10000 },
+        { metric: 'purchases', operator: 'eq', value: 0 },
+      ],
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'PAUSE',
+    }),
+  },
+  {
+    name: '💰 Kill Boros (ROAS <1)',
+    description: 'Matikan adset kalau udah spend Rp30K+ tapi ROAS di bawah 1x. Daripada boncos terus.',
+    scope: 'ADSET',
+    ruleCategory: 'THRESHOLD',
+    conditionTreeJson: JSON.stringify({
+      op: 'AND',
+      children: [
+        { metric: 'spend', operator: 'gt', value: 30000 },
+        { metric: 'roas', operator: 'lt', value: 1 },
+      ],
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'PAUSE',
+    }),
+  },
 ]
 
 async function seedBuiltinTemplates() {

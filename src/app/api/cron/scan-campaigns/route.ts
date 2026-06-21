@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInsights, updateBudget, setStatus, TokenError, RateLimitError } from '@/lib/meta-client'
 import { evaluateRule, resolveAction, parseConditionTree, MetricsMap } from '@/lib/rule-engine'
+import { computeTemporalMetrics } from '@/lib/metrics-temporal'
 import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
 import { notify } from '@/lib/notify'
 
@@ -95,8 +96,11 @@ async function run() {
     const token = writeCheck.token!
 
     try {
-      // Fetch fresh insights from Meta
+      // Fetch fresh insights from Meta (for rule evaluation — uses session insightWindow)
       const insights = await getInsights(metaCampaignId, token, session.insightWindow ?? 'maximum')
+
+      // ★ Fetch SEPARATE daily insights for metric snapshot (always 'today', never lifetime)
+      const snapshotInsights = await getInsights(metaCampaignId, token, 'today')
 
       // ★ Observability: log jika insights kosong (e.g. campaign paused/no data)
       if (insights.spend === 0 && insights.impressions === 0 && insights.purchases === 0) {
@@ -106,8 +110,9 @@ async function run() {
       // Mark account healthy
       await markAccountHealthy(metaAdAccountId)
 
-      // Save metric snapshot
+      // Save metric snapshot (from daily window — rule eval tetap pakai insights di atas)
       const cpa = insights.purchases > 0 ? insights.spend / insights.purchases : null
+      const snapCpa = snapshotInsights.purchases > 0 ? snapshotInsights.spend / snapshotInsights.purchases : null
       const metricsMap: MetricsMap = {
         spend: insights.spend,
         roas: insights.purchaseRoas ?? 0,
@@ -119,11 +124,11 @@ async function run() {
         cpa,
       }
 
-      // ⏺ Save MetricSnapshot (idempotent per bucket jam)
+      // ⏺ Save MetricSnapshot (idempotent per HARI — windowEnd = awal hari)
       const campaignEntity = session.metaEntities?.[0]
       if (campaignEntity) {
         const windowEnd = new Date()
-        windowEnd.setMinutes(0, 0, 0) // bucket per jam
+        windowEnd.setHours(0, 0, 0, 0) // bucket per HARI (ganti dari per-jam PR-1)
         await prisma.metricSnapshot.upsert({
           where: {
             campaignSessionId_metaEntityId_windowEnd: {
@@ -133,13 +138,13 @@ async function run() {
             },
           },
           update: {
-            spend: insights.spend,
-            roas: insights.purchaseRoas ?? null,
-            frequency: insights.frequency ?? null,
-            purchases: insights.purchases,
-            cpa,
-            cpc: insights.cpc ?? null,
-            ctr: insights.ctr ?? null,
+            spend: snapshotInsights.spend,
+            roas: snapshotInsights.purchaseRoas ?? null,
+            frequency: snapshotInsights.frequency ?? null,
+            purchases: snapshotInsights.purchases,
+            cpa: snapCpa,
+            cpc: snapshotInsights.cpc ?? null,
+            ctr: snapshotInsights.ctr ?? null,
           },
           create: {
             userId: session.userId,
@@ -149,18 +154,25 @@ async function run() {
             windowStart: windowEnd,
             windowEnd,
             attributionWindow: 'scan',
-            spend: insights.spend,
-            impressions: insights.impressions,
-            clicks: insights.clicks ?? 0,
-            purchases: insights.purchases,
-            purchaseValue: insights.purchaseValue ?? 0,
-            roas: insights.purchaseRoas ?? null,
-            frequency: insights.frequency ?? null,
-            cpa,
-            cpc: insights.cpc ?? null,
-            ctr: insights.ctr ?? null,
+            spend: snapshotInsights.spend,
+            impressions: snapshotInsights.impressions,
+            clicks: snapshotInsights.clicks ?? 0,
+            purchases: snapshotInsights.purchases,
+            purchaseValue: snapshotInsights.purchaseValue ?? 0,
+            roas: snapshotInsights.purchaseRoas ?? null,
+            frequency: snapshotInsights.frequency ?? null,
+            cpa: snapCpa,
+            cpc: snapshotInsights.cpc ?? null,
+            ctr: snapshotInsights.ctr ?? null,
           },
         })
+      }
+
+      // ★ Fase 4: compute temporal metrics dari snapshot history — merge ke metricsMap SEBELUM eval
+      if (campaignEntity) {
+        const temporal = await computeTemporalMetrics(session.id, campaignEntity.id)
+        Object.assign(metricsMap, temporal)
+        console.log(`[scan-campaigns] temporal session=${session.id} age=${temporal.adset_age_days}d daysWithData=${temporal.days_with_data} roasMin7d=${temporal.roas_min_7d} freqMax7d=${temporal.frequency_max_7d}`)
       }
 
       // Evaluate each rule
@@ -213,15 +225,49 @@ async function run() {
           : metaCampaignId
         const budgetLevel = budgetMode === 'ABO' ? 'ADSET' as const : 'CAMPAIGN' as const
 
-        // ⚠️ Anti-overscale guard: MAX 50% increase per 24 jam
+        // ⚠️ Anti-overscale guard: CUMULATIVE max 50% dalam 24 jam
         const MAX_DAILY_INCREASE_PCT = 50
         if (resolved.payload.dailyBudget) {
           const newBudget = resolved.payload.dailyBudget as number
-          const pctChange = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
-          if (pctChange > MAX_DAILY_INCREASE_PCT) {
-            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+
+          // Cari budget 24 jam lalu (AutomationAction SUCCEEDED terlama dlm 24j)
+          const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          const lastIncrease = await prisma.automationAction.findFirst({
+            where: {
+              campaignSessionId: session.id,
+              status: 'SUCCEEDED',
+              actionType: { in: ['increase_budget', 'set_budget', 'INCREASE_BUDGET', 'SET_BUDGET'] },
+              createdAt: { gte: since24h },
+            },
+            orderBy: { createdAt: 'asc' }, // ambil PALING LAMA (first in window)
+            select: { payloadJson: true },
+          })
+
+          let budget24hAgo = currentBudget // fallback: kalau gak ada increase dalam 24j, baseline = sekarang
+          if (lastIncrease) {
+            try {
+              const payload = JSON.parse(lastIncrease.payloadJson)
+              const previousBudget = payload.previousBudget ?? payload.oldBudget ?? Number(payload.dailyBudget ?? 0)
+              if (previousBudget > 0) budget24hAgo = previousBudget
+            } catch { /* fallback ke currentBudget */ }
+          }
+
+          // Cumulative guard (layer 1): cap against budget 24h ago
+          const cumulativePct = budget24hAgo > 0 ? ((newBudget - budget24hAgo) / budget24hAgo) * 100 : 0
+          if (cumulativePct > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(budget24hAgo * (1 + MAX_DAILY_INCREASE_PCT / 100))
             resolved.payload.dailyBudget = cappedBudget
-            console.log(`[scan-campaigns] overscale_guard session=${session.id} capped ${pctChange.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+            console.log(`[scan-campaigns] overscale_guard_cumulative session=${session.id} cumulative ${cumulativePct.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (budget24hAgo=${budget24hAgo}→capped=${cappedBudget})`)
+          }
+
+          // Per-action guard (layer 2): cap against current budget
+          const actionPct = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
+          if (actionPct > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+            if (cappedBudget < (resolved.payload.dailyBudget as number)) {
+              resolved.payload.dailyBudget = cappedBudget
+              console.log(`[scan-campaigns] overscale_guard_action session=${session.id} capped ${actionPct.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+            }
           }
         }
 

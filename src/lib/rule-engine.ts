@@ -8,6 +8,7 @@
 
 export type Operator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'ne'
 export type Metric = 'spend' | 'roas' | 'cpc' | 'ctr' | 'purchases' | 'impressions' | 'frequency' | 'cpa'
+  | 'roas_min_7d' | 'frequency_max_7d' | 'cpa_change_pct_3d' | 'adset_age_days' | 'days_with_data'
 
 export interface LeafCondition {
   metric: Metric
@@ -31,6 +32,12 @@ export interface MetricsMap {
   impressions: number
   frequency: number | null
   cpa: number | null
+  // Fase 4 — Temporal (turunan dari snapshot harian, bisa null jika <3 hari data)
+  roas_min_7d?: number | null
+  frequency_max_7d?: number | null
+  cpa_change_pct_3d?: number | null
+  adset_age_days?: number | null
+  days_with_data?: number | null
 }
 
 export interface EvaluationResult {
@@ -78,7 +85,9 @@ export function evaluateRule(
 
     // Leaf
     const leaf = node as LeafCondition
-    const actual = metrics[leaf.metric] ?? 0
+    const metricsRecord = metrics as unknown as Record<string, number | null | undefined>
+    const raw = metricsRecord[leaf.metric]
+    const actual = raw !== undefined ? raw : null // temporal undefined → null (tidak match)
     const matched = actual !== null && evalOperator(leaf.operator, actual, leaf.value)
     const key = nextKey()
     results[key] = {
