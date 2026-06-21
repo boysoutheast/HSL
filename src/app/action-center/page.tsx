@@ -484,7 +484,7 @@ export default function ActionCenterPage() {
               <button
                 onClick={handleTriggerTopUp}
                 disabled={!selectedSessionId || topUpLoading}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-violet-600 text-white rounded hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-5"
+                className="btn-primary mt-5"
               >
                 {topUpLoading ? (
                   <>

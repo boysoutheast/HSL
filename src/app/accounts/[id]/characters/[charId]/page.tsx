@@ -440,7 +440,7 @@ function PhotosTab({ charId }: { charId: string }) {
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setShowUpload(false)} className="btn-ghost btn-sm">Cancel</button>
-            <button type="submit" disabled={uploading || !uploadFile} className="btn-primary">
+            <button type="submit" disabled={uploading || !uploadFile} className="btn-secondary">
               {uploading ? 'Uploading...' : 'Upload'}
             </button>
           </div>
@@ -789,7 +789,7 @@ function TopicsTab({ charId }: { charId: string }) {
                       </p>
                       <button
                         onClick={() => { setCepForTopicId(topic.id); setCepText(''); setShowCepModal(true) }}
-                        className="btn-primary btn-sm"
+                        className="btn-secondary btn-sm"
                       >
                         + Add CEP
                       </button>
@@ -877,7 +877,7 @@ function TopicsTab({ charId }: { charId: string }) {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => { setShowTopicModal(false); setEditTopic(null); setTopicError(null) }} className="btn-ghost">Cancel</button>
-            <button type="submit" disabled={savingTopic} className="btn-primary">
+            <button type="submit" disabled={savingTopic} className="btn-success">
               {savingTopic ? 'Saving...' : editTopic ? 'Save Changes' : 'Add Topic'}
             </button>
           </div>
@@ -913,7 +913,7 @@ function TopicsTab({ charId }: { charId: string }) {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => { setShowCepModal(false); setCepError(null) }} className="btn-ghost">Cancel</button>
-            <button type="submit" disabled={savingCep || !cepText.trim()} className="btn-primary">
+            <button type="submit" disabled={savingCep || !cepText.trim()} className="btn-success">
               {savingCep ? 'Saving...' : 'Add CEP'}
             </button>
           </div>
