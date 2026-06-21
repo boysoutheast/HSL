@@ -132,7 +132,7 @@ export default function MetaConnectionsPage() {
             </svg>
             Connect with Facebook
           </a>
-          <Link href="/meta-connections/new" className="btn-ghost">
+          <Link href="/meta-connections/new" className="btn-secondary">
             Manual Token
           </Link>
         </div>
