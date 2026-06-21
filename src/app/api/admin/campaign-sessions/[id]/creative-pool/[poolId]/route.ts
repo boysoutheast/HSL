@@ -78,7 +78,7 @@ export async function DELETE(
   if (auth instanceof NextResponse) return auth
 
   const existing = await prisma.campaignCreativePool.findFirst({
-    where: { id: params.poolId, campaignSessionId: params.id, userId: auth.id },
+    where: { id: params.poolId, campaignSessionId: params.id, ...(auth.role === 'admin' ? {} : { userId: auth.id }) },
   })
   if (!existing) return NextResponse.json({ error: 'Creative not found' }, { status: 404 })
 
