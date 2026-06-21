@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
     return {
       id: a.id,
       name: a.name ?? 'Meta Connection',
+      appId: a.appId,
       metaUserId: a.metaUserId,
       metaUserName: a.metaUserName,
       status: expiringSoon ? 'expiring_soon' : a.status,
