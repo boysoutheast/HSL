@@ -50,6 +50,11 @@ async function run() {
       metaAdAccount: {
         select: { id: true, adAccountId: true },
       },
+      metaEntities: {
+        where: { entityType: 'CAMPAIGN' },
+        take: 1,
+        select: { id: true, metaEntityId: true },
+      },
       automationRules: {
         where: { status: 'ACTIVE' },
         orderBy: { priority: 'asc' },
@@ -112,6 +117,50 @@ async function run() {
         impressions: insights.impressions,
         frequency: insights.frequency ?? null,
         cpa,
+      }
+
+      // ⏺ Save MetricSnapshot (idempotent per bucket jam)
+      const campaignEntity = session.metaEntities?.[0]
+      if (campaignEntity) {
+        const windowEnd = new Date()
+        windowEnd.setMinutes(0, 0, 0) // bucket per jam
+        await prisma.metricSnapshot.upsert({
+          where: {
+            campaignSessionId_metaEntityId_windowEnd: {
+              campaignSessionId: session.id,
+              metaEntityId: campaignEntity.id,
+              windowEnd,
+            },
+          },
+          update: {
+            spend: insights.spend,
+            roas: insights.purchaseRoas ?? null,
+            frequency: insights.frequency ?? null,
+            purchases: insights.purchases,
+            cpa,
+            cpc: insights.cpc ?? null,
+            ctr: insights.ctr ?? null,
+          },
+          create: {
+            userId: session.userId,
+            campaignSessionId: session.id,
+            metaEntityId: campaignEntity.id,
+            entityType: 'CAMPAIGN',
+            windowStart: windowEnd,
+            windowEnd,
+            attributionWindow: 'scan',
+            spend: insights.spend,
+            impressions: insights.impressions,
+            clicks: insights.clicks ?? 0,
+            purchases: insights.purchases,
+            purchaseValue: insights.purchaseValue ?? 0,
+            roas: insights.purchaseRoas ?? null,
+            frequency: insights.frequency ?? null,
+            cpa,
+            cpc: insights.cpc ?? null,
+            ctr: insights.ctr ?? null,
+          },
+        })
       }
 
       // Evaluate each rule

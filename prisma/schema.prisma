@@ -998,6 +998,7 @@ model MetricSnapshot {
   catalogSegmentPurchases Int?   @map("catalog_segment_purchases")
   catalogSegmentValue     Float? @map("catalog_segment_value")
   cplc                    Float? // cost per link click = spend / linkClicks, computed on insert
+  cpa                     Float? @map("cpa")
   addToCartCount          Int?   @map("add_to_cart_count")
   createdAt            DateTime @default(now()) @map("created_at")
 
