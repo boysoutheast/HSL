@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   // Telegram sends X-Telegram-Bot-Api-Secret-Token when set during setWebhook
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (expected) {
+  if (!expected) {
+    console.warn('[webhooks/telegram] TELEGRAM_WEBHOOK_SECRET not set — webhook is unprotected!')
+  } else {
     const provided = req.headers.get('x-telegram-bot-api-secret-token')
     if (provided !== expected) {
       return NextResponse.json({ ok: true }, { status: 200 }) // diamkan, jangan kasih sinyal
