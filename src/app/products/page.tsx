@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import Modal from '@/components/ui/Modal'
+import PageInfo from '@/components/ui/PageInfo'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
-import PageInfo from '@/components/ui/PageInfo'
-import Modal from '@/components/ui/Modal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Product {
   id: string
@@ -42,6 +43,7 @@ export default function ProductsPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [confirmDeleteProduct, setConfirmDeleteProduct] = useState<{ id: string; name: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchProducts = useCallback(async () => {
@@ -68,10 +70,16 @@ export default function ProductsPage() {
   }
 
   const handleDeleteProduct = async (id: string, name: string) => {
-    if (!confirm(`Hapus produk "${name}" beserta semua CEP dan foto-nya?\n\nTidak bisa dibatalkan.`)) return
-    setDeleteLoading(id)
+    setConfirmDeleteProduct({ id, name })
+  }
+
+  const handleDeleteProductConfirmed = async () => {
+    const target = confirmDeleteProduct
+    if (!target) return
+    setConfirmDeleteProduct(null)
+    setDeleteLoading(target.id)
     try {
-      const res = await fetch(`/api/admin/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${target.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -371,6 +379,24 @@ export default function ProductsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteProduct}
+        title="Hapus Produk"
+        body={
+          <>
+            Hapus produk <strong>&ldquo;{confirmDeleteProduct?.name}&rdquo;</strong> beserta semua CEP dan foto-nya?
+            <br /><br />
+            <strong>Tidak bisa dibatalkan.</strong>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteLoading === confirmDeleteProduct?.id}
+        onConfirm={handleDeleteProductConfirmed}
+        onCancel={() => setConfirmDeleteProduct(null)}
+      />
     </div>
   )
 }

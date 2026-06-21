@@ -89,6 +89,8 @@ export default function AgentsPage() {
   const [regenKey, setRegenKey] = useState<{ agentId: string; agentName: string; key: string } | null>(null)
   const [copied, setCopied] = useState(false)
   const [confirmRegenAgent, setConfirmRegenAgent] = useState<Agent | null>(null)
+  const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<Agent | null>(null)
+  const [deleteAgentLoading, setDeleteAgentLoading] = useState(false)
 
   // Assignments state
   const [selectedAgentId, setSelectedAgentId] = useState<string>('')
@@ -230,6 +232,26 @@ export default function AgentsPage() {
     }
   }
 
+  const handleDeleteAgent = async (agent: Agent) => {
+    setConfirmDeleteAgent(agent)
+  }
+
+  const handleDeleteAgentConfirmed = async () => {
+    const agent = confirmDeleteAgent
+    if (!agent) return
+    setConfirmDeleteAgent(null)
+    setDeleteAgentLoading(true)
+    try {
+      const res = await fetch(`/api/admin/hermes-agents/${agent.id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed')
+      await fetchAgents()
+    } catch (err) {
+      alert('Gagal hapus agent: ' + String(err))
+    } finally {
+      setDeleteAgentLoading(false)
+    }
+  }
+
   const handleToggleCheck = (itemId: string) => {
     setChecked((prev) => {
       const next = new Set(prev)
@@ -358,6 +380,14 @@ export default function AgentsPage() {
                     title="Regenerate API Key"
                   >
                     {regenLoading === agent.id ? '...' : '🔄 Key'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAgent(agent)}
+                    disabled={deleteAgentLoading}
+                    className="text-stone-300 hover:text-red-500 text-xs"
+                    title={deleteAgentLoading ? 'Menghapus...' : 'Hapus agent (admin only)'}
+                  >
+                    {deleteAgentLoading ? '...' : '🗑'}
                   </button>
                 </div>
               </td>
@@ -576,6 +606,24 @@ export default function AgentsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Delete Agent Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteAgent}
+        title="Hapus Hermes Agent"
+        body={
+          <>
+            Hapus agent <strong>&ldquo;{confirmDeleteAgent?.name}&rdquo;</strong>? Semua assignment dan content log terkait akan ikut terhapus.
+            <br /><br />
+            <strong>Tindakan ini tidak bisa dibatalkan.</strong>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteAgentLoading}
+        onConfirm={handleDeleteAgentConfirmed}
+        onCancel={() => setConfirmDeleteAgent(null)}
+      />
     </div>
   )
 }

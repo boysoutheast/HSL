@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Cep {
   id: string
@@ -42,6 +43,8 @@ function CepsPageInner() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState(defaultTab)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [confirmDeleteCep, setConfirmDeleteCep] = useState<Cep | null>(null)
 
   const fetchCeps = useCallback(async () => {
     try {
@@ -93,6 +96,23 @@ function CepsPageInner() {
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const handleDeleteCep = async (cep: Cep) => {
+    setConfirmDeleteCep(cep)
+  }
+
+  const handleDeleteCepConfirmed = async () => {
+    const cep = confirmDeleteCep
+    if (!cep) return
+    setConfirmDeleteCep(null)
+    setDeleteLoading(cep.id)
+    try {
+      const res = await fetch(`/api/admin/ceps/${cep.id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error()
+      await fetchCeps()
+    } catch { /* silent */ }
+    finally { setDeleteLoading(null) }
   }
 
   const filtered = ceps.filter((c) => c.status === activeTab)
@@ -165,7 +185,7 @@ function CepsPageInner() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-stone-50">
               <tr>
-                {['CEP Text', 'Topic', 'Product', 'Source', 'Status', 'Created', ...(activeTab === 'pending_review' ? ['Actions'] : [])].map((h) => (
+                {['CEP Text', 'Topic', 'Product', 'Source', 'Status', 'Created', ...(activeTab === 'pending_review' ? ['Actions'] : []), ' '].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -235,6 +255,16 @@ function CepsPageInner() {
                         </div>
                       </td>
                     )}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleDeleteCep(cep)}
+                        disabled={deleteLoading === cep.id}
+                        className="text-stone-300 hover:text-red-500 text-xs"
+                        title="Delete CEP"
+                      >
+                        🗑
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -242,6 +272,24 @@ function CepsPageInner() {
           </table>
         </div>
       )}
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteCep}
+        title="Hapus CEP"
+        body={
+          <>
+            Hapus CEP ini? Tindakan ini tidak bisa dibatalkan.
+            <br /><br />
+            <span className="text-xs text-stone-400 line-clamp-2">{confirmDeleteCep?.cepText}</span>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteLoading === confirmDeleteCep?.id}
+        onConfirm={handleDeleteCepConfirmed}
+        onCancel={() => setConfirmDeleteCep(null)}
+      />
     </div>
   )
 }
