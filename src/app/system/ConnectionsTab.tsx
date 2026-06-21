@@ -38,7 +38,7 @@ export default function ConnectionsTab() {
   // Hermes Agent Keys
   // ── Meta Connections ──
   interface MetaConnection {
-    id: string; name: string; metaUserId: string | null; metaUserName: string | null
+    id: string; name: string; appId?: string; metaUserId: string | null; metaUserName: string | null
     status: string; tokenExpiry: string | null; lastTokenCheckAt: string | null
     lastMetaCallAt: string | null; createdAt: string
     adAccounts: { id: string; name: string }[]
@@ -306,10 +306,13 @@ export default function ConnectionsTab() {
                 <div key={c.id} className="py-3 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-stone-800 text-sm">{c.name}</span>
+                      <Link href={`/meta-connections/${c.id}`} className="font-medium text-stone-800 text-sm hover:text-violet-700 hover:underline">
+                        {c.name}
+                      </Link>
                       <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-full ${pill.cls}`}>{pill.label}</span>
                     </div>
                     <div className="text-xs text-stone-400 mt-0.5">
+                      {c.appId && <span className="font-mono">{c.appId} · </span>}
                       {c.metaUserName && <span>{c.metaUserName} · </span>}
                       {c.adAccounts.map(a => `${a.name} (${a.id})`).join(', ')}
                     </div>
