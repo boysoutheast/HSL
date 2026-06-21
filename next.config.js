@@ -12,7 +12,6 @@ module.exports = {
       { source: '/action-center', destination: '/ads?tab=actions', permanent: false },
       { source: '/rules-editor', destination: '/ads?tab=rules', permanent: false },
       { source: '/media-rules', destination: '/ads?tab=rules', permanent: false },
-      { source: '/meta-connections', destination: '/system?tab=connections', permanent: false },
       { source: '/agents', destination: '/system?tab=agents', permanent: false },
       { source: '/workers', destination: '/system?tab=workers', permanent: false },
       { source: '/admin/dead-letters', destination: '/system?tab=workers', permanent: false },
