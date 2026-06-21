@@ -381,8 +381,8 @@ function PhotosTab({ productId }: { productId: string }) {
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" onClick={() => setShowUpload(false)} className="btn-ghost btn-sm">Cancel</button>
-            <button type="submit" disabled={uploading || !uploadFile} className="btn-primary">
-              {uploading ? 'Uploading...' : 'Upload'}
+            <button type="submit" disabled={uploading || !uploadFile} className="btn-secondary">
+                        {uploading ? 'Uploading...' : 'Upload'}
             </button>
           </div>
         </form>
@@ -639,7 +639,7 @@ function CepsTab({ productId }: { productId: string }) {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => { setShowModal(false); setCepError(null) }} className="btn-ghost">Cancel</button>
-            <button type="submit" disabled={savingCep || !cepText.trim()} className="btn-primary">
+            <button type="submit" disabled={savingCep || !cepText.trim()} className="btn-success">
               {savingCep ? 'Saving...' : 'Add CEP'}
             </button>
           </div>
