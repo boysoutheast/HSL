@@ -37,31 +37,7 @@ export default function ConnectionsTab() {
   const [showTxDetail, setShowTxDetail] = useState(false)
 
   // Hermes Agent Keys
-  // ── Meta Connections ──
-  interface MetaConnection {
-    id: string; name: string; appId?: string; metaUserId: string | null; metaUserName: string | null
-    status: string; tokenExpiry: string | null; lastTokenCheckAt: string | null
-    lastMetaCallAt: string | null; createdAt: string
-    adAccounts: { id: string; name: string }[]
-  }
-  const [metaConnections, setMetaConnections] = useState<MetaConnection[]>([])
-  const [metaConnLoading, setMetaConnLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/admin/connections/meta', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { setMetaConnections(d?.connections ?? []); setMetaConnLoading(false) })
-      .catch(() => setMetaConnLoading(false))
-  }, [])
-
-  function statusPill(status: string, expiry: string | null) {
-    if (status === 'connected') return { label: 'Terhubung', cls: 'bg-emerald-100 text-emerald-700' }
-    if (status === 'expiring_soon') return { label: `Segera expire (${Math.ceil((new Date(expiry!).getTime() - Date.now()) / 86400000)} hari)`, cls: 'bg-amber-100 text-amber-700' }
-    if (status === 'needs_reconnect') return { label: 'Perlu reconnect', cls: 'bg-red-100 text-red-700' }
-    if (status === 'expired') return { label: 'Expired', cls: 'bg-red-100 text-red-700' }
-    if (status === 'revoked') return { label: 'Dicabut', cls: 'bg-stone-100 text-stone-500' }
-    return { label: status, cls: 'bg-stone-100 text-stone-500' }
-  }
+  // ── Meta Connections — pindah ke menu Akun Meta ──
   const [hermesAgents, setHermesAgents] = useState<HermesAgent[]>([])
   const [hermesAgentName, setHermesAgentName] = useState('')
   const [hermesAgentNotes, setHermesAgentNotes] = useState('')
@@ -195,69 +171,17 @@ export default function ConnectionsTab() {
       </div>
 
 
-      {/* Meta Connections */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
-        <div className="flex items-start justify-between gap-4">
+      {/* Meta Connections — pointer ke menu Akun Meta */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-6">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-stone-800">🔗 Meta Connections</h3>
-            <p className="text-sm text-stone-500">Akun Meta yang terhubung untuk automation campaign.</p>
+            <p className="text-sm text-stone-500 mt-0.5">Kelola akun Meta & ad account di menu khusus.</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
-              ➕ Hubungkan Meta
-            </a>
-            <Link href="/meta-connections/new" className="btn-secondary btn-sm">
-              Tambah manual
-            </Link>
-          </div>
+          <Link href="/meta-connections" className="btn-primary btn-sm whitespace-nowrap">
+            Kelola di Akun Meta →
+          </Link>
         </div>
-        {metaConnLoading ? (
-          <div className="text-sm text-stone-400 py-2">Loading...</div>
-        ) : metaConnections.length === 0 ? (
-          <div className="text-sm text-stone-400 py-4 space-y-3">
-            <p>Belum ada akun Meta terhubung.</p>
-            <div className="flex items-center gap-2">
-              <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
-                ➕ Hubungkan Meta
-              </a>
-              <Link href="/meta-connections/new" className="btn-secondary btn-sm">
-                Tambah manual
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {metaConnections.map(c => {
-              const pill = statusPill(c.status, c.tokenExpiry)
-              return (
-                <div key={c.id} className="py-3 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Link href={`/meta-connections/${c.id}`} className="font-medium text-stone-800 text-sm hover:text-violet-700 hover:underline">
-                        {c.name}
-                      </Link>
-                      <span className={`px-2 py-0.5 text-[11px] font-semibold rounded-full ${pill.cls}`}>{pill.label}</span>
-                    </div>
-                    <div className="text-xs text-stone-400 mt-0.5">
-                      {c.appId && <span className="font-mono">{c.appId} · </span>}
-                      {c.metaUserName && <span>{c.metaUserName} · </span>}
-                      {c.adAccounts.map(a => `${a.name} (${a.id})`).join(', ')}
-                    </div>
-                    {c.lastMetaCallAt && (
-                      <div className="text-xs text-stone-400">Terakhir dipakai: {new Date(c.lastMetaCallAt).toLocaleString('id-ID')}</div>
-                    )}
-                  </div>
-                  {(c.status === 'needs_reconnect' || c.status === 'expired') && (
-                    <a href="/api/admin/meta-oauth/start"
-                      className="text-xs font-medium text-violet-600 hover:text-violet-800 underline whitespace-nowrap ml-4">
-                      Hubungkan Ulang
-                    </a>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
 
       {/* Credit */}

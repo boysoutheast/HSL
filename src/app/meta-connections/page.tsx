@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
-import PageInfo from '@/components/ui/PageInfo'
-import Modal from '@/components/ui/Modal'
 
 interface MetaAccount {
   id: string
@@ -51,9 +49,6 @@ function MetaStatusBadge({ status }: { status: string }) {
 export default function MetaConnectionsPage() {
   const [accounts, setAccounts] = useState<MetaAccount[]>([])
   const [loading, setLoading] = useState(true)
-  const [deleteTarget, setDeleteTarget] = useState<MetaAccount | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [banner, setBanner] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
   // Banner dari OAuth redirect (?connected=1 / ?error=...)
@@ -84,28 +79,6 @@ export default function MetaConnectionsPage() {
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setDeleteLoading(true)
-    setDeleteError(null)
-    try {
-      const res = await fetch(`/api/admin/meta-connections/${deleteTarget.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data?.error ?? `Server error (${res.status})`)
-      }
-      setDeleteTarget(null)
-      await fetchAccounts()
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setDeleteLoading(false)
-    }
-  }
-
   return (
     <div>
       {banner && (
@@ -120,106 +93,52 @@ export default function MetaConnectionsPage() {
       )}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Meta Akun</h1>
+          <h1 className="text-2xl font-bold text-stone-900">Akun Meta</h1>
           <p className="text-sm text-stone-500 mt-0.5">
-            {loading ? '...' : `${accounts.length} koneksi${accounts.length !== 1 ? 's' : ''}`}
+            {loading ? '...' : `${accounts.length} koneksi${accounts.length !== 1 ? '' : ''}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <a href="/api/admin/meta-oauth/start" className="btn-primary">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-            </svg>
-            Connect with Facebook
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Hubungkan Meta
           </a>
           <Link href="/meta-connections/new" className="btn-secondary">
-            Manual Token
+            Tambah manual
           </Link>
         </div>
       </div>
-
-      <PageInfo
-        purpose="Kelola koneksi akun Meta (Business + Ads) yang terhubung ke sistem AI Buddy."
-        wiring={[
-          { label: '→ Businesses', desc: 'Business Manager yang terhubung' },
-          { label: '→ Ad Accounts', desc: 'Akun Meta Ads yang bisa dipakai' },
-          { label: '→ Pages', desc: 'Halaman Facebook & Instagram' },
-          { label: '→ Test Launcher', desc: 'Dipakai saat launching campaign' },
-        ]}
-      />
 
       {loading ? (
         <div className="flex items-center justify-center h-48 text-stone-400 text-sm">Memuat...</div>
       ) : (
         <Table
-          headers={['Nama', 'App ID', 'Meta User', 'Status', 'Last Call', 'Actions']}
-          empty="Belum ada koneksi Meta. Klik &quot;Hubungkan Baru&quot; untuk mulai."
+          headers={['Nama Koneksi', 'Status', 'Ad Account', 'Terakhir Sinkron', '']}
+          empty="Belum ada koneksi Meta. Klik &quot;Hubungkan Meta&quot; untuk mulai."
         >
           {accounts.map((acc) => (
             <tr key={acc.id} className="hover:bg-stone-50 transition-colors">
               <td className="px-4 py-3">
                 <span className="font-medium text-stone-900">{acc.name}</span>
               </td>
-              <td className="px-4 py-3 text-stone-600 font-mono text-xs">{acc.appId}</td>
-              <td className="px-4 py-3 text-stone-700">{acc.metaUserName ?? '—'}</td>
               <td className="px-4 py-3">
                 <MetaStatusBadge status={acc.status} />
+              </td>
+              <td className="px-4 py-3 text-stone-600 text-sm">
+                {Array.isArray(acc.adAccounts) ? `${acc.adAccounts.length} akun` : '—'}
               </td>
               <td className="px-4 py-3 text-stone-500 text-xs whitespace-nowrap">
                 {formatDate(acc.lastMetaCallAt)}
               </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Link href={`/meta-connections/${acc.id}`} className="btn-info btn-sm">
-                    Detail →
-                  </Link>
-                  <button
-                    onClick={() => setDeleteTarget(acc)}
-                    className="btn-danger btn-sm"
-                  >
-                    Hapus
-                  </button>
-                </div>
+              <td className="px-4 py-3 text-right">
+                <Link href={`/meta-connections/${acc.id}`} className="btn-info btn-sm whitespace-nowrap">
+                  Kelola →
+                </Link>
               </td>
             </tr>
           ))}
         </Table>
       )}
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteTarget !== null}
-        onClose={() => { setDeleteTarget(null); setDeleteError(null) }}
-        title="Hapus Koneksi Meta"
-        maxWidth="max-w-md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-stone-600">
-            Hapus koneksi <strong>{deleteTarget?.name}</strong>? Tindakan ini tidak bisa dibatalkan.
-          </p>
-          {deleteError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
-              ⚠️ {deleteError}
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => { setDeleteTarget(null); setDeleteError(null) }}
-              className="btn-ghost"
-            >
-              Batal
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className="btn-danger"
-            >
-              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   )
 }
