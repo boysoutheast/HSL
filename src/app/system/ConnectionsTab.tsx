@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { HelpHint } from '@/components/ui/HelpHint'
 
 // ─── Types ──────────────────────────────────────────────
@@ -269,12 +270,34 @@ export default function ConnectionsTab() {
 
       {/* Meta Connections */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
-        <h3 className="text-base font-semibold text-stone-800">🔗 Meta Connections</h3>
-        <p className="text-sm text-stone-500">Akun Meta yang terhubung untuk automation campaign.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-stone-800">🔗 Meta Connections</h3>
+            <p className="text-sm text-stone-500">Akun Meta yang terhubung untuk automation campaign.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
+              ➕ Hubungkan Meta
+            </a>
+            <Link href="/meta-connections/new" className="btn-ghost btn-sm">
+              Tambah manual
+            </Link>
+          </div>
+        </div>
         {metaConnLoading ? (
           <div className="text-sm text-stone-400 py-2">Loading...</div>
         ) : metaConnections.length === 0 ? (
-          <div className="text-sm text-stone-400 py-2">Belum ada akun Meta terhubung.</div>
+          <div className="text-sm text-stone-400 py-4 space-y-3">
+            <p>Belum ada akun Meta terhubung.</p>
+            <div className="flex items-center gap-2">
+              <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
+                ➕ Hubungkan Meta
+              </a>
+              <Link href="/meta-connections/new" className="btn-ghost btn-sm">
+                Tambah manual
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="divide-y divide-stone-100">
             {metaConnections.map(c => {
