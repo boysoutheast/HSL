@@ -294,7 +294,7 @@ export default function NewMetaConnectionPage() {
           </div>
 
           <div className="flex justify-between pt-2">
-            <button type="button" onClick={() => setStep(1)} className="btn-ghost">
+            <button type="button" onClick={() => setStep(1)} className="btn-secondary">
               ← Kembali
             </button>
             <button type="button" onClick={() => setStep(3)} className="btn-primary">
@@ -335,7 +335,7 @@ export default function NewMetaConnectionPage() {
           )}
 
           <div className="flex justify-between pt-2">
-            <button type="button" onClick={() => setStep(2)} className="btn-ghost" disabled={connecting}>
+            <button type="button" onClick={() => setStep(2)} className="btn-secondary" disabled={connecting}>
               ← Kembali
             </button>
             <button type="button" onClick={handleConnect} disabled={connecting} className="btn-success">

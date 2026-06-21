@@ -200,7 +200,7 @@ export default function ConnectionsTab() {
             <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
               ➕ Hubungkan Meta
             </a>
-            <Link href="/meta-connections/new" className="btn-ghost btn-sm">
+            <Link href="/meta-connections/new" className="btn-secondary btn-sm">
               Tambah manual
             </Link>
           </div>
@@ -214,7 +214,7 @@ export default function ConnectionsTab() {
               <a href="/api/admin/meta-oauth/start" className="btn-primary btn-sm">
                 ➕ Hubungkan Meta
               </a>
-              <Link href="/meta-connections/new" className="btn-ghost btn-sm">
+              <Link href="/meta-connections/new" className="btn-secondary btn-sm">
                 Tambah manual
               </Link>
             </div>
