@@ -148,7 +148,7 @@ export default function MonitorPage() {
               onClick={() => setFilter(value)}
               className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
                 isActive
-                  ? FILTER_ACTIVE_COLORS[value] ?? 'bg-violet-600 text-white'
+                  ? FILTER_ACTIVE_COLORS[value] ?? 'bg-emerald-600 text-white'
                   : 'bg-white border border-stone-300 text-stone-600 hover:bg-stone-50'
               }`}
             >

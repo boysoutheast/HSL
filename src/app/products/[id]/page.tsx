@@ -947,7 +947,7 @@ function LandingPagesTab({ productId }: { productId: string }) {
                 />
               </div>
               <div className="flex justify-end">
-                <button type="submit" disabled={statSaving} className="btn-primary btn-sm">
+                <button type="submit" disabled={statSaving} className="btn-secondary btn-sm">
                   {statSaving ? 'Saving...' : '+ Add Stat'}
                 </button>
               </div>
@@ -1028,7 +1028,7 @@ function LandingPagesTab({ productId }: { productId: string }) {
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={() => setShowModal(false)} className="btn-ghost">Cancel</button>
-            <button type="submit" disabled={saving || !form.url.trim()} className="btn-primary">
+            <button type="submit" disabled={saving || !form.url.trim()} className="btn-success">
               {saving ? 'Saving...' : editLP ? 'Save Changes' : 'Add Landing Page'}
             </button>
           </div>
