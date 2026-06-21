@@ -188,85 +188,6 @@ export default function ConnectionsTab() {
         </p>
       </div>
 
-      {/* Hermes Agent Keys */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-base font-semibold text-stone-800">🤖 AI Buddy Agent Keys</h3>
-          <p className="text-sm text-stone-500 mt-0.5">Bearer token untuk Hermes AI agents akses <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> endpoints.</p>
-        </div>
-
-        {/* New Key Alert */}
-        {hermesNewKey && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-            <div className="text-sm font-semibold text-emerald-800">✅ Key baru untuk <span className="font-bold">{hermesNewKey.name}</span> — simpan sekarang!</div>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm font-mono text-emerald-900 break-all">{hermesNewKey.key}</code>
-              <button onClick={handleHermesCopy} className="btn-outline btn-sm whitespace-nowrap">{hermesKeyCopied ? 'Copied!' : 'Copy'}</button>
-            </div>
-            <p className="text-xs text-emerald-700">⚠️ Simpan key ini sekarang — tidak akan ditampilkan lagi.</p>
-          </div>
-        )}
-
-        {/* Create Form */}
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-3">
-            <input type="text" value={hermesAgentName} onChange={e => setHermesAgentName(e.target.value)}
-              placeholder="Agent name (required)"
-              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm flex-1" />
-            <input type="text" value={hermesAgentNotes} onChange={e => setHermesAgentNotes(e.target.value)}
-              placeholder="Notes (optional)"
-              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-48" />
-            <button onClick={handleHermesCreate} disabled={hermesCreating || !hermesAgentName.trim()} className="btn-primary whitespace-nowrap">
-              {hermesCreating ? 'Creating...' : 'Create Agent'}
-            </button>
-          </div>
-          {hermesError && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {hermesError}
-            </div>
-          )}
-        </div>
-
-        {/* Agent List */}
-        {hermesAgents.length > 0 && (
-          <div className="border-t border-stone-100 pt-4 mt-2">
-            <div className="text-xs font-semibold text-stone-400 uppercase mb-2">Agents ({hermesAgents.length})</div>
-            <div className="divide-y divide-stone-100">
-              {hermesAgents.map(agent => (
-                <div key={agent.id} className="py-3 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-stone-800 text-sm">{agent.name}</span>
-                      <span className={`px-1.5 py-0.5 text-[11px] font-semibold rounded-full ${
-                        agent.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
-                      }`}>{agent.status}</span>
-                    </div>
-                    {agent.notes && (
-                      <div className="text-xs text-stone-400 mt-0.5 truncate">{agent.notes}</div>
-                    )}
-                    <div className="text-xs text-stone-400 mt-0.5">
-                      Created {fmt(agent.createdAt)}
-                      {agent._count !== undefined ? ` · ${agent._count?.assignments ?? 0} assignments, ${agent._count?.contentLogs ?? 0} logs` : ''}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <button onClick={() => handleHermesRegen(agent)} disabled={hermesRegenLoading === agent.id}
-                      className="text-xs text-violet-600 hover:text-violet-800 underline whitespace-nowrap">
-                      {hermesRegenLoading === agent.id ? 'Regenerating...' : 'Regen Key'}
-                    </button>
-                    <button onClick={() => handleHermesToggle(agent)}
-                      className={`btn-sm text-xs whitespace-nowrap ${
-                        agent.status === 'active' ? 'btn-ghost text-red-600' : 'btn-outline text-stone-600'
-                      }`}>
-                      {agent.status === 'active' ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Meta Connections */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
@@ -374,6 +295,18 @@ export default function ConnectionsTab() {
           </div>
         )}
       </div>
+
+      <details className="group bg-white border border-stone-200 rounded-2xl overflow-hidden">
+        <summary className="px-6 py-4 cursor-pointer list-none flex items-center justify-between hover:bg-stone-50 transition-colors">
+          <div>
+            <h3 className="text-base font-semibold text-stone-800">🧩 Developer / API (opsional)</h3>
+            <p className="text-xs text-stone-400 mt-0.5">Buat yang mau integrasi sistem sendiri. Kalau cuma jalanin iklan, abaikan bagian ini.</p>
+          </div>
+          <svg className="w-5 h-5 text-stone-400 group-open:rotate-180 transition-transform shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </summary>
+        <div className="px-6 pb-6 space-y-6">
 
       {/* Generate Key */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
@@ -511,7 +444,7 @@ export default function ConnectionsTab() {
 
         <div className="space-y-4">
           <div>
-            <div className="text-xs font-semibold text-stone-500 uppercase mb-2">Normal Flow (1–25 menit — tergantung antrian GeminiGen)</div>
+            <div className="text-xs font-semibold text-stone-500 uppercase mb-2">Normal Flow (1–25 menit — tergantung antrian sistem)</div>
             <pre className="bg-stone-50 border border-stone-200 text-xs text-stone-700 p-3 rounded-xl overflow-x-auto whitespace-pre-wrap">{`POST /api/gen/video → 201 { id, creditsCost, balanceAfter }
   ↓ (simpan id)
 Poll GET /api/gen/video/{id} setiap 30s
@@ -523,11 +456,11 @@ Download videoUrl`}</pre>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
               <div className="text-xs font-semibold text-emerald-700 mb-1">Best Case (~40s)</div>
-              <div className="text-xs text-emerald-800">Submit → GeminiGen webhook masuk → langsung completed</div>
+              <div className="text-xs text-emerald-800">Submit → diproses → langsung selesai</div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <div className="text-xs font-semibold text-amber-700 mb-1">Worst Case (~25+ menit)</div>
-              <div className="text-xs text-amber-800">Submit → GeminiGen lambat → job <code className="bg-amber-100 px-0.5 rounded">stalled</code> → cek lagi nanti. <strong>Tidak auto-refund</strong> — video mungkin masih jadi.</div>
+              <div className="text-xs text-amber-800">Submit → sistem lambat → job <code className="bg-amber-100 px-0.5 rounded">stalled</code> → cek lagi nanti. <strong>Tidak auto-refund</strong> — video mungkin masih diproses.</div>
             </div>
           </div>
         </div>
@@ -544,10 +477,9 @@ Download videoUrl`}</pre>
             </thead>
             <tbody className="divide-y divide-stone-50">
               <tr><td className="py-1.5 pr-3 font-mono text-stone-700">queued</td><td className="py-1.5 pr-3 text-stone-600">Job diterima</td><td className="py-1.5 text-stone-500">Tunggu</td></tr>
-              <tr><td className="py-1.5 pr-3 font-mono text-stone-700">processing</td><td className="py-1.5 pr-3 text-stone-600">Di GeminiGen</td><td className="py-1.5 text-stone-500">Poll tiap 30s</td></tr>
-              <tr><td className="py-1.5 pr-3 font-mono text-emerald-700">completed</td><td className="py-1.5 pr-3 text-stone-600">Siap</td><td className="py-1.5 text-stone-500">Download <code className="bg-stone-100 px-0.5 rounded">videoUrl</code></td></tr>
-              <tr><td className="py-1.5 pr-3 font-mono text-red-600">failed</td><td className="py-1.5 pr-3 text-stone-600">GeminiGen gagal (status=3)</td><td className="py-1.5 text-stone-500">Cek <code className="bg-stone-100 px-0.5 rounded">refundedAt</code> → resubmit</td></tr>
-              <tr><td className="py-1.5 pr-3 font-mono text-amber-600">stalled</td><td className="py-1.5 pr-3 text-stone-600">Melebihi 30 menit, masih proses di GeminiGen</td><td className="py-1.5 text-stone-500">Tunggu atau laporkan — tdk auto-refund</td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-stone-700">processing</td><td className="py-1.5 pr-3 text-stone-600">Sedang diproses</td><td className="py-1.5 text-stone-500">Poll tiap 30s</td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-red-600">failed</td><td className="py-1.5 pr-3 text-stone-600">Pemrosesan gagal</td><td className="py-1.5 text-stone-500">Cek <code className="bg-stone-100 px-0.5 rounded">refundedAt</code> → resubmit</td></tr>
+              <tr><td className="py-1.5 pr-3 font-mono text-amber-600">stalled</td><td className="py-1.5 pr-3 text-stone-600">Melebihi 30 menit, masih diproses</td><td className="py-1.5 text-stone-500">Tunggu atau laporkan — tdk auto-refund</td></tr>
             </tbody>
           </table>
         </div>
@@ -557,7 +489,7 @@ Download videoUrl`}</pre>
           <ul className="text-xs text-stone-500 space-y-0.5 list-disc list-inside">
             <li>Interval: 30 detik</li>
             <li>Timeout client: berhenti setelah 30 menit</li>
-            <li>Status <code className="bg-stone-100 px-0.5 rounded">stalled</code> = bukan failed — video mungkin masih jadi di GeminiGen</li>
+            <li>Status <code className="bg-stone-100 px-0.5 rounded">stalled</code> = bukan failed — video mungkin masih diproses</li>
             <li>Cek <code className="bg-stone-100 px-0.5 rounded">refundedAt</code> saat status=failed — kalau non-null, aman resubmit</li>
           </ul>
         </div>
@@ -567,18 +499,11 @@ Download videoUrl`}</pre>
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
         <h3 className="text-base font-semibold text-stone-800">🔄 Refund Policy</h3>
         <ul className="text-sm text-stone-600 space-y-2">
-          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Refund otomatis saat: GeminiGen failed (status=3) ATAU job never submitted</span></li>
+          <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Refund otomatis saat: pemrosesan gagal ATAU job tidak terkirim</span></li>
           <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Cek <code className="text-xs bg-stone-100 px-1 rounded">refundedAt</code> di response — non-null = credits sudah kembali</span></li>
           <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Idempotent — tidak bisa double refund</span></li>
           <li className="flex gap-2"><span className="text-stone-400 mt-0.5">•</span><span>Cek balance via <code className="text-xs bg-stone-100 px-1 rounded">GET /api/gen/credits</code> setelah refund</span></li>
         </ul>
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-          <div className="text-xs font-semibold text-blue-700 mb-1">Webhook</div>
-          <div className="text-xs text-blue-800">
-            <code className="bg-blue-100 px-1 rounded">https://ai.boytenggara.com/api/webhooks/geminigen</code>
-          </div>
-          <div className="text-xs text-blue-700 mt-1.5">Kalau aktif → video selesai ~40s. Kalau tidak → cron backup tiap 5 menit.</div>
-        </div>
       </div>
 
       {/* Error Codes */}
@@ -617,6 +542,14 @@ done`}</pre>
         </div>
       </div>
 
+      {/* Auth note */}
+      <div className="text-xs text-stone-400 text-center">
+        Auth via <code className="bg-stone-100 px-1 rounded">x-api-key</code> or <code className="bg-stone-100 px-1 rounded">Authorization: Bearer</code> header.
+        Keys are scoped to your account — get yours in the <a href="/studio" className="text-violet-600 underline">Media Studio</a>.
+      </div>
+        </div>
+      </details>
+
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
         <h3 className="text-base font-semibold text-stone-800 mb-3">💰 Pricing</h3>
         <table className="w-full text-sm">
@@ -626,12 +559,6 @@ done`}</pre>
             <tr><td className="py-2 pr-2 font-mono text-xs">10s</td><td className="py-2 pr-2 text-xs">1,300 cr</td><td className="py-2 text-xs">2,600 cr</td></tr>
           </tbody>
         </table>
-      </div>
-
-      {/* Auth note */}
-      <div className="text-xs text-stone-400 text-center">
-        Auth via <code className="bg-stone-100 px-1 rounded">x-api-key</code> or <code className="bg-stone-100 px-1 rounded">Authorization: Bearer</code> header.
-        Keys are scoped to your account — get yours in the <a href="/studio" className="text-violet-600 underline">Media Studio</a>.
       </div>
     </div>
   )
