@@ -5,6 +5,7 @@ import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface MediaRule {
   id: string
@@ -41,6 +42,7 @@ export default function MediaRulesPage() {
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmDeleteRule, setConfirmDeleteRule] = useState<MediaRule | null>(null)
   const [form, setForm] = useState({
     name: '',
     triggerType: 'MIN_COUNT',
@@ -118,7 +120,13 @@ export default function MediaRulesPage() {
   }
 
   const handleDelete = async (rule: MediaRule) => {
-    if (!confirm(`Hapus rule "${rule.name}"?`)) return
+    setConfirmDeleteRule(rule)
+  }
+
+  const handleDeleteConfirmed = async () => {
+    const rule = confirmDeleteRule
+    if (!rule) return
+    setConfirmDeleteRule(null)
     await fetch(`/api/admin/media-rules/${rule.id}`, { method: 'DELETE', credentials: 'include' })
     await fetchRules()
   }
@@ -263,6 +271,21 @@ export default function MediaRulesPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteRule}
+        title="Hapus Media Rule"
+        body={
+          <>
+            Hapus rule <strong>&ldquo;{confirmDeleteRule?.name}&rdquo;</strong>?
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmDeleteRule(null)}
+      />
     </div>
   )
 }

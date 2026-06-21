@@ -489,6 +489,7 @@ model MetaAdAccount {
   adAccountId    String    @map("ad_account_id") // act_XXXXXXXXX
   adAccountName  String?   @map("ad_account_name")
   accountStatus  Int       @default(1) @map("account_status") // 1=active, 2=disabled
+  enabledForAutomation Boolean @default(true) @map("enabled_for_automation")
   currency       String? // IDR, USD, etc
   timezoneName   String?   @map("timezone_name")
   isDefault      Boolean   @default(false) @map("is_default")

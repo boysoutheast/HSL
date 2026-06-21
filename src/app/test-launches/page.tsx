@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface TestLaunch {
   id: string
@@ -69,6 +70,9 @@ export default function TestLaunchesPage() {
   const [launches, setLaunches] = useState<TestLaunch[]>([])
   const [loading, setLoading] = useState(true)
   const [submittingId, setSubmittingId] = useState<string | null>(null)
+  const [confirmSubmitId, setConfirmSubmitId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchLaunches = useCallback(async () => {
     try {
@@ -86,7 +90,13 @@ export default function TestLaunchesPage() {
   useEffect(() => { fetchLaunches() }, [fetchLaunches])
 
   const handleSubmitForApproval = async (id: string) => {
-    if (!confirm('Submit this launch for approval?')) return
+    setConfirmSubmitId(id)
+  }
+
+  const handleSubmitConfirmed = async () => {
+    const id = confirmSubmitId
+    if (!id) return
+    setConfirmSubmitId(null)
     setSubmittingId(id)
     try {
       const res = await fetch(`/api/admin/test-launches/${id}/submit`, {
@@ -103,6 +113,23 @@ export default function TestLaunchesPage() {
     } finally {
       setSubmittingId(null)
     }
+  }
+
+  const handleDeleteLaunch = async (id: string) => {
+    setConfirmDeleteId(id)
+  }
+
+  const handleDeleteLaunchConfirmed = async () => {
+    const id = confirmDeleteId
+    if (!id) return
+    setConfirmDeleteId(null)
+    setDeleteLoading(true)
+    try {
+      const res = await fetch(`/api/admin/test-launches/${id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error()
+      await fetchLaunches()
+    } catch { /* silent */ }
+    finally { setDeleteLoading(false) }
   }
 
   return (
@@ -190,12 +217,49 @@ export default function TestLaunchesPage() {
                       {submittingId === launch.id ? '...' : 'Submit'}
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDeleteLaunch(launch.id)}
+                    disabled={launch.status !== 'draft' || deleteLoading}
+                    className={launch.status === 'draft' ? 'btn-danger btn-sm' : 'btn-disabled btn-sm cursor-not-allowed opacity-40'}
+                    title={launch.status === 'draft' ? 'Hapus launch' : 'Hanya draft yang bisa dihapus'}
+                  >
+                    {deleteLoading ? '...' : '🗑'}
+                  </button>
                 </div>
               </td>
             </tr>
           ))}
         </Table>
       )}
+
+      {/* Submit Confirm */}
+      <ConfirmDialog
+        open={!!confirmSubmitId}
+        title="Submit Launch"
+        body="Submit launch ini untuk approval?"
+        confirmLabel="Submit"
+        loading={submittingId === confirmSubmitId}
+        onConfirm={handleSubmitConfirmed}
+        onCancel={() => setConfirmSubmitId(null)}
+      />
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Hapus Launch"
+        body={
+          <>
+            Hapus launch ini? Tindakan ini tidak bisa dibatalkan.
+            <br /><br />
+            <strong>Hanya draft yang bisa dihapus.</strong>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleDeleteLaunchConfirmed}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   )
 }

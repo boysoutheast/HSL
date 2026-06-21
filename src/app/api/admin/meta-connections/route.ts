@@ -27,7 +27,7 @@ const SAFE_META_ACCOUNT_SELECT = {
   createdAt: true,
   updatedAt: true,
   businesses: { select: { id: true, businessId: true, businessName: true, verificationStatus: true, isSelected: true, lastSyncedAt: true, createdAt: true, updatedAt: true } },
-  adAccounts: { select: { id: true, adAccountId: true, adAccountName: true, accountStatus: true, currency: true, timezoneName: true, isDefault: true, lastSyncedAt: true, createdAt: true, updatedAt: true, business: { select: { id: true, businessId: true, businessName: true } } } },
+  adAccounts: { select: { id: true, adAccountId: true, adAccountName: true, accountStatus: true, currency: true, timezoneName: true, isDefault: true, enabledForAutomation: true, lastSyncedAt: true, createdAt: true, updatedAt: true, business: { select: { id: true, businessId: true, businessName: true } } } },
   pages: { select: { id: true, pageId: true, pageName: true, igBusinessAccountId: true, igUsername: true, igName: true, isActive: true, lastSyncedAt: true, createdAt: true, updatedAt: true } },
 }
 

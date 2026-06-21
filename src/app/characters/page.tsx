@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Character {
   id: string
@@ -26,14 +27,37 @@ interface Character {
 export default function CharactersPage() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+  const [confirmDeleteChar, setConfirmDeleteChar] = useState<Character | null>(null)
 
-  useEffect(() => {
-    fetch('/api/admin/characters', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : { characters: [] })
-      .then(data => setCharacters(data.characters ?? []))
-      .catch(() => setCharacters([]))
-      .finally(() => setLoading(false))
+  const fetchChars = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/characters', { credentials: 'include' })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setCharacters(data.characters ?? [])
+    } catch { /* silent */ }
+    finally { setLoading(false) }
   }, [])
+
+  useEffect(() => { fetchChars() }, [fetchChars])
+
+  const handleDeleteChar = async (char: Character) => {
+    setConfirmDeleteChar(char)
+  }
+
+  const handleDeleteCharConfirmed = async () => {
+    const char = confirmDeleteChar
+    if (!char) return
+    setConfirmDeleteChar(null)
+    setDeleteLoading(char.id)
+    try {
+      const res = await fetch(`/api/admin/characters/${char.id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error()
+      await fetchChars()
+    } catch { /* silent */ }
+    finally { setDeleteLoading(null) }
+  }
 
   return (
     <div>
@@ -75,7 +99,7 @@ export default function CharactersPage() {
         <div className="flex items-center justify-center h-40 text-stone-400 text-sm">Loading characters...</div>
       ) : (
         <Table
-          headers={['Name', 'Account', 'Status', 'Description', 'Speaking Style', 'Topics', 'Photos']}
+          headers={['Name', 'Account', 'Status', 'Description', 'Speaking Style', 'Topics', 'Photos', '']}
           empty="No characters found. Buat karakter dari halaman Account Detail."
         >
           {characters.map((char) => (
@@ -104,10 +128,37 @@ export default function CharactersPage() {
               <td className="px-4 py-3 text-stone-600">
                 {char._count?.photoReferences ?? '—'}
               </td>
+              <td className="px-4 py-3">
+                <button
+                  onClick={() => handleDeleteChar(char)}
+                  disabled={deleteLoading === char.id}
+                  className="btn-danger btn-sm"
+                >
+                  {deleteLoading === char.id ? '...' : '🗑'}
+                </button>
+              </td>
             </tr>
           ))}
         </Table>
       )}
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteChar}
+        title="Hapus Character"
+        body={
+          <>
+            Hapus character <strong>&ldquo;{confirmDeleteChar?.name}&rdquo;</strong>? Semua topic dan foto referensi terkait akan ikut terhapus.
+            <br /><br />
+            <strong>Tidak bisa dibatalkan.</strong>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteLoading === confirmDeleteChar?.id}
+        onConfirm={handleDeleteCharConfirmed}
+        onCancel={() => setConfirmDeleteChar(null)}
+      />
     </div>
   )
 }

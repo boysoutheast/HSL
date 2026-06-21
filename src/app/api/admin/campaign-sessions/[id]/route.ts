@@ -157,7 +157,7 @@ export async function DELETE(
   if (auth instanceof NextResponse) return auth
 
   const existing = await prisma.campaignSession.findFirst({
-    where: { id: params.id, userId: auth.id },
+    where: { id: params.id, ...(auth.role === 'admin' ? {} : { userId: auth.id }) },
   })
 
   if (!existing) {

@@ -16,6 +16,7 @@ interface Business {
 }
 
 interface AdAccount {
+  id: string
   adAccountId: string
   adAccountName?: string
   name?: string
@@ -24,6 +25,7 @@ interface AdAccount {
   currency: string | null
   timezoneName?: string | null
   isDefault?: boolean
+  enabledForAutomation?: boolean
 }
 
 interface Page {
@@ -114,6 +116,9 @@ export default function MetaConnectionDetailPage() {
   const [credStep, setCredStep] = useState<'input' | 'test' | 'saving' | 'done'>('input')
   const [credTestResult, setCredTestResult] = useState<{ metaUserId?: string; metaUserName?: string; scopes?: string[]; tokenExpiry?: string } | null>(null)
 
+  // Ad Account toggle state
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
+
   const fetchConnection = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/meta-connections/${id}`, { cache: 'no-store', credentials: 'include' })
@@ -175,6 +180,30 @@ export default function MetaConnectionDetailPage() {
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Unknown error')
       setDeleteLoading(false)
+    }
+  }
+
+  // Ad Account toggle handler
+  const toggleAdAccount = async (adAccountId: string, enabled: boolean) => {
+    setTogglingIds(prev => new Set(prev).add(adAccountId))
+    try {
+      const res = await fetch(`/api/admin/meta-connections/${id}/ad-accounts`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adAccountId, enabledForAutomation: enabled }),
+      })
+      if (res.ok) {
+        await fetchConnection()
+      }
+    } catch {
+      // silent — optimistic toggle stays on success revert on fail
+    } finally {
+      setTogglingIds(prev => {
+        const next = new Set(prev)
+        next.delete(adAccountId)
+        return next
+      })
     }
   }
 
@@ -473,7 +502,7 @@ export default function MetaConnectionDetailPage() {
           Ad Accounts ({conn.adAccounts?.length ?? 0})
         </h2>
         <Table
-          headers={['Ad Account ID', 'Nama', 'Status', 'Currency']}
+          headers={['Ad Account ID', 'Nama', 'Status', 'Currency', 'Automation']}
           empty="Belum ada ad account yang terhubung."
         >
           {conn.adAccounts?.map((acc) => {
@@ -488,6 +517,21 @@ export default function MetaConnectionDetailPage() {
                   <StatusBadge status={status} />
                 </td>
                 <td className="px-4 py-3 text-stone-600">{acc.currency ?? '—'}</td>
+                <td className="px-4 py-3">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={acc.enabledForAutomation !== false}
+                      disabled={togglingIds.has(acc.id ?? acc.adAccountId)}
+                      onChange={(e) => toggleAdAccount(acc.id ?? acc.adAccountId, e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-stone-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 dark:peer-checked:bg-emerald-600"></div>
+                    <span className="ml-2 text-xs text-stone-500">
+                      {togglingIds.has(acc.id ?? acc.adAccountId) ? '...' : acc.enabledForAutomation !== false ? 'ON' : 'OFF'}
+                    </span>
+                  </label>
+                </td>
               </tr>
             )
           })}

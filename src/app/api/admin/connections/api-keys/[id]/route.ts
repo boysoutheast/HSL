@@ -15,7 +15,7 @@ export async function DELETE(
   const { id } = params
 
   const key = await prisma.userApiKey.findFirst({
-    where: { id, userId: user.id },
+    where: { id, ...(user.role === 'admin' ? {} : { userId: user.id }) },
   })
   if (!key) {
     return NextResponse.json({ error: 'API key not found' }, { status: 404 })

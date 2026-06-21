@@ -5,6 +5,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Agent {
   id: string
@@ -87,6 +88,9 @@ export default function AgentsPage() {
   const [regenLoading, setRegenLoading] = useState<string | null>(null)
   const [regenKey, setRegenKey] = useState<{ agentId: string; agentName: string; key: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [confirmRegenAgent, setConfirmRegenAgent] = useState<Agent | null>(null)
+  const [confirmDeleteAgent, setConfirmDeleteAgent] = useState<Agent | null>(null)
+  const [deleteAgentLoading, setDeleteAgentLoading] = useState(false)
 
   // Assignments state
   const [selectedAgentId, setSelectedAgentId] = useState<string>('')
@@ -206,7 +210,11 @@ export default function AgentsPage() {
   }
 
   const handleRegenerateKey = async (agent: Agent) => {
-    if (!window.confirm(`Regenerate API key untuk "${agent.name}"?\n\nKey lama akan langsung tidak berlaku.`)) return
+    setConfirmRegenAgent(agent)
+  }
+
+  const handleRegenerateKeyConfirmed = async (agent: Agent) => {
+    setConfirmRegenAgent(null)
     setRegenLoading(agent.id)
     try {
       const res = await fetch(`/api/admin/hermes-agents/${agent.id}/regenerate-key`, {
@@ -221,6 +229,26 @@ export default function AgentsPage() {
       alert('Gagal regenerate key: ' + String(err))
     } finally {
       setRegenLoading(null)
+    }
+  }
+
+  const handleDeleteAgent = async (agent: Agent) => {
+    setConfirmDeleteAgent(agent)
+  }
+
+  const handleDeleteAgentConfirmed = async () => {
+    const agent = confirmDeleteAgent
+    if (!agent) return
+    setConfirmDeleteAgent(null)
+    setDeleteAgentLoading(true)
+    try {
+      const res = await fetch(`/api/admin/hermes-agents/${agent.id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Failed')
+      await fetchAgents()
+    } catch (err) {
+      alert('Gagal hapus agent: ' + String(err))
+    } finally {
+      setDeleteAgentLoading(false)
     }
   }
 
@@ -352,6 +380,14 @@ export default function AgentsPage() {
                     title="Regenerate API Key"
                   >
                     {regenLoading === agent.id ? '...' : '🔄 Key'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAgent(agent)}
+                    disabled={deleteAgentLoading}
+                    className="text-stone-300 hover:text-red-500 text-xs"
+                    title={deleteAgentLoading ? 'Menghapus...' : 'Hapus agent (admin only)'}
+                  >
+                    {deleteAgentLoading ? '...' : '🗑'}
                   </button>
                 </div>
               </td>
@@ -522,6 +558,24 @@ export default function AgentsPage() {
         </div>
       )}
 
+      {/* Regenerate Key Confirm */}
+      <ConfirmDialog
+        open={!!confirmRegenAgent}
+        title="Regenerate API Key"
+        body={
+          <>
+            Regenerate API key untuk <strong>&ldquo;{confirmRegenAgent?.name}&rdquo;</strong>?
+            <br /><br />
+            Key lama akan langsung <strong>tidak berlaku</strong>.
+          </>
+        }
+        confirmLabel="Regenerate"
+        danger
+        loading={regenLoading === confirmRegenAgent?.id}
+        onConfirm={() => confirmRegenAgent && handleRegenerateKeyConfirmed(confirmRegenAgent)}
+        onCancel={() => setConfirmRegenAgent(null)}
+      />
+
       {/* API Key Modal */}
       <Modal open={showKeyModal} onClose={() => { setShowKeyModal(false); setNewApiKey('') }} title="Agent Created — Save Your API Key">
         <div className="space-y-4">
@@ -552,6 +606,24 @@ export default function AgentsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Delete Agent Confirm */}
+      <ConfirmDialog
+        open={!!confirmDeleteAgent}
+        title="Hapus Hermes Agent"
+        body={
+          <>
+            Hapus agent <strong>&ldquo;{confirmDeleteAgent?.name}&rdquo;</strong>? Semua assignment dan content log terkait akan ikut terhapus.
+            <br /><br />
+            <strong>Tindakan ini tidak bisa dibatalkan.</strong>
+          </>
+        }
+        confirmLabel="Hapus"
+        danger
+        loading={deleteAgentLoading}
+        onConfirm={handleDeleteAgentConfirmed}
+        onCancel={() => setConfirmDeleteAgent(null)}
+      />
     </div>
   )
 }
