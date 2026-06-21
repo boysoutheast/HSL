@@ -52,8 +52,14 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [newCreative, setNewCreative] = useState({ primaryText: '', headline: '', description: '', callToAction: 'LEARN_MORE', linkUrl: '', mediaUrl: '' })
+  const [newCreative, setNewCreative] = useState({ primaryText: '', headline: '', description: '', callToAction: 'LEARN_MORE', linkUrl: '' })
   const [showAddForm, setShowAddForm] = useState(false)
+  const [selectedMediaAssetId, setSelectedMediaAssetId] = useState<string | null>(null)
+  const [selectedMediaThumb, setSelectedMediaThumb] = useState<string | null>(null)
+  const [mediaMode, setMediaMode] = useState<'library' | 'upload'>('library')
+  const [libraryAssets, setLibraryAssets] = useState<{id:string;fileUrl:string|null;publicUrl:string|null;label:string|null}[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   // Fetch session + pool + logs
   const fetchAll = useCallback(async () => {
@@ -108,19 +114,29 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
     } finally { setSaving(false) }
   }
 
+  // Fetch library assets
+  const fetchLibrary = async () => {
+    setLibraryLoading(true)
+    try {
+      const res = await fetch('/api/admin/media-assets?type=IMAGE&status=READY', { credentials: 'include' })
+      if (res.ok) { const d = await res.json(); setLibraryAssets(d.assets ?? []) }
+    } catch { /* silent */ }
+    finally { setLibraryLoading(false) }
+  }
+
   // Add creative
   const handleAddCreative = async () => {
-    if (!newCreative.primaryText) return
+    if (!newCreative.primaryText || !selectedMediaAssetId) return
     setSaving(true)
     try {
       const body: Record<string, unknown> = {
         primaryText: newCreative.primaryText,
         callToAction: newCreative.callToAction,
+        mediaAssetId: selectedMediaAssetId,
       }
       if (newCreative.headline) body.headline = newCreative.headline
       if (newCreative.description) body.description = newCreative.description
       if (newCreative.linkUrl) body.linkUrl = newCreative.linkUrl
-      if (newCreative.mediaUrl) body.creativeUrl = newCreative.mediaUrl
 
       const res = await fetch(`/api/admin/campaign-sessions/${sessionId}/creative-pool`, {
         method: 'POST',
@@ -132,7 +148,9 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? 'Failed to add')
       }
-      setNewCreative({ primaryText: '', headline: '', description: '', callToAction: 'LEARN_MORE', linkUrl: '', mediaUrl: '' })
+      setNewCreative({ primaryText: '', headline: '', description: '', callToAction: 'LEARN_MORE', linkUrl: '' })
+      setSelectedMediaAssetId(null)
+      setSelectedMediaThumb(null)
       setShowAddForm(false)
       fetchAll()
     } catch (err) {
@@ -261,13 +279,95 @@ export default function TopUpTab({ sessionId, compact }: { sessionId: string; co
                 </select>
               </div>
             </div>
+
+            {/* Media selector: Library | Upload */}
             <div>
-              <label className="block text-xs text-stone-600 font-medium mb-1">Link URL or Media URL</label>
-              <input type="text" value={newCreative.mediaUrl} onChange={(e) => setNewCreative({ ...newCreative, mediaUrl: e.target.value })}
-                placeholder="https://..."
+              <label className="block text-xs text-stone-600 font-medium mb-2">Media *</label>
+              <div className="flex items-center gap-2 mb-3">
+                <button type="button" onClick={() => { setMediaMode('library'); if (libraryAssets.length===0) fetchLibrary() }}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${mediaMode==='library'?'bg-violet-100 text-violet-800':'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>📚 Library</button>
+                <button type="button" onClick={() => setMediaMode('upload')}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${mediaMode==='upload'?'bg-violet-100 text-violet-800':'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>⬆️ Upload</button>
+              </div>
+
+              {/* Preview kalau udah punya */}
+              {selectedMediaThumb && (
+                <div className="relative inline-block mb-2">
+                  <img src={selectedMediaThumb} alt="Preview" className="w-20 h-20 rounded-lg object-cover border border-stone-300" />
+                  <button type="button" onClick={() => { setSelectedMediaAssetId(null); setSelectedMediaThumb(null) }}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs leading-none hover:bg-red-600">✕</button>
+                </div>
+              )}
+
+              {/* Library grid */}
+              {mediaMode === 'library' && (
+                <div>
+                  {libraryLoading ? (
+                    <p className="text-xs text-stone-400 py-2">Loading library...</p>
+                  ) : libraryAssets.length === 0 ? (
+                    <p className="text-xs text-stone-400 py-2">Belum ada gambar di library. Upload dulu.</p>
+                  ) : (
+                    <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
+                      {libraryAssets.map((a) => {
+                        const url = a.fileUrl ?? a.publicUrl ?? ''
+                        const isSelected = selectedMediaAssetId === a.id
+                        return (
+                          <button key={a.id} type="button" onClick={() => { setSelectedMediaAssetId(a.id); setSelectedMediaThumb(url) }}
+                            className={`aspect-square rounded-lg overflow-hidden border-2 transition ${isSelected ? 'border-violet-500 ring-2 ring-violet-200' : 'border-stone-200 hover:border-violet-300'}`}>
+                            {url && <img src={url} alt={a.label ?? ''} className="w-full h-full object-cover" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upload mode */}
+              {mediaMode === 'upload' && (
+                <div>
+                  <label className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed cursor-pointer text-sm font-medium transition ${
+                    uploading ? 'border-stone-200 text-stone-300 cursor-not-allowed' : 'border-violet-200 text-violet-600 hover:border-violet-400 hover:bg-violet-50'
+                  }`}>
+                    <input type="file" accept="image/*" className="sr-only" disabled={uploading}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setUploading(true)
+                        try {
+                          const fd = new FormData()
+                          fd.append('file', file)
+                          fd.append('label', `Topup-${sessionId}`)
+                          const r = await fetch('/api/admin/media-assets/upload', {
+                            method: 'POST', credentials: 'include', body: fd,
+                          })
+                          const d = await r.json()
+                          if (r.ok && d.asset) {
+                            const url = d.asset.fileUrl ?? d.asset.publicUrl ?? ''
+                            setSelectedMediaAssetId(d.asset.id)
+                            setSelectedMediaThumb(url)
+                          } else {
+                            setError(d.error ?? 'Upload gagal')
+                          }
+                        } catch {
+                          setError('Network error')
+                        }
+                        setUploading(false)
+                      }}
+                    />
+                    {uploading ? 'Uploading...' : '↑ Upload gambar'}
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-stone-600 font-medium mb-1">Link URL (opsional)</label>
+              <input type="text" value={newCreative.linkUrl} onChange={(e) => setNewCreative({ ...newCreative, linkUrl: e.target.value })}
+                placeholder="https://shopee.co.id/..."
                 className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
             </div>
-            <button onClick={handleAddCreative} disabled={saving || !newCreative.primaryText} className="btn-primary btn-sm">
+            <button onClick={handleAddCreative} disabled={saving || !newCreative.primaryText || !selectedMediaAssetId} className="btn-primary btn-sm">
               {saving ? 'Adding...' : 'Add to Pool'} <HelpHint k="tu.addToPool" />
             </button>
           </div>

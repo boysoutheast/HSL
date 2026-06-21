@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma'
 import { createAd, resolvePageId, TokenError, RateLimitError } from '@/lib/meta-client'
 import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
 import { notify } from '@/lib/notify'
+import { resolvePoolMediaUrl } from '@/lib/creative-media'
 
 export const dynamic = 'force-dynamic'
 
@@ -141,7 +142,7 @@ async function run() {
             description: poolItem.description ?? '',
             callToAction: poolItem.callToAction ?? 'LEARN_MORE',
             linkUrl: poolItem.linkUrl ?? '',
-            mediaUrl: poolItem.creativeUrl ?? undefined,
+            mediaUrl: await resolvePoolMediaUrl(poolItem),
             status: 'PAUSED',
           }, token)
 
