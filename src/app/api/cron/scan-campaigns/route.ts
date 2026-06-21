@@ -46,6 +46,7 @@ async function run() {
       budgetMode: true,
       primaryAdsetMetaId: true,
       monitorIntervalMinutes: true,
+      insightWindow: true,
       metaAdAccount: {
         select: { id: true, adAccountId: true },
       },
@@ -90,7 +91,7 @@ async function run() {
 
     try {
       // Fetch fresh insights from Meta
-      const insights = await getInsights(metaCampaignId, token, 'maximum')
+      const insights = await getInsights(metaCampaignId, token, session.insightWindow ?? 'maximum')
 
       // ★ Observability: log jika insights kosong (e.g. campaign paused/no data)
       if (insights.spend === 0 && insights.impressions === 0 && insights.purchases === 0) {

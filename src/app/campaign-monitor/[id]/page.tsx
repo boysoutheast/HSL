@@ -12,7 +12,7 @@ import { HelpHint } from '@/components/ui/HelpHint'
 interface Session {
   id: string; name: string; status: string; phase: string
   automationEnabled: boolean; dailyBudget: string; currency: string; objective: string
-  monitorIntervalMinutes: number; lastMonitorAt: string | null; nextMonitorAt: string | null
+  monitorIntervalMinutes: number; insightWindow: string; lastMonitorAt: string | null; nextMonitorAt: string | null
   lastActionAt: string | null; source: string; importStatus: string | null
   minActiveAds: number; topupEnabled: boolean
   product: { id: string; name: string } | null
@@ -60,6 +60,7 @@ export default function CampaignDetailPage() {
   const [togglingAuto, setTogglingAuto] = useState(false)
   const [savingInterval, setSavingInterval] = useState(false)
   const [intervalVal, setIntervalVal] = useState(15)
+  const [insightWindowVal, setInsightWindowVal] = useState('maximum')
   const [logs, setLogs] = useState<TopupLog[]>([])
 
   // ── Fetch session ──
@@ -71,6 +72,7 @@ export default function CampaignDetailPage() {
       const loaded = data.session as Session
       setSession(loaded)
       setIntervalVal(loaded.monitorIntervalMinutes)
+      setInsightWindowVal(loaded.insightWindow ?? 'maximum')
       if(!loaded.latestSnapshot) {
         try {
           const mRes = await fetch(`/api/admin/campaign-sessions/${id}/metrics`, { credentials:'include' })
@@ -111,6 +113,14 @@ export default function CampaignDetailPage() {
     try {
       await fetch(`/api/admin/campaign-sessions/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({monitorIntervalMinutes:val}) })
     } finally { setSavingInterval(false) }
+  }
+
+  // ── Insight window change ──
+  const handleInsightWindowChange = async (val:string) => {
+    setInsightWindowVal(val)
+    try {
+      await fetch(`/api/admin/campaign-sessions/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({insightWindow:val}) })
+    } catch{}
   }
 
   // ── Rule toggle ──
@@ -256,6 +266,17 @@ export default function CampaignDetailPage() {
                   {INTERVAL_OPTIONS.map(v => <option key={v} value={v}>tiap {v}m</option>)}
                 </select>
                 {savingInterval && <span className="text-[10px] text-stone-400">...</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-stone-600 font-medium">Periode:</span>
+                <select value={insightWindowVal} onChange={(e)=>handleInsightWindowChange(e.target.value)}
+                  className="border border-stone-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  <option value="maximum">Lifetime</option>
+                  <option value="last_7d">7 hari terakhir</option>
+                  <option value="last_14d">14 hari terakhir</option>
+                  <option value="last_3d">3 hari terakhir</option>
+                  <option value="today">Hari ini</option>
+                </select>
               </div>
               <div className="text-xs text-stone-500">
                 {rules.length} rules aktif · floor {session.minActiveAds} ads · pool {session.topupEnabled?'ON':'OFF'}
