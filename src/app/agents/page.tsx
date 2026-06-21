@@ -5,6 +5,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Modal from '@/components/ui/Modal'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface Agent {
   id: string
@@ -87,6 +88,7 @@ export default function AgentsPage() {
   const [regenLoading, setRegenLoading] = useState<string | null>(null)
   const [regenKey, setRegenKey] = useState<{ agentId: string; agentName: string; key: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [confirmRegenAgent, setConfirmRegenAgent] = useState<Agent | null>(null)
 
   // Assignments state
   const [selectedAgentId, setSelectedAgentId] = useState<string>('')
@@ -206,7 +208,11 @@ export default function AgentsPage() {
   }
 
   const handleRegenerateKey = async (agent: Agent) => {
-    if (!window.confirm(`Regenerate API key untuk "${agent.name}"?\n\nKey lama akan langsung tidak berlaku.`)) return
+    setConfirmRegenAgent(agent)
+  }
+
+  const handleRegenerateKeyConfirmed = async (agent: Agent) => {
+    setConfirmRegenAgent(null)
     setRegenLoading(agent.id)
     try {
       const res = await fetch(`/api/admin/hermes-agents/${agent.id}/regenerate-key`, {
@@ -521,6 +527,24 @@ export default function AgentsPage() {
           </div>
         </div>
       )}
+
+      {/* Regenerate Key Confirm */}
+      <ConfirmDialog
+        open={!!confirmRegenAgent}
+        title="Regenerate API Key"
+        body={
+          <>
+            Regenerate API key untuk <strong>&ldquo;{confirmRegenAgent?.name}&rdquo;</strong>?
+            <br /><br />
+            Key lama akan langsung <strong>tidak berlaku</strong>.
+          </>
+        }
+        confirmLabel="Regenerate"
+        danger
+        loading={regenLoading === confirmRegenAgent?.id}
+        onConfirm={() => confirmRegenAgent && handleRegenerateKeyConfirmed(confirmRegenAgent)}
+        onCancel={() => setConfirmRegenAgent(null)}
+      />
 
       {/* API Key Modal */}
       <Modal open={showKeyModal} onClose={() => { setShowKeyModal(false); setNewApiKey('') }} title="Agent Created — Save Your API Key">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { HelpHint } from '@/components/ui/HelpHint'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 // ─── Types ──────────────────────────────────────────────
 interface ApiKey {
@@ -69,6 +70,7 @@ export default function ConnectionsTab() {
   const [hermesRegenLoading, setHermesRegenLoading] = useState<string | null>(null)
   const [hermesKeyCopied, setHermesKeyCopied] = useState(false)
   const [hermesError, setHermesError] = useState('')
+  const [hermesConfirmRegen, setHermesConfirmRegen] = useState<HermesAgent | null>(null)
 
   const fetchAll = useCallback(async () => {
     try {
@@ -138,7 +140,11 @@ export default function ConnectionsTab() {
   }
 
   const handleHermesRegen = async (agent: HermesAgent) => {
-    if (!window.confirm(`Regenerate key untuk "${agent.name}"? Key lama langsung tidak berlaku.`)) return
+    setHermesConfirmRegen(agent)
+  }
+
+  const handleHermesRegenConfirmed = async (agent: HermesAgent) => {
+    setHermesConfirmRegen(null)
     setHermesRegenLoading(agent.id); setHermesError('')
     try {
       const r = await fetch(`/api/admin/hermes-agents/${agent.id}/regenerate-key`, { method: 'POST', credentials: 'include' })
@@ -560,6 +566,24 @@ done`}</pre>
           </tbody>
         </table>
       </div>
+
+      {/* Regenerate Key Confirm */}
+      <ConfirmDialog
+        open={!!hermesConfirmRegen}
+        title="Regenerate API Key"
+        body={
+          <>
+            Regenerate key untuk <strong>&ldquo;{hermesConfirmRegen?.name}&rdquo;</strong>?
+            <br /><br />
+            Key lama akan langsung <strong>tidak berlaku</strong>.
+          </>
+        }
+        confirmLabel="Regenerate"
+        danger
+        loading={hermesRegenLoading === hermesConfirmRegen?.id}
+        onConfirm={() => hermesConfirmRegen && handleHermesRegenConfirmed(hermesConfirmRegen)}
+        onCancel={() => setHermesConfirmRegen(null)}
+      />
     </div>
   )
 }
