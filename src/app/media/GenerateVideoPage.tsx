@@ -474,7 +474,7 @@ export default function GenerateVideoPage() {
             data-tour="vg-generate"
             disabled={!canSubmit}
             onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="btn-primary px-6 py-2.5"
           >
             {submitting ? 'Mengirim...' : <>Generate Video → <HelpHint k="vg.generate" /></>}
           </button>

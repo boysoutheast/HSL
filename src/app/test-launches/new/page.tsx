@@ -1231,7 +1231,7 @@ export default function NewTestLaunchPage() {
             <div className={sectionCls}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Ad Sets</h2>
-                <button type="button" onClick={addAdset} className="btn-primary btn-sm">+ Tambah Ad Set</button>
+                <button type="button" onClick={addAdset} className="btn-secondary btn-sm">+ Tambah Ad Set</button>
               </div>
 
               {form.adsets.map((adset, idx) => {
@@ -1546,7 +1546,7 @@ export default function NewTestLaunchPage() {
                 <div key={adset.id} className={cardCls}>
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-stone-700">Creatives — Ad Set #{idx + 1}: {adset.name}</h3>
-                    <button type="button" onClick={() => addCreativeToAdset(adset.id)} className="btn-primary btn-sm">+ Creative</button>
+                    <button type="button" onClick={() => addCreativeToAdset(adset.id)} className="btn-secondary btn-sm">+ Creative</button>
                   </div>
 
                   {adset.creatives.map((creative, ci) => (
