@@ -188,85 +188,6 @@ export default function ConnectionsTab() {
         </p>
       </div>
 
-      {/* Hermes Agent Keys */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-base font-semibold text-stone-800">🤖 AI Buddy Agent Keys</h3>
-          <p className="text-sm text-stone-500 mt-0.5">Bearer token untuk Hermes AI agents akses <code className="text-xs bg-stone-100 px-1 rounded">/api/hermes/*</code> endpoints.</p>
-        </div>
-
-        {/* New Key Alert */}
-        {hermesNewKey && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
-            <div className="text-sm font-semibold text-emerald-800">✅ Key baru untuk <span className="font-bold">{hermesNewKey.name}</span> — simpan sekarang!</div>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 bg-white border border-emerald-300 rounded-lg px-3 py-2 text-sm font-mono text-emerald-900 break-all">{hermesNewKey.key}</code>
-              <button onClick={handleHermesCopy} className="btn-outline btn-sm whitespace-nowrap">{hermesKeyCopied ? 'Copied!' : 'Copy'}</button>
-            </div>
-            <p className="text-xs text-emerald-700">⚠️ Simpan key ini sekarang — tidak akan ditampilkan lagi.</p>
-          </div>
-        )}
-
-        {/* Create Form */}
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-3">
-            <input type="text" value={hermesAgentName} onChange={e => setHermesAgentName(e.target.value)}
-              placeholder="Agent name (required)"
-              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm flex-1" />
-            <input type="text" value={hermesAgentNotes} onChange={e => setHermesAgentNotes(e.target.value)}
-              placeholder="Notes (optional)"
-              className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-48" />
-            <button onClick={handleHermesCreate} disabled={hermesCreating || !hermesAgentName.trim()} className="btn-primary whitespace-nowrap">
-              {hermesCreating ? 'Creating...' : 'Create Agent'}
-            </button>
-          </div>
-          {hermesError && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {hermesError}
-            </div>
-          )}
-        </div>
-
-        {/* Agent List */}
-        {hermesAgents.length > 0 && (
-          <div className="border-t border-stone-100 pt-4 mt-2">
-            <div className="text-xs font-semibold text-stone-400 uppercase mb-2">Agents ({hermesAgents.length})</div>
-            <div className="divide-y divide-stone-100">
-              {hermesAgents.map(agent => (
-                <div key={agent.id} className="py-3 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-stone-800 text-sm">{agent.name}</span>
-                      <span className={`px-1.5 py-0.5 text-[11px] font-semibold rounded-full ${
-                        agent.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'
-                      }`}>{agent.status}</span>
-                    </div>
-                    {agent.notes && (
-                      <div className="text-xs text-stone-400 mt-0.5 truncate">{agent.notes}</div>
-                    )}
-                    <div className="text-xs text-stone-400 mt-0.5">
-                      Created {fmt(agent.createdAt)}
-                      {agent._count !== undefined ? ` · ${agent._count?.assignments ?? 0} assignments, ${agent._count?.contentLogs ?? 0} logs` : ''}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <button onClick={() => handleHermesRegen(agent)} disabled={hermesRegenLoading === agent.id}
-                      className="text-xs text-violet-600 hover:text-violet-800 underline whitespace-nowrap">
-                      {hermesRegenLoading === agent.id ? 'Regenerating...' : 'Regen Key'}
-                    </button>
-                    <button onClick={() => handleHermesToggle(agent)}
-                      className={`btn-sm text-xs whitespace-nowrap ${
-                        agent.status === 'active' ? 'btn-ghost text-red-600' : 'btn-outline text-stone-600'
-                      }`}>
-                      {agent.status === 'active' ? 'Deactivate' : 'Activate'}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Meta Connections */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
@@ -374,6 +295,18 @@ export default function ConnectionsTab() {
           </div>
         )}
       </div>
+
+      <details className="group bg-white border border-stone-200 rounded-2xl overflow-hidden">
+        <summary className="px-6 py-4 cursor-pointer list-none flex items-center justify-between hover:bg-stone-50 transition-colors">
+          <div>
+            <h3 className="text-base font-semibold text-stone-800">🧩 Developer / API (opsional)</h3>
+            <p className="text-xs text-stone-400 mt-0.5">Buat yang mau integrasi sistem sendiri. Kalau cuma jalanin iklan, abaikan bagian ini.</p>
+          </div>
+          <svg className="w-5 h-5 text-stone-400 group-open:rotate-180 transition-transform shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </summary>
+        <div className="px-6 pb-6 space-y-6">
 
       {/* Generate Key */}
       <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-3">
@@ -609,6 +542,14 @@ done`}</pre>
         </div>
       </div>
 
+      {/* Auth note */}
+      <div className="text-xs text-stone-400 text-center">
+        Auth via <code className="bg-stone-100 px-1 rounded">x-api-key</code> or <code className="bg-stone-100 px-1 rounded">Authorization: Bearer</code> header.
+        Keys are scoped to your account — get yours in the <a href="/studio" className="text-violet-600 underline">Media Studio</a>.
+      </div>
+        </div>
+      </details>
+
       <div className="bg-white border border-stone-200 rounded-2xl p-6">
         <h3 className="text-base font-semibold text-stone-800 mb-3">💰 Pricing</h3>
         <table className="w-full text-sm">
@@ -618,12 +559,6 @@ done`}</pre>
             <tr><td className="py-2 pr-2 font-mono text-xs">10s</td><td className="py-2 pr-2 text-xs">1,300 cr</td><td className="py-2 text-xs">2,600 cr</td></tr>
           </tbody>
         </table>
-      </div>
-
-      {/* Auth note */}
-      <div className="text-xs text-stone-400 text-center">
-        Auth via <code className="bg-stone-100 px-1 rounded">x-api-key</code> or <code className="bg-stone-100 px-1 rounded">Authorization: Bearer</code> header.
-        Keys are scoped to your account — get yours in the <a href="/studio" className="text-violet-600 underline">Media Studio</a>.
       </div>
     </div>
   )
