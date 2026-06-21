@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInsights, updateBudget, setStatus, TokenError, RateLimitError } from '@/lib/meta-client'
 import { evaluateRule, resolveAction, parseConditionTree, MetricsMap } from '@/lib/rule-engine'
+import { computeTemporalMetrics } from '@/lib/metrics-temporal'
 import { canWriteToAdAccount, markAccountNeedsReconnect, markAccountHealthy } from '@/lib/write-guard'
 import { notify } from '@/lib/notify'
 
@@ -165,6 +166,13 @@ async function run() {
             ctr: snapshotInsights.ctr ?? null,
           },
         })
+      }
+
+      // ★ Fase 4: compute temporal metrics dari snapshot history — merge ke metricsMap SEBELUM eval
+      if (campaignEntity) {
+        const temporal = await computeTemporalMetrics(session.id, campaignEntity.id)
+        Object.assign(metricsMap, temporal)
+        console.log(`[scan-campaigns] temporal session=${session.id} age=${temporal.adset_age_days}d daysWithData=${temporal.days_with_data} roasMin7d=${temporal.roas_min_7d} freqMax7d=${temporal.frequency_max_7d}`)
       }
 
       // Evaluate each rule
