@@ -217,15 +217,49 @@ async function run() {
           : metaCampaignId
         const budgetLevel = budgetMode === 'ABO' ? 'ADSET' as const : 'CAMPAIGN' as const
 
-        // ⚠️ Anti-overscale guard: MAX 50% increase per 24 jam
+        // ⚠️ Anti-overscale guard: CUMULATIVE max 50% dalam 24 jam
         const MAX_DAILY_INCREASE_PCT = 50
         if (resolved.payload.dailyBudget) {
           const newBudget = resolved.payload.dailyBudget as number
-          const pctChange = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
-          if (pctChange > MAX_DAILY_INCREASE_PCT) {
-            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+
+          // Cari budget 24 jam lalu (AutomationAction SUCCEEDED terlama dlm 24j)
+          const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          const lastIncrease = await prisma.automationAction.findFirst({
+            where: {
+              campaignSessionId: session.id,
+              status: 'SUCCEEDED',
+              actionType: { in: ['increase_budget', 'set_budget', 'INCREASE_BUDGET', 'SET_BUDGET'] },
+              createdAt: { gte: since24h },
+            },
+            orderBy: { createdAt: 'asc' }, // ambil PALING LAMA (first in window)
+            select: { payloadJson: true },
+          })
+
+          let budget24hAgo = currentBudget // fallback: kalau gak ada increase dalam 24j, baseline = sekarang
+          if (lastIncrease) {
+            try {
+              const payload = JSON.parse(lastIncrease.payloadJson)
+              const previousBudget = payload.previousBudget ?? payload.oldBudget ?? Number(payload.dailyBudget ?? 0)
+              if (previousBudget > 0) budget24hAgo = previousBudget
+            } catch { /* fallback ke currentBudget */ }
+          }
+
+          // Cumulative guard (layer 1): cap against budget 24h ago
+          const cumulativePct = budget24hAgo > 0 ? ((newBudget - budget24hAgo) / budget24hAgo) * 100 : 0
+          if (cumulativePct > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(budget24hAgo * (1 + MAX_DAILY_INCREASE_PCT / 100))
             resolved.payload.dailyBudget = cappedBudget
-            console.log(`[scan-campaigns] overscale_guard session=${session.id} capped ${pctChange.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+            console.log(`[scan-campaigns] overscale_guard_cumulative session=${session.id} cumulative ${cumulativePct.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (budget24hAgo=${budget24hAgo}→capped=${cappedBudget})`)
+          }
+
+          // Per-action guard (layer 2): cap against current budget
+          const actionPct = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
+          if (actionPct > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+            if (cappedBudget < (resolved.payload.dailyBudget as number)) {
+              resolved.payload.dailyBudget = cappedBudget
+              console.log(`[scan-campaigns] overscale_guard_action session=${session.id} capped ${actionPct.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+            }
           }
         }
 
