@@ -20,7 +20,26 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Extract param
   const { metaConnectionId } = params
+
+  // Audit log — log tiap akses (jangan pernah log nilai token)
+  console.info(`[worker/tokens] access by agent=${agent.id} (${agent.name}) connection=${metaConnectionId} at ${new Date().toISOString()}`)
+
+  // Optional IP allowlist — hanya aktif kalau WORKER_IP_ALLOWLIST di-set
+  const allowlist = process.env.WORKER_IP_ALLOWLIST
+  if (allowlist) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? ''
+    const allowed = allowlist.split(',').map(s => s.trim()).filter(Boolean)
+    if (!allowed.includes(ip)) {
+      console.warn(`[worker/tokens] BLOCKED ip=${ip} not in allowlist, connection=${metaConnectionId}`)
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
+  // DEFERRED: Tidak ada model assignment MetaAccount→HermesAgent di schema saat ini.
+  // Scope-bind hanya bisa ditambah kalau ada relasi assignment tersebut.
+  // Butuh keputusan owner untuk bikin model assignment MetaAccount→worker.
 
   const metaAccount = await prisma.metaAccount.findUnique({
     where: { id: metaConnectionId },
