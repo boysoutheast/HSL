@@ -7,7 +7,7 @@
  */
 
 export type Operator = 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'ne'
-export type Metric = 'spend' | 'roas' | 'cpc' | 'ctr' | 'purchases' | 'impressions'
+export type Metric = 'spend' | 'roas' | 'cpc' | 'ctr' | 'purchases' | 'impressions' | 'frequency' | 'cpa'
 
 export interface LeafCondition {
   metric: Metric
@@ -29,6 +29,8 @@ export interface MetricsMap {
   ctr: number | null
   purchases: number
   impressions: number
+  frequency: number | null
+  cpa: number | null
 }
 
 export interface EvaluationResult {

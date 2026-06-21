@@ -46,8 +46,14 @@ async function run() {
       budgetMode: true,
       primaryAdsetMetaId: true,
       monitorIntervalMinutes: true,
+      insightWindow: true,
       metaAdAccount: {
         select: { id: true, adAccountId: true },
+      },
+      metaEntities: {
+        where: { entityType: 'CAMPAIGN' },
+        take: 1,
+        select: { id: true, metaEntityId: true },
       },
       automationRules: {
         where: { status: 'ACTIVE' },
@@ -90,7 +96,7 @@ async function run() {
 
     try {
       // Fetch fresh insights from Meta
-      const insights = await getInsights(metaCampaignId, token, 'maximum')
+      const insights = await getInsights(metaCampaignId, token, session.insightWindow ?? 'maximum')
 
       // ★ Observability: log jika insights kosong (e.g. campaign paused/no data)
       if (insights.spend === 0 && insights.impressions === 0 && insights.purchases === 0) {
@@ -101,6 +107,7 @@ async function run() {
       await markAccountHealthy(metaAdAccountId)
 
       // Save metric snapshot
+      const cpa = insights.purchases > 0 ? insights.spend / insights.purchases : null
       const metricsMap: MetricsMap = {
         spend: insights.spend,
         roas: insights.purchaseRoas ?? 0,
@@ -108,6 +115,52 @@ async function run() {
         ctr: insights.ctr ?? 0,
         purchases: insights.purchases,
         impressions: insights.impressions,
+        frequency: insights.frequency ?? null,
+        cpa,
+      }
+
+      // ⏺ Save MetricSnapshot (idempotent per bucket jam)
+      const campaignEntity = session.metaEntities?.[0]
+      if (campaignEntity) {
+        const windowEnd = new Date()
+        windowEnd.setMinutes(0, 0, 0) // bucket per jam
+        await prisma.metricSnapshot.upsert({
+          where: {
+            campaignSessionId_metaEntityId_windowEnd: {
+              campaignSessionId: session.id,
+              metaEntityId: campaignEntity.id,
+              windowEnd,
+            },
+          },
+          update: {
+            spend: insights.spend,
+            roas: insights.purchaseRoas ?? null,
+            frequency: insights.frequency ?? null,
+            purchases: insights.purchases,
+            cpa,
+            cpc: insights.cpc ?? null,
+            ctr: insights.ctr ?? null,
+          },
+          create: {
+            userId: session.userId,
+            campaignSessionId: session.id,
+            metaEntityId: campaignEntity.id,
+            entityType: 'CAMPAIGN',
+            windowStart: windowEnd,
+            windowEnd,
+            attributionWindow: 'scan',
+            spend: insights.spend,
+            impressions: insights.impressions,
+            clicks: insights.clicks ?? 0,
+            purchases: insights.purchases,
+            purchaseValue: insights.purchaseValue ?? 0,
+            roas: insights.purchaseRoas ?? null,
+            frequency: insights.frequency ?? null,
+            cpa,
+            cpc: insights.cpc ?? null,
+            ctr: insights.ctr ?? null,
+          },
+        })
       }
 
       // Evaluate each rule
@@ -159,6 +212,18 @@ async function run() {
           ? session.primaryAdsetMetaId
           : metaCampaignId
         const budgetLevel = budgetMode === 'ABO' ? 'ADSET' as const : 'CAMPAIGN' as const
+
+        // ⚠️ Anti-overscale guard: MAX 50% increase per 24 jam
+        const MAX_DAILY_INCREASE_PCT = 50
+        if (resolved.payload.dailyBudget) {
+          const newBudget = resolved.payload.dailyBudget as number
+          const pctChange = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
+          if (pctChange > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+            resolved.payload.dailyBudget = cappedBudget
+            console.log(`[scan-campaigns] overscale_guard session=${session.id} capped ${pctChange.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+          }
+        }
 
         // Apply action via Meta API
         try {

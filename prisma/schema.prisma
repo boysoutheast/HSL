@@ -844,6 +844,7 @@ model CampaignSession {
   nextMonitorAt          DateTime? @map("next_monitor_at")
   lastMonitorAt          DateTime? @map("last_monitor_at")
   lastActionAt           DateTime? @map("last_action_at")
+  insightWindow          String    @default("maximum") @map("insight_window")
   // CPAS slot management
   adsetCap               Int?      @map("adset_cap")        // max active adsets for this campaign
   metaCampaignId         String?   @map("meta_campaign_id") // actual Meta campaign ID for live slot count
@@ -997,6 +998,7 @@ model MetricSnapshot {
   catalogSegmentPurchases Int?   @map("catalog_segment_purchases")
   catalogSegmentValue     Float? @map("catalog_segment_value")
   cplc                    Float? // cost per link click = spend / linkClicks, computed on insert
+  cpa                     Float? @map("cpa")
   addToCartCount          Int?   @map("add_to_cart_count")
   createdAt            DateTime @default(now()) @map("created_at")
 

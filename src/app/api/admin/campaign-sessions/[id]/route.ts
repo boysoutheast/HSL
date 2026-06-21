@@ -52,6 +52,7 @@ export async function PATCH(
     phase?: string
     automationEnabled?: boolean
     monitorIntervalMinutes?: number
+    insightWindow?: string
     // MVP2: floor + topup
     minActiveAds?: number
     topupEnabled?: boolean
@@ -96,6 +97,12 @@ export async function PATCH(
     }
   }
 
+  // Guard: insightWindow valid values
+  const VALID_WINDOWS = ['maximum', 'today', 'last_3d', 'last_7d', 'last_14d']
+  if (body.insightWindow !== undefined && !VALID_WINDOWS.includes(body.insightWindow)) {
+    return NextResponse.json({ error: 'insightWindow must be one of: maximum, today, last_3d, last_7d, last_14d' }, { status: 400 })
+  }
+
   // Guard: minActiveAds range 0–50
   if (body.minActiveAds !== undefined) {
     if (body.minActiveAds < 0 || body.minActiveAds > 50) {
@@ -129,6 +136,7 @@ export async function PATCH(
     updateData.monitorIntervalMinutes = body.monitorIntervalMinutes
     updateData.nextMonitorAt = new Date() // reset so scan fires next cycle
   }
+  if (body.insightWindow !== undefined) updateData.insightWindow = body.insightWindow
   if (body.minActiveAds !== undefined) updateData.minActiveAds = body.minActiveAds
   if (body.topupEnabled !== undefined) updateData.topupEnabled = body.topupEnabled
   if (body.topupTargetAdsetId !== undefined) updateData.topupTargetAdsetId = body.topupTargetAdsetId

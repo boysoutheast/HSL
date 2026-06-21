@@ -37,6 +37,8 @@ const metrics: MetricsMap = {
   ctr: 2.1,
   purchases: 10,
   impressions: 5000,
+  frequency: 2.1,
+  cpa: 5000,
 }
 
 console.log('\n=== rule-engine.ts — Unit Tests ===\n')
@@ -147,7 +149,7 @@ assert(evaluateRule(nested, metrics).matched, '(spend>10k AND roas>=2) OR NOT(cp
 // ── 10. Edge: roas null ───────────────────────────────────
 console.log('\n── Edge: null metric ──')
 const nullMetrics: MetricsMap = {
-  spend: 10000, roas: null, cpc: null, ctr: null, purchases: 0, impressions: 1000,
+  spend: 10000, roas: null, cpc: null, ctr: null, purchases: 0, impressions: 1000, frequency: null, cpa: null,
 }
 // roas gt anything with null → false
 assert(!evaluateRule({ metric: 'roas', operator: 'gt', value: 0 }, nullMetrics).matched, 'roas > 0 with null → false')
