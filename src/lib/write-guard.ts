@@ -42,6 +42,7 @@ export async function canWriteToAdAccount(
     where: { id: metaAdAccountId },
     select: {
       adAccountId: true,
+      enabledForAutomation: true,
       metaAccount: {
         select: {
           userId: true,
@@ -60,6 +61,11 @@ export async function canWriteToAdAccount(
   // 2. Ownership: MetaAccount.userId must match session userId
   if (adAccount.metaAccount.userId !== sessionUserId) {
     return { ok: false, reason: 'not_owned' }
+  }
+
+  // 2b. Check enabledForAutomation flag
+  if (adAccount.enabledForAutomation === false) {
+    return { ok: false, reason: 'ad_account_disabled' }
   }
 
   const meta = adAccount.metaAccount

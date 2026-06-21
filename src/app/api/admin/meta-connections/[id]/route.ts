@@ -50,6 +50,7 @@ const SAFE_META_ACCOUNT_SELECT = {
       currency: true,
       timezoneName: true,
       isDefault: true,
+      enabledForAutomation: true,
       lastSyncedAt: true,
       createdAt: true,
       updatedAt: true,

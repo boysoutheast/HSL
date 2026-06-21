@@ -10,6 +10,7 @@ interface MetaAdAccount {
   id: string
   adAccountId: string
   adAccountName: string | null
+  enabledForAutomation?: boolean
   business: { id: string; businessName: string } | null
 }
 
@@ -59,6 +60,7 @@ export default function ImportCampaignPage() {
               id: aa.id,
               adAccountId: aa.adAccountId,
               adAccountName: aa.adAccountName ?? `act_${aa.adAccountId}`,
+              enabledForAutomation: aa.enabledForAutomation ?? true,
               business: aa.business ?? null,
             })
           }
@@ -167,6 +169,7 @@ export default function ImportCampaignPage() {
           {adAccounts.map((aa) => (
             <option key={aa.id} value={aa.id}>
               {aa.adAccountName} {aa.business ? `(${aa.business.businessName})` : ''}
+              {aa.enabledForAutomation === false ? ' ⛔ Automation OFF' : ''}
             </option>
           ))}
         </select>
