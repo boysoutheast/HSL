@@ -213,6 +213,18 @@ async function run() {
           : metaCampaignId
         const budgetLevel = budgetMode === 'ABO' ? 'ADSET' as const : 'CAMPAIGN' as const
 
+        // ⚠️ Anti-overscale guard: MAX 50% increase per 24 jam
+        const MAX_DAILY_INCREASE_PCT = 50
+        if (resolved.payload.dailyBudget) {
+          const newBudget = resolved.payload.dailyBudget as number
+          const pctChange = currentBudget > 0 ? ((newBudget - currentBudget) / currentBudget) * 100 : 0
+          if (pctChange > MAX_DAILY_INCREASE_PCT) {
+            const cappedBudget = Math.round(currentBudget * (1 + MAX_DAILY_INCREASE_PCT / 100))
+            resolved.payload.dailyBudget = cappedBudget
+            console.log(`[scan-campaigns] overscale_guard session=${session.id} capped ${pctChange.toFixed(0)}%→${MAX_DAILY_INCREASE_PCT}% (${currentBudget}→${cappedBudget})`)
+          }
+        }
+
         // Apply action via Meta API
         try {
           if (resolved.payload.dailyBudget) {
