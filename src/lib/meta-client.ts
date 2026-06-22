@@ -372,6 +372,7 @@ export async function createCampaign(
     objective: string
     status?: 'PAUSED' | 'ACTIVE'
     specialAdCategories?: string[]
+    dailyBudgetMinor?: number
   },
   token: string,
 ): Promise<{ id: string }> {
@@ -380,6 +381,13 @@ export async function createCampaign(
     objective: spec.objective,
     status: spec.status ?? 'PAUSED',
     special_ad_categories: JSON.stringify(spec.specialAdCategories ?? []),
+  }
+  if (spec.dailyBudgetMinor !== undefined) {
+    body.daily_budget = String(spec.dailyBudgetMinor)
+    body.is_adset_budget_sharing_enabled = 'true'
+  } else {
+    body.is_adset_budget_sharing_enabled = 'false'
+    body.daily_budget = '10000' // minimum budget (Rp100) for PAUSED
   }
   const { data } = await metaPost(`act_${adAccountId}/campaigns`, token, body)
   const campaign = data as { id: string }
@@ -397,9 +405,12 @@ export async function createAdset(
     optimizationGoal: string
     billingEvent: string
     bidStrategy?: string
+    bidAmount?: number
     targetingJson: string
     status?: 'PAUSED' | 'ACTIVE'
     startTime?: string
+    promotedObject?: { pixelId: string; customEventType?: string }
+    targetingAutomation?: { advantageAudience: number }
   },
   token: string,
 ): Promise<{ id: string }> {
@@ -413,7 +424,10 @@ export async function createAdset(
   }
   if (spec.dailyBudgetMinor !== undefined) body.daily_budget = String(spec.dailyBudgetMinor)
   if (spec.bidStrategy) body.bid_strategy = spec.bidStrategy
+  if (spec.bidAmount !== undefined) body.bid_amount = String(spec.bidAmount)
   if (spec.startTime) body.start_time = spec.startTime
+  if (spec.promotedObject) body.promoted_object = JSON.stringify(spec.promotedObject)
+  if (spec.targetingAutomation) body.targeting_automation = JSON.stringify(spec.targetingAutomation)
 
   const { data } = await metaPost(`act_${adAccountId}/adsets`, token, body)
   const adset = data as { id: string }
