@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { metaPost, TokenError, RateLimitError } from '@/lib/meta-client'
+import { decode } from '@/lib/crypto'
+import { markAccountNeedsReconnect } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +21,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ catalogs })
 }
 
-// POST /api/admin/meta-catalogs — draft catalog + task untuk buat di Meta
+// POST /api/admin/meta-catalogs — create catalog langsung di Meta API (SaaS, no worker)
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
@@ -40,26 +43,61 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  let taskId: string | null = null
+  // If metaBusinessId provided, execute directly via Meta API
   if (body.metaBusinessId) {
-    const task = await prisma.workerTask.create({
-      data: {
-        type: 'create_catalog',
-        capability: 'automation_action',
-        payloadJson: JSON.stringify({
-          catalogId: catalog.id,
-          metaBusinessId: body.metaBusinessId,
+    try {
+      // Get user's MetaAccount token
+      const metaAccount = await prisma.metaAccount.findFirst({
+        where: { userId: auth.id, status: 'connected' },
+        select: { id: true, longLivedTokenEncrypted: true, tokenExpiry: true },
+      })
+      if (!metaAccount?.longLivedTokenEncrypted) {
+        throw new Error('No connected Meta account found')
+      }
+      if (metaAccount.tokenExpiry && metaAccount.tokenExpiry < new Date()) {
+        throw new Error('Meta token expired')
+      }
+      const token = decode(metaAccount.longLivedTokenEncrypted)
+
+      // POST /{businessId}/owned_product_catalogs
+      const { data } = await metaPost(
+        `${body.metaBusinessId}/owned_product_catalogs`,
+        token,
+        {
           name: catalog.name,
-          vertical: catalog.vertical,
-          isCpas: catalog.isCpas,
-          userId: auth.id,
-        }),
-        priority: 5,
-        scope: 'internal',
-      },
-    })
-    taskId = task.id
+          vertical: catalog.vertical || 'commerce',
+        },
+      )
+
+      const result = data as { id: string }
+
+      // Update catalog record
+      await prisma.metaCatalog.update({
+        where: { id: catalog.id },
+        data: {
+          metaCatalogId: result.id,
+          status: 'READY',
+          lastSyncedAt: new Date(),
+        },
+      })
+    } catch (err: any) {
+      const errorMessage = err instanceof TokenError
+        ? 'Token error — reconnect needed'
+        : err instanceof RateLimitError
+          ? 'Meta rate limited — try later'
+          : err?.message ?? 'Unknown error'
+
+      await prisma.metaCatalog.update({
+        where: { id: catalog.id },
+        data: { status: 'FAILED', errorMessage },
+      })
+
+      return NextResponse.json({
+        catalog: await prisma.metaCatalog.findUnique({ where: { id: catalog.id } }),
+        error: errorMessage,
+      }, { status: 500 })
+    }
   }
 
-  return NextResponse.json({ catalog, taskId }, { status: 201 })
+  return NextResponse.json({ catalog }, { status: 201 })
 }

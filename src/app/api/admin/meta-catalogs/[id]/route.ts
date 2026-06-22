@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { metaPost, TokenError, RateLimitError } from '@/lib/meta-client'
+import { decode } from '@/lib/crypto'
+import { markAccountNeedsReconnect } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +57,7 @@ export async function DELETE(
   return NextResponse.json({ success: true })
 }
 
-// POST /api/admin/meta-catalogs/[id] — buat product set di catalog ini
+// POST /api/admin/meta-catalogs/[id] — create product set langsung di Meta API (SaaS, no worker)
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -79,25 +82,63 @@ export async function POST(
     },
   })
 
-  let taskId: string | null = null
+  // If catalog has metaCatalogId, execute directly via Meta API
   if (catalog.metaCatalogId) {
-    const task = await prisma.workerTask.create({
-      data: {
-        type: 'create_product_set',
-        capability: 'automation_action',
-        payloadJson: JSON.stringify({
-          productSetId: productSet.id,
-          metaCatalogId: catalog.metaCatalogId,
-          name: productSet.name,
-          filter: body.filter,
-          userId: auth.id,
-        }),
-        priority: 5,
-        scope: 'internal',
-      },
-    })
-    taskId = task.id
+    try {
+      // Get user's MetaAccount token
+      const metaAccount = await prisma.metaAccount.findFirst({
+        where: { userId: auth.id, status: 'connected' },
+        select: { id: true, longLivedTokenEncrypted: true, tokenExpiry: true },
+      })
+      if (!metaAccount?.longLivedTokenEncrypted) {
+        throw new Error('No connected Meta account found')
+      }
+      if (metaAccount.tokenExpiry && metaAccount.tokenExpiry < new Date()) {
+        throw new Error('Meta token expired')
+      }
+      const token = decode(metaAccount.longLivedTokenEncrypted)
+
+      // POST /{catalogId}/product_sets
+      const postBody: Record<string, string> = { name: productSet.name }
+      if (body.filter) postBody.filter = JSON.stringify(body.filter)
+
+      const { data } = await metaPost(
+        `${catalog.metaCatalogId}/product_sets`,
+        token,
+        postBody,
+      )
+
+      const result = data as { id: string }
+
+      await prisma.metaProductSet.update({
+        where: { id: productSet.id },
+        data: {
+          metaProductSetId: result.id,
+          status: 'READY',
+        },
+      })
+    } catch (err: any) {
+      const errorMessage = err instanceof TokenError
+        ? 'Token error — reconnect needed'
+        : err instanceof RateLimitError
+          ? 'Meta rate limited — try later'
+          : err?.message ?? 'Unknown error'
+
+      await prisma.metaProductSet.update({
+        where: { id: productSet.id },
+        data: { status: 'FAILED', errorMessage },
+      })
+
+      return NextResponse.json({
+        productSet: await prisma.metaProductSet.findUnique({ where: { id: productSet.id } }),
+        error: errorMessage,
+      }, { status: 500 })
+    }
   }
 
-  return NextResponse.json({ productSet, taskId }, { status: 201 })
+  return NextResponse.json({
+    productSet: await prisma.metaProductSet.findUnique({
+      where: { id: productSet.id },
+    }),
+  }, { status: 201 })
 }

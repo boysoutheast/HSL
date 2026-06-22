@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { metaPost, TokenError, RateLimitError } from '@/lib/meta-client'
+import { canWriteToAdAccount, markAccountHealthy, markAccountNeedsReconnect } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ audiences })
 }
 
-// POST /api/admin/meta-audiences — buat draft audience + WorkerTask untuk eksekusi di Meta
+// POST /api/admin/meta-audiences — create audience langsung di Meta API (SaaS, no worker)
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req)
   if (auth instanceof NextResponse) return auth
@@ -72,28 +74,79 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // Worker task untuk eksekusi via Meta API
-  const task = await prisma.workerTask.create({
-    data: {
-      type: type === 'LOOKALIKE' ? 'create_lookalike_audience' : 'create_custom_audience',
-      capability: 'automation_action',
-      payloadJson: JSON.stringify({
-        audienceId: audience.id,
-        adAccountId: adAccount.adAccountId,
-        name: audience.name,
-        type,
-        subtype,
-        sourceAudienceId: body.sourceAudienceId,
-        lookalikeRatio: body.lookalikeRatio,
-        lookalikeCountry: body.lookalikeCountry,
-        ruleJson: body.ruleJson,
-        retentionDays: body.retentionDays,
-        userId: auth.id,
-      }),
-      priority: 4,
-      scope: 'internal',
-    },
-  })
+  // Execute directly via Meta API
+  try {
+    // Write gate: token + ownership
+    const writeCheck = await canWriteToAdAccount(auth.id, metaAdAccountId)
+    if (!writeCheck.ok) {
+      throw new Error(writeCheck.reason ?? 'Write access denied')
+    }
+    const token = writeCheck.token!
+    await markAccountHealthy(metaAdAccountId)
 
-  return NextResponse.json({ audience, taskId: task.id }, { status: 201 })
+    const adAccountIdNum = adAccount.adAccountId.replace(/^act_/, '')
+
+    if (type === 'CUSTOM') {
+      // POST /act_{adAccountId}/customaudiences
+      const postBody: Record<string, string> = {
+        name: audience.name,
+        subtype: subtype ?? 'CUSTOM',
+        description: description?.trim() || audience.name,
+        customer_file_source: 'USER_PROVIDED_ONLY',
+      }
+      if (body.ruleJson) postBody.rule = JSON.stringify(body.ruleJson)
+      if (body.retentionDays) postBody.retention_days = String(body.retentionDays)
+
+      const { data } = await metaPost(`act_${adAccountIdNum}/customaudiences`, token, postBody)
+      const result = data as { id: string }
+
+      await prisma.metaAudience.update({
+        where: { id: audience.id },
+        data: { metaAudienceId: result.id, status: 'READY', lastSyncedAt: new Date() },
+      })
+    } else {
+      // LOOKALIKE
+      const lookalikeSpec = JSON.stringify({
+        ratio: Number(body.lookalikeRatio),
+        country: body.lookalikeCountry,
+      })
+
+      const { data } = await metaPost(`act_${adAccountIdNum}/customaudiences`, token, {
+        name: audience.name,
+        subtype: 'LOOKALIKE',
+        origin_audience_id: body.sourceAudienceId,
+        lookalike_spec: lookalikeSpec,
+      })
+      const result = data as { id: string }
+
+      await prisma.metaAudience.update({
+        where: { id: audience.id },
+        data: { metaAudienceId: result.id, status: 'READY', lastSyncedAt: new Date() },
+      })
+    }
+  } catch (err: any) {
+    const errorMessage = err instanceof TokenError
+      ? 'Token error — reconnect needed'
+      : err instanceof RateLimitError
+        ? 'Meta rate limited — try later'
+        : err?.message ?? 'Unknown error'
+
+    if (err instanceof TokenError) {
+      await markAccountNeedsReconnect(metaAdAccountId)
+    }
+
+    await prisma.metaAudience.update({
+      where: { id: audience.id },
+      data: { status: 'FAILED', errorMessage },
+    })
+
+    return NextResponse.json({
+      audience: await prisma.metaAudience.findUnique({ where: { id: audience.id } }),
+      error: errorMessage,
+    }, { status: 500 })
+  }
+
+  return NextResponse.json({
+    audience: await prisma.metaAudience.findUnique({ where: { id: audience.id } }),
+  }, { status: 201 })
 }
