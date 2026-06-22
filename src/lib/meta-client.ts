@@ -427,7 +427,16 @@ export async function createAdset(
   if (spec.bidAmount !== undefined) body.bid_amount = String(spec.bidAmount)
   if (spec.startTime) body.start_time = spec.startTime
   if (spec.promotedObject) body.promoted_object = JSON.stringify(spec.promotedObject)
-  if (spec.targetingAutomation) body.targeting_automation = JSON.stringify(spec.targetingAutomation)
+  // targeting_automation goes INSIDE the targeting JSON, not as a top-level field
+  if (spec.targetingAutomation) {
+    try {
+      const targeting = JSON.parse(spec.targetingJson)
+      targeting.targeting_automation = spec.targetingAutomation
+      body.targeting = JSON.stringify(targeting)
+    } catch {
+      // If targeting JSON is invalid, fall through with original value
+    }
+  }
 
   const { data } = await metaPost(`act_${adAccountId}/adsets`, token, body)
   const adset = data as { id: string }
