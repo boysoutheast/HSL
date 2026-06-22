@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
 import { decode } from '@/lib/crypto'
+import { normalizeMetaAdAccountPath } from '@/lib/meta-graph'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
   // Query Meta for campaigns
   try {
     const fields = 'id,name,status,daily_budget,objective,adsets.limit(1){id}'
-    const url = new URL(`${GRAPH_BASE}/act_${adAccount.adAccountId}/campaigns`)
+    const url = new URL(`${GRAPH_BASE}/${normalizeMetaAdAccountPath(adAccount.adAccountId)}/campaigns`)
     url.searchParams.set('fields', fields)
     url.searchParams.set('limit', '100')
 
