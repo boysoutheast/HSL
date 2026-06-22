@@ -362,3 +362,60 @@ export async function createAd(
 
   return { adId: adData.id, creativeId: creativeData.id }
 }
+
+// ── Helper: createCampaign ────────────────────────────────
+// POST /act_{adAccountId}/campaigns
+export async function createCampaign(
+  adAccountId: string,
+  spec: {
+    name: string
+    objective: string
+    status?: 'PAUSED' | 'ACTIVE'
+    specialAdCategories?: string[]
+  },
+  token: string,
+): Promise<{ id: string }> {
+  const body: Record<string, string> = {
+    name: spec.name,
+    objective: spec.objective,
+    status: spec.status ?? 'PAUSED',
+    special_ad_categories: JSON.stringify(spec.specialAdCategories ?? []),
+  }
+  const { data } = await metaPost(`act_${adAccountId}/campaigns`, token, body)
+  const campaign = data as { id: string }
+  return { id: campaign.id }
+}
+
+// ── Helper: createAdset ───────────────────────────────────
+// POST /act_{adAccountId}/adsets
+export async function createAdset(
+  adAccountId: string,
+  spec: {
+    name: string
+    campaignId: string
+    dailyBudgetMinor?: number
+    optimizationGoal: string
+    billingEvent: string
+    bidStrategy?: string
+    targetingJson: string
+    status?: 'PAUSED' | 'ACTIVE'
+    startTime?: string
+  },
+  token: string,
+): Promise<{ id: string }> {
+  const body: Record<string, string> = {
+    name: spec.name,
+    campaign_id: spec.campaignId,
+    optimization_goal: spec.optimizationGoal,
+    billing_event: spec.billingEvent,
+    targeting: spec.targetingJson,
+    status: spec.status ?? 'PAUSED',
+  }
+  if (spec.dailyBudgetMinor !== undefined) body.daily_budget = String(spec.dailyBudgetMinor)
+  if (spec.bidStrategy) body.bid_strategy = spec.bidStrategy
+  if (spec.startTime) body.start_time = spec.startTime
+
+  const { data } = await metaPost(`act_${adAccountId}/adsets`, token, body)
+  const adset = data as { id: string }
+  return { id: adset.id }
+}
