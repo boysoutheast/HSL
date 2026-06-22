@@ -38,7 +38,6 @@ export async function GET(
           defaultAdAccountId: true,
         },
       },
-      workerTasks: true,
     },
   })
 

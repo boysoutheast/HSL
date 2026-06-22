@@ -43,7 +43,8 @@ async function getDashboardData() {
           },
           orderBy: { updatedAt: 'desc' },
         }),
-        prisma.workerRegistry.findFirst({ orderBy: { lastHeartbeatAt: 'desc' }, select: { lastHeartbeatAt: true } }),
+        // Zero-worker: no worker registry — all ops direct/SaaS
+        Promise.resolve(null),
       ])
 
     // Spend & ROAS hari ini: snapshot terbaru per campaign
@@ -58,9 +59,8 @@ async function getDashboardData() {
     }
     const roas = spend > 0 && weightedRoas > 0 ? weightedRoas / spend : null
 
-    const workerHealthy = workers
-      ? Date.now() - new Date(workers.lastHeartbeatAt).getTime() < 120_000
-      : false
+    const workerHealthy = false
+    const workerKnown = false
 
     return {
       hasMetrics: todaySnapshots.length > 0,
@@ -71,7 +71,7 @@ async function getDashboardData() {
       pendingActions,
       monitors,
       workerHealthy,
-      workerKnown: !!workers,
+      workerKnown,
     }
   } catch (e) {
     console.error('[dashboard]', e)
@@ -261,15 +261,13 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Footer sinyal sistem */}
+      {/* Footer sinyal sistem — zero-worker (all direct/SaaS) */}
       <div className="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-4 py-2.5">
         <span className="text-[11px] text-stone-400 font-medium">Sinyal sistem:</span>
-        <Link href="/system?tab=workers" className="flex items-center gap-1.5 text-[11px] font-semibold hover:underline">
-          <span className={`w-2 h-2 rounded-full ${d.workerHealthy ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`} />
-          <span className={d.workerHealthy ? 'text-emerald-600' : 'text-red-600'}>
-            {d.workerKnown ? (d.workerHealthy ? 'worker sehat' : 'worker tidak heartbeat — cek System') : 'worker belum terdaftar'}
-          </span>
-        </Link>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          zero-worker — semua operasi langsung/SaaS
+        </span>
       </div>
     </div>
   )
