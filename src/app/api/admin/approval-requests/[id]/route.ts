@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { getObjectiveConfig } from '@/lib/meta-objective-matrix'
 import { buildPlacementTargeting } from '@/lib/meta-placement-map'
+import { createCampaign, createAdset, createAd, TokenError, RateLimitError } from '@/lib/meta-client'
+import { canWriteToAdAccount, markAccountHealthy, markAccountNeedsReconnect } from '@/lib/write-guard'
 
 type AudienceShape = {
   ageMin?: number
@@ -192,11 +194,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const selectedAdAccount = testLaunch.metaAdAccountId
       ? await prisma.metaAdAccount.findUnique({
           where: { id: testLaunch.metaAdAccountId },
-          select: { adAccountId: true },
+          select: { id: true, adAccountId: true },
         })
       : null
 
-    const adAccountId = selectedAdAccount?.adAccountId || testLaunch.metaAccount?.defaultAdAccountId || ''
+    const adAccountIdRaw = selectedAdAccount?.adAccountId || testLaunch.metaAccount?.defaultAdAccountId || ''
+    const metaAdAccountDbId = testLaunch.metaAdAccountId || testLaunch.metaAccountId || ''
+    const adAccountIdNumeric = adAccountIdRaw.replace(/^act_/, '')
+    if (!adAccountIdNumeric || !metaAdAccountDbId) {
+      return NextResponse.json({ error: 'No ad account linked to test launch' }, { status: 422 })
+    }
+
+    // ── Write gate ──
+    const writeCheck = await canWriteToAdAccount(testLaunch.metaAccount?.userId || auth.id, metaAdAccountDbId)
+    if (!writeCheck.ok) {
+      return NextResponse.json({ error: writeCheck.reason ?? 'Write access denied' }, { status: 403 })
+    }
+    const token = writeCheck.token!
+    await markAccountHealthy(metaAdAccountDbId)
+
     const budgetMode = testLaunch.budgetMode || 'CBO'
     const campaignBidStrategy = parseBidStrategy(testLaunch.bidStrategyJson)
     const rootPlacements = parseJson<string[]>(testLaunch.placementsJson, [])
@@ -292,33 +308,137 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           },
         ]
 
-    const payload = {
-      payloadVersion: 3,
-      budgetMode,
-      campaign: {
+    // ── DIRECT EXECUTION: Create full funnel inline (all PAUSED) ──
+    const createdEntities: { type: string; metaId: string; name: string }[] = []
+    let launchError: string | null = null
+
+    try {
+      // Step 1: Create campaign (PAUSED)
+      const campaignResult = await createCampaign(adAccountIdNumeric, {
         name: testLaunch.name,
-        objective: testLaunch.objective,
+        objective: testLaunch.objective || 'OUTCOME_LEADS',
+        status: 'PAUSED',
         specialAdCategories: [],
-        ...(budgetMode === 'CBO' ? { dailyBudget: Number(testLaunch.dailyBudget) } : {}),
-        ...(budgetMode === 'CBO' && campaignBidStrategy ? { bidStrategy: campaignBidStrategy } : {}),
-        ...(budgetMode === 'ABO' ? { isAdsetBudgetSharingEnabled: false } : {}),
-      },
-      adsets,
-      adAccountId,
-      metaConnectionId: testLaunch.metaAccountId,
-      snapshotAt: now.toISOString(),
+      }, token)
+      createdEntities.push({ type: 'CAMPAIGN', metaId: campaignResult.id, name: testLaunch.name })
+      const campaignId = campaignResult.id
+
+      // Optional: set campaign daily budget for CBO
+      if (budgetMode === 'CBO' && Number(testLaunch.dailyBudget) > 0) {
+        const { updateBudget } = await import('@/lib/meta-client')
+        await updateBudget(campaignId, Math.round(Number(testLaunch.dailyBudget) * 100), token, 'CAMPAIGN')
+      }
+
+      // Step 2: Create adsets + ads for each adset
+      for (const adsetSpec of adsets) {
+        // Build targeting JSON string
+        const targetingStr = JSON.stringify(adsetSpec.targeting)
+
+        // Determine dailyBudgetMinor (ABO only)
+        const dailyBudgetMinor = budgetMode === 'ABO' && adsetSpec.dailyBudget
+          ? Math.round(adsetSpec.dailyBudget * 100)
+          : undefined
+
+        const adsetResult = await createAdset(adAccountIdNumeric, {
+          name: adsetSpec.name,
+          campaignId,
+          dailyBudgetMinor,
+          optimizationGoal: adsetSpec.optimizationGoal,
+          billingEvent: adsetSpec.billingEvent,
+          bidStrategy: (adsetSpec as any).bidStrategy?.strategy,
+          targetingJson: targetingStr,
+          status: 'PAUSED',
+          startTime: adsetSpec.startTime ?? undefined,
+        }, token)
+        createdEntities.push({ type: 'ADSET', metaId: adsetResult.id, name: adsetSpec.name })
+
+        // Step 3: Create ads for this adset
+        for (const adItem of adsetSpec.ads) {
+          const pageId = adItem.identity.pageId || testLaunch.pageId || ''
+          if (!pageId) throw new Error(`No pageId for ad in adset "${adsetSpec.name}"`)
+
+          const adResult = await createAd({
+            adAccountId: adAccountIdNumeric,
+            pageId,
+            name: `Approved-${adItem.creative.headline?.slice(0, 30) || adsetSpec.name}-${Date.now()}`,
+            adsetId: adsetResult.id,
+            primaryText: adItem.creative.message,
+            headline: adItem.creative.headline,
+            description: adItem.creative.description,
+            callToAction: adItem.creative.cta,
+            linkUrl: adItem.creative.linkUrl,
+            mediaUrl: adItem.creative.mediaUrl || null,
+            status: 'PAUSED',
+          }, token)
+          createdEntities.push({ type: 'AD', metaId: adResult.adId, name: adItem.creative.headline || 'Ad' })
+
+          // Save MetaEntity record for each ad
+          await prisma.metaEntity.create({
+            data: {
+              userId: testLaunch.metaAccount?.userId || auth.id,
+              metaAdAccountId: metaAdAccountDbId,
+              entityType: 'AD',
+              metaEntityId: adResult.adId,
+              name: adItem.creative.headline || adItem.creative.message?.slice(0, 60) || 'Ad',
+              effectiveStatus: 'PAUSED',
+              configuredStatus: 'PAUSED',
+              lastSyncedAt: new Date(),
+            },
+          }).catch(() => {}) // Non-critical — don't fail for metaEntity save
+        }
+      }
+
+      // All succeeded — update test launch with campaign IDs
+      await prisma.testLaunch.update({
+        where: { id: testLaunch.id },
+        data: {
+          metaCampaignId: campaignId,
+          status: 'completed',
+        },
+      })
+    } catch (err: any) {
+      launchError = err instanceof TokenError
+        ? 'Token error — reconnect needed'
+        : err instanceof RateLimitError
+          ? 'Meta rate limited — try later'
+          : err?.message ?? 'Unknown error'
+
+      if (err instanceof TokenError) {
+        await markAccountNeedsReconnect(metaAdAccountDbId)
+      }
+
+      // Log partial creations: update test launch with what was created
+      await prisma.testLaunch.update({
+        where: { id: testLaunch.id },
+        data: {
+          errorMessage: `Partial funnel — created: ${createdEntities.map(e => `${e.type}:${e.metaId}`).join(', ')}. Error at: ${launchError}`,
+          status: 'completed',
+        },
+      })
     }
 
-    await prisma.workerTask.create({
+    // Update approval request
+    const updated = await prisma.approvalRequest.update({
+      where: { id: params.id },
       data: {
-        type: 'create_full_launch_v3',
-        payloadJson: JSON.stringify(payload),
-        scope: 'internal',
-        status: 'pending',
-        priority: 1,
-        testLaunchId: approvalRequest.testLaunchId,
+        status: body.status,
+        reviewedById: auth.id,
+        reviewedAt: now,
+        reviewNote: body.reviewNote ?? (launchError ? `Funnel error: ${launchError}` : null),
+        ...(launchError ? {} : {}),
+      },
+      include: {
+        testLaunch: true,
+        requestedBy: { select: { id: true, name: true, email: true } },
+        reviewedBy: { select: { id: true, name: true, email: true } },
       },
     })
+
+    if (launchError) {
+      return NextResponse.json({ approvalRequest: updated, error: launchError, createdEntities }, { status: 500 })
+    }
+
+    return NextResponse.json({ approvalRequest: updated, createdEntities })
   } else {
     await prisma.testLaunch.update({
       where: { id: approvalRequest.testLaunchId },

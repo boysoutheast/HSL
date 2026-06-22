@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { AutomationAction, WorkerTask } from '@prisma/client'
+import { createCampaign, TokenError, RateLimitError } from '@/lib/meta-client'
+import { canWriteToAdAccount, markAccountHealthy, markAccountNeedsReconnect } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -90,27 +91,68 @@ export async function POST(req: NextRequest) {
       payloadJson: JSON.stringify({ campaignSessionId: session.id, name: session.name }),
       status: 'PENDING',
       idempotencyKey: `${auth.id}-CREATE_CAMPAIGN-${session.id}-${Date.now()}`,
-      priority: 1, // P1_INTERACTIVE
+      priority: 1,
       requestedAt: new Date(),
     },
   })
 
-  // Create paired WorkerTask for the automation action
-  await prisma.workerTask.create({
-    data: {
-      type: 'automation_action',
-      payloadJson: JSON.stringify({
-        actionId: createCampaignAction.id,
-        actionType: 'CREATE_CAMPAIGN',
-        campaignSessionId: session.id,
-        payload: { campaignSessionId: session.id, name: session.name },
-      }),
-      scope: 'internal',
-      status: 'PENDING',
-      priority: 1,
-      testLaunchId: session.testLaunchId,
-    },
-  })
+  // Execute langsung via Meta API — semua PAUSED, no worker
+  if (body.metaAdAccountId) {
+    try {
+      const writeCheck = await canWriteToAdAccount(auth.id, body.metaAdAccountId)
+      if (!writeCheck.ok) {
+        throw new Error(writeCheck.reason ?? 'Write access denied')
+      }
+      const token = writeCheck.token!
+      const adAccountId = writeCheck.adAccountId!.replace(/^act_/, '')
+      await markAccountHealthy(body.metaAdAccountId)
+
+      const result = await createCampaign(adAccountId, {
+        name: body.name,
+        objective: body.objective ?? 'OUTCOME_LEADS',
+        status: 'PAUSED',
+        specialAdCategories: [],
+      }, token)
+
+      // Update AutomationAction: SUCCEEDED
+      await prisma.automationAction.update({
+        where: { id: createCampaignAction.id },
+        data: {
+          status: 'SUCCEEDED',
+          executedAt: new Date(),
+          metaResponseJson: JSON.stringify(result),
+          targetMetaEntityId: result.id,
+        },
+      })
+
+      // Save metaCampaignId to session
+      await prisma.campaignSession.update({
+        where: { id: session.id },
+        data: { metaCampaignId: result.id, status: 'ACTIVE' },
+      })
+    } catch (err: any) {
+      const errorMessage = err instanceof TokenError
+        ? 'Token error — reconnect needed'
+        : err instanceof RateLimitError
+          ? 'Meta rate limited — try later'
+          : err?.message ?? 'Unknown error'
+
+      await prisma.automationAction.update({
+        where: { id: createCampaignAction.id },
+        data: {
+          status: 'FAILED',
+          executedAt: new Date(),
+          errorMessage,
+        },
+      })
+
+      if (err instanceof TokenError && body.metaAdAccountId) {
+        await markAccountNeedsReconnect(body.metaAdAccountId)
+      }
+
+      return NextResponse.json({ session, error: errorMessage }, { status: 500 })
+    }
+  }
 
   return NextResponse.json({ session }, { status: 201 })
 }

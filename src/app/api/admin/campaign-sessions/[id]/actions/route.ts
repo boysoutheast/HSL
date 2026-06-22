@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
+import { createCampaign, createAd, resolvePageId, setStatus, updateBudget, TokenError, RateLimitError } from '@/lib/meta-client'
+import { canWriteToAdAccount, markAccountHealthy, markAccountNeedsReconnect } from '@/lib/write-guard'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -38,7 +40,7 @@ export async function GET(
 
 /**
  * POST /api/admin/campaign-sessions/[id]/actions
- * Create an AutomationAction + paired WorkerTask for the campaign session.
+ * Create AutomationAction + execute langsung via Meta API (SaaS, no worker).
  * Body: { actionType, payload?, priority? }
  */
 export async function POST(
@@ -66,10 +68,15 @@ export async function POST(
     return NextResponse.json({ error: 'actionType is required' }, { status: 400 })
   }
 
-  // Verify the session belongs to the user
+  // Verify the session belongs to the user and get context
   const session = await prisma.campaignSession.findFirst({
     where: { id: sessionId, userId: auth.id },
-    select: { id: true },
+    select: {
+      id: true,
+      userId: true,
+      metaAdAccountId: true,
+      metaAdAccount: { select: { adAccountId: true } },
+    },
   })
 
   if (!session) {
@@ -78,10 +85,10 @@ export async function POST(
 
   const priority = body.priority ?? 5
 
-  // Idempotency key: userId + actionType + campaignSessionId + Date.now()
+  // Idempotency key
   const idempotencyKey = `${auth.id}-${body.actionType}-${sessionId}-${Date.now()}`
 
-  // Create AutomationAction
+  // Create AutomationAction (PENDING)
   const action = await prisma.automationAction.create({
     data: {
       userId: auth.id,
@@ -96,28 +103,154 @@ export async function POST(
     },
   })
 
-  // Create paired WorkerTask with status PENDING, taskType = automation_action
-  const workerTask = await prisma.workerTask.create({
+  // ── Eksekusi langsung berdasarkan actionType ──────────
+  const payload = body.payload ?? {}
+  let actionStatus = 'SUCCEEDED'
+  let metaResponseJson: string | null = null
+  let targetMetaEntityId: string | null = null
+  let errorMessage: string | null = null
+
+  try {
+    const actionType = body.actionType
+
+    // NOTIFY — no Meta write, just mark succeeded
+    if (actionType === 'NOTIFY') {
+      // Notifications don't need Meta API — already handled
+      actionStatus = 'SUCCEEDED'
+    }
+    else if (['PAUSE_CAMPAIGN', 'PAUSE_ADSET', 'RESUME_CAMPAIGN', 'RESUME_ADSET'].includes(actionType)) {
+      // setStatus requires token + entityId
+      const entityId = String(payload.campaignId ?? payload.adsetId ?? '')
+      if (!entityId) throw new Error('entityId (campaignId/adsetId) required in payload')
+      const metaStatus = actionType.startsWith('PAUSE') ? 'PAUSED' : 'ACTIVE'
+
+      const writeCheck = await canWriteToAdAccount(auth.id, session.metaAdAccountId)
+      if (!writeCheck.ok) throw new Error(writeCheck.reason ?? 'Write access denied')
+      const token = writeCheck.token!
+      await markAccountHealthy(session.metaAdAccountId!)
+
+      await setStatus(entityId, metaStatus, token)
+      metaResponseJson = JSON.stringify({ entityId, status: metaStatus })
+      targetMetaEntityId = entityId
+    }
+    else if (actionType === 'UPDATE_BUDGET') {
+      const entityId = String(payload.campaignId ?? payload.adsetId ?? '')
+      const minor = Number(payload.dailyBudgetMinor ?? payload.dailyBudget ?? 0)
+      if (!entityId) throw new Error('campaignId/adsetId required in payload')
+
+      const writeCheck = await canWriteToAdAccount(auth.id, session.metaAdAccountId)
+      if (!writeCheck.ok) throw new Error(writeCheck.reason ?? 'Write access denied')
+      const token = writeCheck.token!
+      await markAccountHealthy(session.metaAdAccountId!)
+
+      const level = body.actionType === 'UPDATE_BUDGET' && payload.level === 'ADSET' ? 'ADSET' as const : 'CAMPAIGN' as const
+      await updateBudget(entityId, minor, token, level)
+      metaResponseJson = JSON.stringify({ entityId, dailyBudgetMinor: minor, level })
+      targetMetaEntityId = entityId
+    }
+    else if (actionType === 'CREATE_CAMPAIGN') {
+      const adAccountIdNumeric = session.metaAdAccount?.adAccountId?.replace(/^act_/, '')
+      if (!adAccountIdNumeric) throw new Error('No ad account linked')
+      if (!session.metaAdAccountId) throw new Error('No meta ad account')
+
+      const writeCheck = await canWriteToAdAccount(auth.id, session.metaAdAccountId)
+      if (!writeCheck.ok) throw new Error(writeCheck.reason ?? 'Write access denied')
+      const token = writeCheck.token!
+      await markAccountHealthy(session.metaAdAccountId)
+
+      const result = await createCampaign(adAccountIdNumeric, {
+        name: String(payload.name ?? 'Campaign'),
+        objective: String(payload.objective ?? 'OUTCOME_LEADS'),
+        status: 'PAUSED',
+        specialAdCategories: [],
+      }, token)
+      metaResponseJson = JSON.stringify(result)
+      targetMetaEntityId = result.id
+    }
+    else if (['CREATE_AD', 'REPLACE_AD', 'ADD_CREATIVE'].includes(actionType)) {
+      const adAccountIdNumeric = session.metaAdAccount?.adAccountId?.replace(/^act_/, '')
+      if (!adAccountIdNumeric) throw new Error('No ad account linked')
+      if (!session.metaAdAccountId) throw new Error('No meta ad account')
+
+      const writeCheck = await canWriteToAdAccount(auth.id, session.metaAdAccountId)
+      if (!writeCheck.ok) throw new Error(writeCheck.reason ?? 'Write access denied')
+      const token = writeCheck.token!
+      await markAccountHealthy(session.metaAdAccountId)
+
+      const pageId = String(payload.pageId ?? '')
+      const resolvedPageId = pageId || await resolvePageId(adAccountIdNumeric, token, {
+        sessionId,
+        metaAdAccountId: session.metaAdAccountId!,
+      })
+      const adsetId = String(payload.adsetId ?? '')
+      if (!adsetId) throw new Error('adsetId required in payload')
+
+      const result = await createAd({
+        adAccountId: adAccountIdNumeric,
+        pageId: resolvedPageId,
+        adsetId,
+        name: String(payload.name ?? `Ad-${Date.now()}`),
+        primaryText: String(payload.primaryText ?? payload.message ?? ''),
+        headline: String(payload.headline ?? ''),
+        description: String(payload.description ?? ''),
+        callToAction: String(payload.callToAction ?? 'LEARN_MORE'),
+        linkUrl: String(payload.linkUrl ?? ''),
+        mediaUrl: payload.mediaUrl ? String(payload.mediaUrl) : null,
+        status: 'PAUSED',
+      }, token)
+
+      metaResponseJson = JSON.stringify(result)
+      targetMetaEntityId = result.adId
+    }
+    else {
+      // Unsupported actionType
+      actionStatus = 'FAILED'
+      errorMessage = `unsupported actionType: ${actionType}`
+    }
+  } catch (err: any) {
+    actionStatus = 'FAILED'
+    errorMessage = err instanceof TokenError
+      ? 'Token error — reconnect needed'
+      : err instanceof RateLimitError
+        ? 'Meta rate limited — try later'
+        : err?.message ?? 'Unknown error'
+
+    if (err instanceof TokenError && session.metaAdAccountId) {
+      await markAccountNeedsReconnect(session.metaAdAccountId)
+    }
+  }
+
+  // Update AutomationAction with result
+  const updatedAction = await prisma.automationAction.update({
+    where: { id: action.id },
     data: {
-      type: 'automation_action',
-      payloadJson: JSON.stringify({
-        actionId: action.id,
-        actionType: body.actionType,
-        campaignSessionId: sessionId,
-        payload: body.payload ?? {},
-      }),
-      scope: 'internal',
-      status: 'PENDING',
-      priority,
-      testLaunchId: null,
+      status: actionStatus,
+      executedAt: new Date(),
+      ...(metaResponseJson ? { metaResponseJson } : {}),
+      ...(targetMetaEntityId ? { targetMetaEntityId } : {}),
+      ...(errorMessage ? { errorMessage } : {}),
     },
   })
 
+  // If CREATE_CAMPAIGN succeeded, save metaCampaignId to session
+  if (body.actionType === 'CREATE_CAMPAIGN' && actionStatus === 'SUCCEEDED' && targetMetaEntityId) {
+    await prisma.campaignSession.update({
+      where: { id: sessionId },
+      data: { metaCampaignId: targetMetaEntityId },
+    })
+  }
+
   return NextResponse.json(
     {
-      action: { id: action.id, actionType: action.actionType, status: action.status },
-      task: { id: workerTask.id, type: workerTask.type, status: workerTask.status },
+      action: {
+        id: updatedAction.id,
+        actionType: updatedAction.actionType,
+        status: updatedAction.status,
+        metaResponseJson: updatedAction.metaResponseJson,
+        targetMetaEntityId: updatedAction.targetMetaEntityId,
+        errorMessage: updatedAction.errorMessage,
+      },
     },
-    { status: 201 }
+    { status: actionStatus === 'FAILED' ? 500 : 201 }
   )
 }
