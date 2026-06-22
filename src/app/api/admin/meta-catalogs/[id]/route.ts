@@ -126,7 +126,7 @@ export async function POST(
 
       await prisma.metaProductSet.update({
         where: { id: productSet.id },
-        data: { status: 'FAILED', errorMessage },
+        data: { status: 'FAILED' },
       })
 
       return NextResponse.json({

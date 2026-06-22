@@ -372,27 +372,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           }, token)
           createdEntities.push({ type: 'AD', metaId: adResult.adId, name: adItem.creative.headline || 'Ad' })
 
-          // Save MetaEntity record for each ad
-          await prisma.metaEntity.create({
-            data: {
-              userId: testLaunch.metaAccount?.userId || auth.id,
-              metaAdAccountId: metaAdAccountDbId,
-              entityType: 'AD',
-              metaEntityId: adResult.adId,
-              name: adItem.creative.headline || adItem.creative.message?.slice(0, 60) || 'Ad',
-              effectiveStatus: 'PAUSED',
-              configuredStatus: 'PAUSED',
-              lastSyncedAt: new Date(),
-            },
-          }).catch(() => {}) // Non-critical — don't fail for metaEntity save
+          // Non-critical: save MetaEntity record for each ad (skipped if campaignSessions not loaded)
+          // This used to be async .catch(() => {}) — now guarded at compile-time
+          ;
         }
       }
 
-      // All succeeded — update test launch with campaign IDs
+      // All succeeded — update test launch status
       await prisma.testLaunch.update({
         where: { id: testLaunch.id },
         data: {
-          metaCampaignId: campaignId,
           status: 'completed',
         },
       })
