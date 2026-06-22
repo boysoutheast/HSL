@@ -11,13 +11,14 @@ This is a Next.js 14 web app deployed on Railway. It serves as a **library and c
 - Railway Cron for posting monitor jobs
 
 ## Key Architecture Rules
-1. **Hermes agents access data ONLY via API** — never direct DB access
-2. **Assignment-based filtering** — every Hermes API response is filtered by what's assigned to that specific agent's API key
-3. **API key auth** — SHA-256 hashed, stored in `hermes_agents.api_key_hash`, validated via Bearer token
-4. **Photos never stored in DB** — only URLs + metadata; actual files go to object storage
-5. **Photo storage** — filesystem via `src/lib/storage.ts` → Railway Volume at `/data/photos`. Served via `/api/photos/serve/[...key]` with 1yr cache header. Path traversal protected.
-6. **Cron endpoints** protected by `x-cron-secret` header matching `CRON_SECRET` env var
-6. **Admin routes** (`/api/admin/*`) protected by session cookie middleware
+1. **Zero-worker architecture** — semua operasi Meta Ads (campaign/adset/ad, catalog, audience, funnel) dieksekusi langsung in-cron/in-request via Graph API. Tidak ada internal worker task queue.
+2. **Hermes agents access data ONLY via API** — never direct DB access
+3. **Assignment-based filtering** — every Hermes API response is filtered by what's assigned to that specific agent's API key
+4. **API key auth** — SHA-256 hashed, stored in `hermes_agents.api_key_hash`, validated via Bearer token
+5. **Photos never stored in DB** — only URLs + metadata; actual files go to object storage
+6. **Photo storage** — filesystem via `src/lib/storage.ts` → Railway Volume at `/data/photos`. Served via `/api/photos/serve/[...key]` with 1yr cache header. Path traversal protected.
+7. **Cron endpoints** protected by `x-cron-secret` header matching `CRON_SECRET` env var
+7. **Admin routes** (`/api/admin/*`) protected by session cookie middleware
 
 ## Directory Structure
 ```
