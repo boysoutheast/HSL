@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { checkRateLimit, getRateLimitKey } from '@/lib/rate-limit'
+import { sendEmail, generateToken, hashToken, tokenExpiry } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,15 +48,48 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await bcrypt.hash(password, 12)
 
-  await prisma.adminUser.create({
-  data: {
-    name,
-    email,
-    passwordHash,
-    role: 'user',
-    status: 'pending',
-  },
+  const user = await prisma.adminUser.create({
+    data: {
+      name,
+      email,
+      passwordHash,
+      role: 'user',
+      status: 'pending',
+    },
   })
 
-  return NextResponse.json({ ok: true, message: 'Akun berhasil dibuat. Tunggu approval admin sebelum bisa login.' })
+  // Send verification email (graceful — jangan crash kalau Resend belum diset)
+  const verifToken = generateToken()
+  const verifTokenHash = hashToken(verifToken)
+
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: verifTokenHash,
+      expiresAt: tokenExpiry(24),
+    },
+  })
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000'
+  const verifyLink = `${baseUrl}/api/admin/auth/verify-email?token=${verifToken}`
+
+  await sendEmail({
+    to: email,
+    subject: 'Verifikasi Email — AI Buddy',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;">
+        <h2>Selamat datang di AI Buddy!</h2>
+        <p>Klik tombol di bawah untuk memverifikasi email Anda.</p>
+        <a href="${verifyLink}"
+           style="display:inline-block;padding:12px 24px;background:#7c3aed;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
+          Verifikasi Email
+        </a>
+        <p style="margin-top:24px;color:#888;font-size:13px;">
+          Link ini berlaku 24 jam. Setelah verifikasi, tunggu approval admin untuk bisa login.
+        </p>
+      </div>
+    `,
+  })
+
+  return NextResponse.json({ ok: true, message: 'Akun berhasil dibuat. Cek email untuk verifikasi, lalu tunggu approval admin.' })
 }

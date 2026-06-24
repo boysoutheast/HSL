@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   const token = await createSession(user!.id)
   const res = NextResponse.json({
     success: true,
-    user: { id: user!.id, email: user!.email, name: user!.name, role: user!.role },
+    user: { id: user!.id, email: user!.email, name: user!.name, role: user!.role, emailVerified: user!.emailVerified },
   })
   setSessionCookie(res, token)
   return res

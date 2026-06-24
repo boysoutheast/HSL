@@ -11,6 +11,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const pending = searchParams.get('pending') === '1'
   const urlError = searchParams.get('error')
+  const verified = searchParams.get('verified') === '1'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -67,6 +68,11 @@ function LoginForm() {
               ⏳ Akun berhasil dibuat. Menunggu approval admin sebelum bisa login.
             </div>
           )}
+          {verified && (
+            <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg px-4 py-3 mb-4">
+              ✅ Email berhasil diverifikasi!
+            </div>
+          )}
           {urlError && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">
               ⚠️ {urlError}
@@ -97,6 +103,11 @@ function LoginForm() {
                 placeholder="••••••••"
                 className="w-full px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
               />
+              <div className="text-right mt-1">
+                <Link href="/forgot-password" className="text-xs text-violet-600 hover:text-violet-700">
+                  Lupa Password?
+                </Link>
+              </div>
             </div>
 
             {error && (
