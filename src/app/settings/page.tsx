@@ -254,6 +254,109 @@ export default function SettingsPage() {
           )}
         </div>
       </form>
+
+      {/* ── Change Password Section ── */}
+      <div className="mt-10 max-w-2xl">
+        <h2 className="text-lg font-semibold text-stone-900 mb-4">Ganti Password</h2>
+        <ChangePasswordForm />
+      </div>
     </div>
+  )
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSuccess(false)
+
+    if (newPassword !== confirmPassword) {
+      setError('Konfirmasi password tidak cocok')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setError('Password minimal 8 karakter')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/admin/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Gagal mengganti password')
+      setSuccess(true)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      setError(String(err).replace('Error: ', ''))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Password Saat Ini</label>
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+          className="w-full max-w-sm px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Password Baru</label>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          minLength={8}
+          className="w-full max-w-sm px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Konfirmasi Password Baru</label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          className="w-full max-w-sm px-3.5 py-2.5 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+      </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          ⚠️ {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+          ✅ Password berhasil diubah!
+        </div>
+      )}
+
+      <button type="submit" disabled={loading} className="btn-primary">
+        {loading ? 'Mengganti...' : 'Ganti Password'}
+      </button>
+    </form>
   )
 }

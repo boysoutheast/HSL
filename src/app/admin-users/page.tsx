@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface AdminUser {
   id: string
@@ -29,6 +30,10 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -47,6 +52,12 @@ export default function AdminUsersPage() {
   }, [])
 
   useEffect(() => {
+    // Fetch current user identity
+    fetch('/api/admin/auth/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.user) setCurrentUserId(d.user.id) })
+      .catch(() => {})
+
     fetchUsers()
   }, [fetchUsers])
 
@@ -75,6 +86,29 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    setDeleteLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/admin-users/${deleteTarget.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? `Error ${res.status}`)
+      }
+      setDeleteTarget(null)
+      await fetchUsers()
+    } catch (err) {
+      setError(String(err).replace('Error: ', ''))
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   const pendingUsers = users.filter((u) => u.status === 'pending')
   const activeUsers = users.filter((u) => u.status === 'active')
 
@@ -96,6 +130,7 @@ export default function AdminUsersPage() {
           'Status: pending → perlu approve atau reject',
           'Status: active → bisa login dan pakai dashboard',
           'Status: rejected → tidak bisa login',
+          'Delete: soft-delete — tidak bisa di-recover tanpa admin DB',
         ]}
         wiring={[
           { label: '→ API Register', desc: 'user baru selalu status = pending' },
@@ -177,7 +212,20 @@ export default function AdminUsersPage() {
                       {actionLoading === user.id ? '...' : 'Deactivate'}
                     </button>
                   ) : (
-                    <span className="text-xs text-stone-400 italic">Inactive</span>
+                    <span className="text-xs text-stone-400 italic">
+                      {user.status === 'deleted' ? 'Deleted' : 'Inactive'}
+                    </span>
+                  )}
+
+                  {/* Delete button — hidden for self */}
+                  {user.id !== currentUserId && user.status !== 'deleted' && (
+                    <button
+                      onClick={() => setDeleteTarget(user)}
+                      className="text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                      title="Hapus user"
+                    >
+                      🗑
+                    </button>
                   )}
                 </div>
               </td>
@@ -185,6 +233,26 @@ export default function AdminUsersPage() {
           ))}
         </Table>
       )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Hapus User"
+        body={
+          <p>
+            Yakin ingin menghapus <strong>{deleteTarget?.name ?? deleteTarget?.email}</strong>?
+            <br />
+            <span className="text-yellow-700 text-xs">
+              User akan di-soft-delete (status=&quot;deleted&quot;) dan session-nya dicabut.
+            </span>
+          </p>
+        }
+        confirmLabel="Hapus User"
+        danger
+        loading={deleteLoading}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

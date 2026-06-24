@@ -184,3 +184,94 @@ export async function PATCH(
 
   return NextResponse.json({ user: updated })
 }
+
+/**
+ * DELETE /api/admin/admin-users/[id]
+ * Admin-only. Soft-delete (set status='deleted').
+ * Guard: cannot delete self, cannot delete last admin.
+ * Before hard-delete: checks FK constraints from related tables.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAdmin(req)
+  if (auth instanceof NextResponse) return auth
+
+  // Guard 1: cannot delete self
+  if (params.id === auth.id) {
+    return NextResponse.json({ error: 'Tidak bisa menghapus akun sendiri' }, { status: 422 })
+  }
+
+  const user = await prisma.adminUser.findUnique({ where: { id: params.id } })
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  if (user.status === 'deleted') {
+    return NextResponse.json({ error: 'User sudah dihapus' }, { status: 400 })
+  }
+
+  // Guard 2: cannot delete the last admin
+  if (user.role === 'admin') {
+    const adminCount = await prisma.adminUser.count({ where: { role: 'admin', status: { not: 'deleted' } } })
+    if (adminCount <= 1) {
+      return NextResponse.json({ error: 'Tidak bisa menghapus admin terakhir' }, { status: 422 })
+    }
+  }
+
+  // Check FK constraints — find related records that would orphan
+  const relatedTables = [
+    { table: 'instagram_accounts', field: 'created_by_user_id', label: 'Instagram accounts' },
+    { table: 'products', field: 'created_by_user_id', label: 'Products' },
+    { table: 'test_launches', field: 'user_id', label: 'Test launches' },
+    { table: 'campaign_sessions', field: 'user_id', label: 'Campaign sessions' },
+    { table: 'meta_accounts', field: 'user_id', label: 'Meta accounts' },
+  ] as const
+
+  // Use raw SQL to check FK existence
+  const fkResults: string[] = []
+  for (const rel of relatedTables) {
+    const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
+      `SELECT COUNT(*) as count FROM "${rel.table}" WHERE "${rel.field}" = $1`,
+      params.id,
+    )
+    if (Number(result[0]?.count ?? 0) > 0) {
+      fkResults.push(`${rel.label} (${result[0].count})`)
+    }
+  }
+
+  // Default: soft-delete (safe, preserves FK relationships)
+  const url = new URL(req.url)
+  const hardDelete = url.searchParams.get('hard') === 'true'
+
+  if (hardDelete) {
+    // Only allow hard-delete if no FK references exist
+    if (fkResults.length > 0) {
+      return NextResponse.json({
+        error: 'User memiliki data terkait. Hapus data terkait dulu atau gunakan soft-delete.',
+        related: fkResults,
+      }, { status: 409 })
+    }
+    // Hard delete
+    await prisma.adminUser.delete({ where: { id: params.id } })
+    console.log(`[audit] Admin ${auth.id} HARD-deleted user ${params.id}`)
+    return NextResponse.json({ ok: true, hardDelete: true })
+  }
+
+  // Soft-delete — set status to 'deleted' + clear session
+  await prisma.$transaction([
+    prisma.adminUser.update({
+      where: { id: params.id },
+      data: { status: 'deleted' },
+    }),
+    prisma.session.deleteMany({
+      where: { userId: params.id },
+    }),
+  ])
+
+  console.log(`[audit] Admin ${auth.id} soft-deleted user ${params.id}. FK references: ${JSON.stringify(fkResults)}`)
+
+  return NextResponse.json({
+    ok: true,
+    softDelete: true,
+    related: fkResults.length > 0 ? fkResults : undefined,
+  })
+}
