@@ -5,6 +5,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import Table from '@/components/ui/Table'
 import PageInfo from '@/components/ui/PageInfo'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import EmptyState from '@/components/ui/EmptyState'
 
 interface AdminUser {
   id: string
@@ -31,13 +32,23 @@ export default function AdminUsersPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  // Search/filter
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
+    setLoading(true)
     try {
-      const res = await fetch('/api/admin/admin-users', {
+      const params = new URLSearchParams()
+      if (searchQuery) params.set('q', searchQuery)
+      if (statusFilter) params.set('status', statusFilter)
+      if (roleFilter) params.set('role', roleFilter)
+
+      const res = await fetch(`/api/admin/admin-users?${params.toString()}`, {
         cache: 'no-store',
         credentials: 'include',
       })
@@ -49,7 +60,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [searchQuery, statusFilter, roleFilter])
 
   useEffect(() => {
     // Fetch current user identity
@@ -110,7 +121,6 @@ export default function AdminUsersPage() {
   }
 
   const pendingUsers = users.filter((u) => u.status === 'pending')
-  const activeUsers = users.filter((u) => u.status === 'active')
 
   return (
     <div>
@@ -144,10 +154,47 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Search / Filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Cari nama atau email..."
+          className="px-3.5 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 w-full max-w-xs"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Semua Status</option>
+          <option value="active">Active</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+          <option value="deleted">Deleted</option>
+        </select>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        >
+          <option value="">Semua Role</option>
+          <option value="admin">Admin</option>
+          <option value="user">User</option>
+        </select>
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
           Loading users...
         </div>
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon="👤"
+          title="Tidak ada user ditemukan"
+          description={searchQuery || statusFilter || roleFilter ? 'Coba ubah filter atau kata kunci pencarian' : 'Belum ada user terdaftar.'}
+        />
       ) : (
         <Table
           headers={['Name', 'Email', 'Role', 'Status', 'Registered', 'Actions']}

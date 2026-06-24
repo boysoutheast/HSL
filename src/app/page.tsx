@@ -14,7 +14,7 @@ async function getDashboardData() {
   startOfDay.setHours(0, 0, 0, 0)
 
   try {
-    const [todaySnapshots, runningCampaigns, pendingApprovals, pendingActions, monitors, workers] =
+    const [todaySnapshots, runningCampaigns, pendingApprovals, pendingActions, monitors, workers, session] =
       await Promise.all([
         prisma.metricSnapshot.findMany({
           where: { entityType: 'CAMPAIGN', windowEnd: { gte: startOfDay } },
@@ -45,7 +45,58 @@ async function getDashboardData() {
         }),
         // Zero-worker: no worker registry — all ops direct/SaaS
         Promise.resolve(null),
+        // Get current session user for onboarding checklist
+        (async () => {
+          const { cookies } = await import('next/headers')
+          const cookieStore = cookies()
+          const sessionToken = cookieStore.get('hermes_session')?.value
+          if (!sessionToken) return null
+          const session = await prisma.session.findUnique({
+            where: { token: sessionToken },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                  role: true,
+                  emailVerified: true,
+                  createdAt: true,
+                  _count: {
+                    select: {
+                      products: true,
+                      metaAccounts: true,
+                      campaignSessions: true,
+                      generatedMedia: true,
+                      instagramAccounts: true,
+                    },
+                  },
+                },
+              },
+            },
+          })
+          return session
+        })(),
       ])
+
+    // Onboarding checklist
+    let onboardingItems: { label: string; done: boolean; href: string }[] | null = null
+    const user = session?.user
+    if (user) {
+      const daysSinceCreated = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      const counts = user._count
+      onboardingItems = [
+        { label: 'Verifikasi email', done: user.emailVerified, href: '#' },
+        { label: 'Buat produk pertama', done: counts.products > 0, href: '/products' },
+        { label: 'Hubungkan akun Meta', done: counts.metaAccounts > 0, href: '/meta-connections' },
+        { label: 'Buat campaign pertama', done: counts.campaignSessions > 0, href: '/test-launches/new' },
+        { label: 'Generate video pertama', done: counts.generatedMedia > 0, href: '/studio' },
+      ]
+      // Only show checklist for new-ish users or incomplete ones
+      if (daysSinceCreated > 30 && onboardingItems.every(i => i.done)) {
+        onboardingItems = null
+      }
+    }
 
     // Spend & ROAS hari ini: snapshot terbaru per campaign
     const seen = new Set<string>()
@@ -72,6 +123,7 @@ async function getDashboardData() {
       monitors,
       workerHealthy,
       workerKnown,
+      onboardingItems,
     }
   } catch (e) {
     console.error('[dashboard]', e)
@@ -79,6 +131,7 @@ async function getDashboardData() {
       hasMetrics: false, spend: 0, roas: null, runningCampaigns: 0,
       pendingApprovals: [], pendingActions: [], monitors: [],
       workerHealthy: false, workerKnown: false,
+      onboardingItems: null,
     }
   }
 }
@@ -114,6 +167,37 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Onboarding checklist — show only for new/incomplete users */}
+      {d.onboardingItems && d.onboardingItems.some(i => !i.done) && (
+        <div className="bg-white border border-violet-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">🚀</span>
+            <div>
+              <h3 className="text-sm font-bold text-stone-800">Mulai menggunakan AI Buddy</h3>
+              <p className="text-[11px] text-stone-400">Selesaikan langkah-langkah berikut untuk memulai.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+            {d.onboardingItems.map((item, i) => (
+              <a
+                key={i}
+                href={item.href}
+                className={`flex items-center gap-2.5 p-3 rounded-lg border text-xs transition-colors ${
+                  item.done
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-violet-300 hover:bg-violet-50'
+                }`}
+              >
+                <span className={`text-base ${item.done ? '' : 'text-stone-300'}`}>
+                  {item.done ? '✅' : '⬜'}
+                </span>
+                <span className="font-medium truncate">{item.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Header strip — 4 angka */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-5">
