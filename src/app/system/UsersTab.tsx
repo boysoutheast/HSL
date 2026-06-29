@@ -119,6 +119,7 @@ export default function UsersTab() {
   const totalPages = Math.ceil(total / limit)
 
   return (
+    <>
     <div className="flex h-full">
       {/* Table */}
       <div className={'flex-1 min-w-0 ' + (selectedUserId ? 'hidden lg:block' : '')}>
@@ -247,5 +248,6 @@ export default function UsersTab() {
         onConfirm={revokeKeyConfirm}
         onCancel={() => setConfirmRevoke(null)}
       />
+    </>
   )
 }
