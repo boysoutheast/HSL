@@ -398,6 +398,16 @@ export default function CampaignDetailPage() {
       {activeTab === 'activity' && (
         <ActivityFeed sessionId={id} actions={actions} rules={rules} topupLogs={topupLogs} onRefresh={fetchAllData} />
       )}
+
+      <ConfirmDialog
+        open={detachRuleId !== null}
+        title="Lepas Aturan"
+        body={<p>Lepas aturan ini? Riwayat tetap tersimpan.</p>}
+        confirmLabel="Lepas"
+        danger
+        onConfirm={handleDetachRuleConfirm}
+        onCancel={() => setDetachRuleId(null)}
+      />
     </div>
   )
 }
@@ -505,16 +515,6 @@ function ActivityFeed({
         </div>
       )}
     </div>
-
-      <ConfirmDialog
-        open={detachRuleId !== null}
-        title="Lepas Aturan"
-        body={<p>Lepas aturan ini? Riwayat tetap tersimpan.</p>}
-        confirmLabel="Lepas"
-        danger
-        onConfirm={handleDetachRuleConfirm}
-        onCancel={() => setDetachRuleId(null)}
-      />
   )
 }
 
