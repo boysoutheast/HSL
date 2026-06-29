@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface CustomTemplate {
   id: string
@@ -176,6 +177,7 @@ export default function RulesEditorPage() {
   const [modalThreshold, setModalThreshold] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -240,8 +242,14 @@ export default function RulesEditorPage() {
     }
   }
 
-  const handleDeleteCustomTemplate = async (id: string) => {
-    if (!confirm('Hapus template ini?')) return
+  const handleDeleteCustomTemplate = (id: string) => {
+    setDeleteTemplateId(id)
+  }
+
+  const handleDeleteTemplateConfirm = async () => {
+    if (!deleteTemplateId) return
+    const id = deleteTemplateId
+    setDeleteTemplateId(null)
     await fetch(`/api/admin/rule-templates/${id}`, { method: 'DELETE', credentials: 'include' })
     await fetchCustomTemplates()
     showToast('Template deleted.')
@@ -609,6 +617,16 @@ export default function RulesEditorPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={deleteTemplateId !== null}
+        title="Hapus Template"
+        body={<p>Yakin ingin menghapus template ini?</p>}
+        confirmLabel="Hapus"
+        danger
+        onConfirm={handleDeleteTemplateConfirm}
+        onCancel={() => setDeleteTemplateId(null)}
+      />
     </div>
   )
 }
