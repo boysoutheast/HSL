@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import TopUpTab from './TopUpTab'
 import { ruleToReadable } from '@/lib/rule-readable'
 import { HelpHint } from '@/components/ui/HelpHint'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,7 @@ export default function CampaignDetailPage() {
   const [intervalVal, setIntervalVal] = useState(15)
   const [insightWindowVal, setInsightWindowVal] = useState('maximum')
   const [logs, setLogs] = useState<TopupLog[]>([])
+  const [detachRuleId, setDetachRuleId] = useState<string | null>(null)
 
   // ── Fetch session ──
   const fetchSession = useCallback(async () => {
@@ -132,8 +134,14 @@ export default function CampaignDetailPage() {
     } catch{}
   }
 
-  const handleDetachRule = async (ruleId:string) => {
-    if(!confirm('Lepas aturan ini? Riwayat tetap tersimpan.')) return
+  const handleDetachRule = (ruleId:string) => {
+    setDetachRuleId(ruleId)
+  }
+
+  const handleDetachRuleConfirm = async () => {
+    if (!detachRuleId) return
+    const ruleId = detachRuleId
+    setDetachRuleId(null)
     try {
       const res = await fetch(`/api/admin/campaign-sessions/${id}/rules?ruleId=${ruleId}`, { method:'DELETE', credentials:'include' })
       if(res.ok) setRules(p=>p.filter(r=>r.id!==ruleId))
@@ -497,6 +505,16 @@ function ActivityFeed({
         </div>
       )}
     </div>
+
+      <ConfirmDialog
+        open={detachRuleId !== null}
+        title="Lepas Aturan"
+        body={<p>Lepas aturan ini? Riwayat tetap tersimpan.</p>}
+        confirmLabel="Lepas"
+        danger
+        onConfirm={handleDetachRuleConfirm}
+        onCancel={() => setDetachRuleId(null)}
+      />
   )
 }
 
