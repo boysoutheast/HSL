@@ -39,6 +39,7 @@ export default function AdminUsersPage() {
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{ id: string; status: 'active' | 'rejected'; name: string } | null>(null)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -72,10 +73,8 @@ export default function AdminUsersPage() {
     fetchUsers()
   }, [fetchUsers])
 
-  const handleAction = async (id: string, status: 'active' | 'rejected', name: string) => {
-    const label = status === 'active' ? 'Approve' : 'Reject'
-    if (!confirm(`${label} user ${name}?`)) return
-
+  const handleAction = (id: string, status: 'active' | 'rejected', name: string) => setPendingAction({ id, status, name })
+  const doAction = async (id: string, status: 'active' | 'rejected') => {
     setActionLoading(id)
     setError(null)
     try {
@@ -299,6 +298,15 @@ export default function AdminUsersPage() {
         loading={deleteLoading}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <ConfirmDialog
+        open={pendingAction !== null}
+        title={pendingAction?.status === 'active' ? 'Approve User' : 'Reject User'}
+        body={<p>{pendingAction?.status === 'active' ? 'Approve' : 'Reject'} user <strong>{pendingAction?.name}</strong>?</p>}
+        confirmLabel={pendingAction?.status === 'active' ? 'Approve' : 'Reject'}
+        danger={pendingAction?.status === 'rejected'}
+        onConfirm={() => { const a = pendingAction; setPendingAction(null); if (a) doAction(a.id, a.status) }}
+        onCancel={() => setPendingAction(null)}
       />
     </div>
   )

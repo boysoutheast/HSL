@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import PhotoLightbox from '@/components/PhotoLightbox'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -317,8 +318,9 @@ function PhotosTab({ productId }: { productId: string }) {
     }
   }
 
-  const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('Hapus foto ini permanen?')) return
+  const [pendingDelPhoto, setPendingDelPhoto] = useState<string | null>(null)
+  const handleDeletePhoto = (photoId: string) => setPendingDelPhoto(photoId)
+  const doDeletePhoto = async (photoId: string) => {
     setActionLoading(`delete-${photoId}`)
     try {
       const res = await fetch(`/api/admin/photos/${photoId}`, {
@@ -451,6 +453,7 @@ function PhotosTab({ productId }: { productId: string }) {
 
       {/* Lightbox */}
       <PhotoLightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />
+      <ConfirmDialog open={pendingDelPhoto !== null} title="Hapus Foto" body={<p>Hapus foto ini permanen?</p>} confirmLabel="Hapus" danger onConfirm={() => { const id = pendingDelPhoto; setPendingDelPhoto(null); if (id) doDeletePhoto(id) }} onCancel={() => setPendingDelPhoto(null)} />
     </div>
   )
 }
@@ -527,8 +530,9 @@ function CepsTab({ productId }: { productId: string }) {
     }
   }
 
-  const handleDeleteCep = async (cepId: string) => {
-    if (!confirm('Hapus CEP ini permanen?')) return
+  const [pendingDelCep, setPendingDelCep] = useState<string | null>(null)
+  const handleDeleteCep = (cepId: string) => setPendingDelCep(cepId)
+  const doDeleteCep = async (cepId: string) => {
     setActionLoading(`del-${cepId}`)
     try {
       const res = await fetch(`/api/admin/ceps/${cepId}`, {
@@ -645,6 +649,7 @@ function CepsTab({ productId }: { productId: string }) {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog open={pendingDelCep !== null} title="Hapus CEP" body={<p>Hapus CEP ini permanen?</p>} confirmLabel="Hapus" danger onConfirm={() => { const id = pendingDelCep; setPendingDelCep(null); if (id) doDeleteCep(id) }} onCancel={() => setPendingDelCep(null)} />
     </div>
   )
 }
@@ -770,8 +775,9 @@ function LandingPagesTab({ productId }: { productId: string }) {
     }
   }
 
-  const handleDelete = async (lp: LandingPage) => {
-    if (!confirm(`Hapus Landing Page "${lp.label ?? lp.url}"?\n\nTidak bisa dibatalkan.`)) return
+  const [pendingDelLp, setPendingDelLp] = useState<LandingPage | null>(null)
+  const handleDelete = (lp: LandingPage) => setPendingDelLp(lp)
+  const doDelete = async (lp: LandingPage) => {
     setDeletingId(lp.id)
     try {
       await fetch(`/api/admin/landing-pages/${lp.id}`, { method: 'DELETE', credentials: 'include' })
@@ -1034,6 +1040,7 @@ function LandingPagesTab({ productId }: { productId: string }) {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog open={pendingDelLp !== null} title="Hapus Landing Page" body={<p>Hapus Landing Page {pendingDelLp ? `"${pendingDelLp.label ?? pendingDelLp.url}"` : ''}? Tidak bisa dibatalkan.</p>} confirmLabel="Hapus" danger onConfirm={() => { const lp = pendingDelLp; setPendingDelLp(null); if (lp) doDelete(lp) }} onCancel={() => setPendingDelLp(null)} />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
 import PhotoLightbox from '@/components/PhotoLightbox'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -355,8 +356,9 @@ function PhotosTab({ charId }: { charId: string }) {
     }
   }
 
-  const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('Hapus foto ini permanen?')) return
+  const [pendingDelPhoto, setPendingDelPhoto] = useState<string | null>(null)
+  const handleDeletePhoto = (photoId: string) => setPendingDelPhoto(photoId)
+  const doDeletePhoto = async (photoId: string) => {
     setActionLoading(`delete-${photoId}`)
     try {
       const res = await fetch(`/api/admin/photos/${photoId}`, {
@@ -523,6 +525,7 @@ function PhotosTab({ charId }: { charId: string }) {
 
       {/* Lightbox */}
       <PhotoLightbox photo={lightboxPhoto} onClose={() => setLightboxPhoto(null)} />
+      <ConfirmDialog open={pendingDelPhoto !== null} title="Hapus Foto" body={<p>Hapus foto ini permanen?</p>} confirmLabel="Hapus" danger onConfirm={() => { const id = pendingDelPhoto; setPendingDelPhoto(null); if (id) doDeletePhoto(id) }} onCancel={() => setPendingDelPhoto(null)} />
     </div>
   )
 }
@@ -620,8 +623,9 @@ function TopicsTab({ charId }: { charId: string }) {
     }
   }
 
-  const handleDeleteTopic = async (topicId: string, topicName: string) => {
-    if (!confirm(`Hapus topik "${topicName}" beserta semua CEP-nya?\n\nTidak bisa dibatalkan.`)) return
+  const [pendingDelTopic, setPendingDelTopic] = useState<{ id: string; name: string } | null>(null)
+  const handleDeleteTopic = (topicId: string, topicName: string) => setPendingDelTopic({ id: topicId, name: topicName })
+  const doDeleteTopic = async (topicId: string, topicName: string) => {
     setActionLoading(`topic-${topicId}`)
     try {
       const res = await fetch(`/api/admin/topics/${topicId}`, {
@@ -685,8 +689,9 @@ function TopicsTab({ charId }: { charId: string }) {
     }
   }
 
-  const handleDeleteCep = async (cepId: string, topicId: string) => {
-    if (!confirm('Hapus CEP ini permanen?')) return
+  const [pendingDelCep, setPendingDelCep] = useState<{ cepId: string; topicId: string } | null>(null)
+  const handleDeleteCep = (cepId: string, topicId: string) => setPendingDelCep({ cepId, topicId })
+  const doDeleteCep = async (cepId: string, topicId: string) => {
     setActionLoading(`del-${cepId}`)
     try {
       const res = await fetch(`/api/admin/ceps/${cepId}`, {
@@ -919,6 +924,8 @@ function TopicsTab({ charId }: { charId: string }) {
           </div>
         </form>
       </Modal>
+      <ConfirmDialog open={pendingDelTopic !== null} title="Hapus Topik" body={<p>Hapus topik {pendingDelTopic ? `"${pendingDelTopic.name}"` : ''} beserta semua CEP-nya? Tidak bisa dibatalkan.</p>} confirmLabel="Hapus" danger onConfirm={() => { const t = pendingDelTopic; setPendingDelTopic(null); if (t) doDeleteTopic(t.id, t.name) }} onCancel={() => setPendingDelTopic(null)} />
+      <ConfirmDialog open={pendingDelCep !== null} title="Hapus CEP" body={<p>Hapus CEP ini permanen?</p>} confirmLabel="Hapus" danger onConfirm={() => { const c = pendingDelCep; setPendingDelCep(null); if (c) doDeleteCep(c.cepId, c.topicId) }} onCancel={() => setPendingDelCep(null)} />
     </div>
   )
 }
