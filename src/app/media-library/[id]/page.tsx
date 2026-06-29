@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface MediaAsset {
   id: string
@@ -67,6 +68,9 @@ export default function MediaAssetDetailPage() {
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [confirmStatus, setConfirmStatus] = useState<{id: string; status: string} | null>(null)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+  const [confirmArchiveVariantId, setConfirmArchiveVariantId] = useState<string | null>(null)
 
   const fetchAsset = useCallback(async () => {
     try {
@@ -97,9 +101,15 @@ export default function MediaAssetDetailPage() {
   useEffect(() => { fetchAsset() }, [fetchAsset])
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = (newStatus: string) => {
     if (!asset) return
-    if (!confirm(`Change status to "${newStatus}"?`)) return
+    setConfirmStatus({ id: asset.id, status: newStatus })
+  }
+
+  const handleStatusChangeConfirm = async () => {
+    if (!confirmStatus) return
+    const { id, status: newStatus } = confirmStatus
+    setConfirmStatus(null)
     try {
       const res = await fetch(`/api/admin/media-assets/${id}`, {
         method: 'PATCH',
@@ -114,11 +124,17 @@ export default function MediaAssetDetailPage() {
     }
   }
 
-  const handleArchive = async () => {
+  const handleArchive = () => {
     if (!asset) return
-    if (!confirm('Archive this asset?')) return
+    setConfirmArchive(true)
+  }
+
+  const handleArchiveConfirm = async () => {
+    if (!asset) return
+    const assetId = id
+    setConfirmArchive(false)
     try {
-      await fetch(`/api/admin/media-assets/${id}`, {
+      await fetch(`/api/admin/media-assets/${assetId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -161,8 +177,14 @@ export default function MediaAssetDetailPage() {
     }
   }
 
-  const handleArchiveVariant = async (variantId: string) => {
-    if (!confirm('Archive this variant?')) return
+  const handleArchiveVariant = (variantId: string) => {
+    setConfirmArchiveVariantId(variantId)
+  }
+
+  const handleArchiveVariantConfirm = async () => {
+    if (!confirmArchiveVariantId) return
+    const variantId = confirmArchiveVariantId
+    setConfirmArchiveVariantId(null)
     try {
       await fetch(`/api/admin/creative-variants/${variantId}`, {
         method: 'DELETE',
@@ -425,6 +447,35 @@ export default function MediaAssetDetailPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={confirmArchive}
+        title="Archive Asset"
+        body={<p>Archive this asset? It will be removed from the library.</p>}
+        confirmLabel="Archive"
+        danger
+        onConfirm={handleArchiveConfirm}
+        onCancel={() => setConfirmArchive(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmStatus !== null}
+        title="Ubah Status"
+        body={<p>Change status to <strong>{confirmStatus?.status}</strong>?</p>}
+        confirmLabel="Ubah"
+        onConfirm={handleStatusChangeConfirm}
+        onCancel={() => setConfirmStatus(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmArchiveVariantId !== null}
+        title="Archive Variant"
+        body={<p>Archive this variant?</p>}
+        confirmLabel="Archive"
+        danger
+        onConfirm={handleArchiveVariantConfirm}
+        onCancel={() => setConfirmArchiveVariantId(null)}
+      />
     </div>
   )
 }
