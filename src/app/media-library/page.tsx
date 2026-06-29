@@ -5,6 +5,7 @@ import Link from 'next/link'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PageInfo from '@/components/ui/PageInfo'
 import Modal from '@/components/ui/Modal'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface MediaAsset {
   id: string
@@ -95,6 +96,7 @@ export default function MediaLibraryPage() {
   const [selectedVariants, setSelectedVariants] = useState<CreativeVariant[]>([])
   const [detailLoading, setDetailLoading] = useState(false)
   const [assetUsage, setAssetUsage] = useState<AssetUsageResponse | null>(null)
+  const [archiveAssetId, setArchiveAssetId] = useState<string | null>(null)
 
   const fetchAssets = useCallback(async () => {
     try {
@@ -191,8 +193,14 @@ export default function MediaLibraryPage() {
     }
   }
 
-  const handleArchive = async (id: string) => {
-    if (!confirm('Archive this asset?')) return
+  const handleArchive = (id: string) => {
+    setArchiveAssetId(id)
+  }
+
+  const handleArchiveConfirm = async () => {
+    if (!archiveAssetId) return
+    const id = archiveAssetId
+    setArchiveAssetId(null)
     try {
       await fetch(`/api/admin/media-assets/${id}`, {
         method: 'DELETE',
@@ -725,6 +733,16 @@ export default function MediaLibraryPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={archiveAssetId !== null}
+        title="Archive Asset"
+        body={<p>Archive this asset? It will no longer appear in active media.</p>}
+        confirmLabel="Archive"
+        danger
+        onConfirm={handleArchiveConfirm}
+        onCancel={() => setArchiveAssetId(null)}
+      />
     </div>
   )
 }
