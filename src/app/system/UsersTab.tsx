@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface UserRow {
   id: string; email: string; name: string | null
@@ -49,6 +50,7 @@ export default function UsersTab() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [detail, setDetail] = useState<UserDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [confirmRevoke, setConfirmRevoke] = useState<{userId: string; keyId: string} | null>(null)
   const limit = 20
 
   const loadUsers = useCallback(async () => {
@@ -87,8 +89,14 @@ export default function UsersTab() {
     } catch (e) { alert(String(e)) }
   }
 
-  const revokeKey = async (userId: string, keyId: string) => {
-    if (!confirm('Revoke API key ini?')) return
+  const revokeKey = (userId: string, keyId: string) => {
+    setConfirmRevoke({ userId, keyId })
+  }
+
+  const revokeKeyConfirm = async () => {
+    if (!confirmRevoke) return
+    const { userId, keyId } = confirmRevoke
+    setConfirmRevoke(null)
     try {
       const r = await fetch('/api/admin/admin-users/' + userId + '/api-keys/' + keyId, { method: 'DELETE', credentials: 'include' })
       if (!r.ok) { const d = await r.json(); alert(d.error); return }
@@ -229,5 +237,15 @@ export default function UsersTab() {
         </div>
       )}
     </div>
+
+      <ConfirmDialog
+        open={confirmRevoke !== null}
+        title="Revoke API Key"
+        body={<p>Revoke API key ini? Akses dengan key ini akan langsung terputus.</p>}
+        confirmLabel="Revoke"
+        danger
+        onConfirm={revokeKeyConfirm}
+        onCancel={() => setConfirmRevoke(null)}
+      />
   )
 }
