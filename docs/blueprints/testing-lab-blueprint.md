@@ -54,7 +54,7 @@ Spine produk: **Library → Studio → Testing Lab → Rules → Dashboard.**
 | 7 | Ruling loop (TEST_OUTCOME signal → auto-scale winner) | DONE | 0974eb2 | TEST_OUTCOME condition + AutomationAction on declare-winner |
 | 8 | Dashboard surfacing + onboarding + zero-worker verify | DONE | 2288ede | tes berjalan + winner widgets + onboarding item + zero-worker grep pass |
 | 9 | Scale templates (seed 5) + template picker UI (lengkapi Fase 6) | DONE | a8e5c4a | +Scale Test Winner template, 13 builtin, picker via rules editor |
-| 10 | Phase affordance (transisi + suggest) + Import UX (create-menu, importStatus) | TODO | — | |
+| 10 | Phase affordance (transisi + suggest) + Import UX (create-menu, importStatus) | DONE | 65fce39 | phase editor dropdown + importStatus badges + import in create-menu |
 
 Status: `TODO` → `DOING` → `DONE` (atau `BLOCKED: alasan`).
 Urutan WAJIB berurutan (1→10). Segmen N+1 boleh mulai hanya jika N = DONE.
