@@ -425,7 +425,7 @@ function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange, actionLo
       </div>
 
       {/* Variant compare */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-stone-100">
         {test.variants.map(v => {
           const metricVal = getMetricValue(v, sm)
           // Find leader
@@ -445,7 +445,7 @@ function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange, actionLo
           }
 
           return (
-            <div key={v.id} className={`p-4 border-r border-stone-100 last:border-r-0 ${v.status === 'winner' ? 'bg-green-50/50' : v.status === 'killed' ? 'bg-red-50/30' : ''}`}>
+            <div key={v.id} className={`p-4 ${v.status === 'winner' ? 'bg-green-50/50' : v.status === 'killed' ? 'bg-red-50/30' : ''}`}>
               <div className="flex items-center gap-2 mb-2">
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold
                   ${v.status === 'winner' ? 'bg-green-500 text-white' : v.status === 'killed' ? 'bg-red-300 text-white' : 'bg-stone-200 text-stone-600'}`}>
@@ -789,8 +789,7 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <label className="text-[11px] font-medium text-stone-500">Meta Ad</label>
                         <button type="button" onClick={() => {
-                          const next = !(showAdPicker.get(i) ?? true)
-                          setShowAdPicker(new Map(showAdPicker.set(i, next)))
+                          setShowAdPicker(prev => { const m = new Map(prev); m.set(i, !(prev.get(i) ?? true)); return m })
                         }} className="text-[10px] text-violet-700 hover:underline">
                           {showAdPicker.get(i) === false ? 'Pilih Ad dari campaign' : 'Input manual'}
                         </button>
