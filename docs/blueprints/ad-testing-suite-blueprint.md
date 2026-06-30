@@ -1,6 +1,10 @@
+> ⛔ **SUPERSEDED — JANGAN EKSEKUSI FILE INI.**
+> Semua isi sudah diserap + diperluas ke `docs/blueprints/testing-lab-blueprint.md` (canonical).
+> Eksekusi blueprint baru itu saja. File ini disimpan hanya sebagai referensi sejarah.
+
 # Blueprint: Meta Ads Testing Suite
 
-**Owner:** Boy Tenggara · Status: APPROVED FOR EXECUTION  
+**Owner:** Boy Tenggara · Status: SUPERSEDED (lihat testing-lab-blueprint.md)  
 **Target files:** prisma/schema.prisma + src/app/api/admin/ad-tests/ + src/app/ads/TestingPage.tsx + src/app/ads/page.tsx  
 **Estimasi:** 90–120 menit Sonnet  
 **Deps:** TestLaunch, TestLaunchCreative, Cep, LandingPage, MetricSnapshot, CampaignSession, GeneratedMedia
