@@ -1045,6 +1045,7 @@ model MetricSnapshot {
   cplc                    Float? // cost per link click = spend / linkClicks, computed on insert
   cpa                     Float? @map("cpa")
   addToCartCount          Int?   @map("add_to_cart_count")
+  landingPageViews        Int?   @map("landing_page_views")
   createdAt            DateTime @default(now()) @map("created_at")
 
   user            AdminUser       @relation(fields: [userId], references: [id], onDelete: Cascade)
