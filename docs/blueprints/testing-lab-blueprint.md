@@ -48,7 +48,7 @@ Spine produk: **Library → Studio → Testing Lab → Rules → Dashboard.**
 | 1 | Foundation schema (AdTest, AdTestVariant, OfferVariant, landingPageViews, track) | DONE | a689483 | migrate + generate + tsc 0 error |
 | 2 | AdTest API (CRUD + declare-winner + sync-metrics) | DONE | 8b59f31 | 5 routes + lib, tsc 0, migrate additive |
 | 3 | Nav re-spine + Design System + CPAS takedown | DONE | bde879f | sidebar re-spine + Library sub-links, CPAS hidden from nav |
-| 4 | Testing Lab UI (variant compare + metric picker = winner readback) | TODO | — | |
+| 4 | Testing Lab UI (variant compare + metric picker = winner readback) | DONE | f5f53f0 | TestingPage: list, metric dropdown, side-by-side, drawer, winner modal |
 | 5 | Creative tester + Studio gen→asset autolink | TODO | — | |
 | 6 | CEP tester + Price tester (OfferVariant) | TODO | — | |
 | 7 | Ruling loop (TEST_OUTCOME signal → auto-scale winner) | TODO | — | |
