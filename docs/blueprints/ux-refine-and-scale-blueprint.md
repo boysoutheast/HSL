@@ -40,8 +40,8 @@
 | 1 | Progress bar arah-benar untuk metrik lower-is-better (LIB) | DONE | 2bfe7d1 | tsc 0 + build sukses + push |
 | 2 | Loading + error state di TestingPage (sync, declare, archive, create) | DONE | 0a4a9c4 | tsc 0 + build sukses + push |
 | 3 | Mobile compare grid + state mutation cleanup | DONE | 75f70d5 | tsc 0 + build sukses + push |
-| 4 | Sync retry + error message visible (import_error_message kolom additive) | TODO | — | unblock user yang `sync_failed` |
-| 5 | Sync verify (audit) | TODO | — | end-to-end pass |
+| 4 | Sync retry + error message visible (import_error_message kolom additive) | DONE | c1f5709 | schema additive + cron writes error + resync endpoint + UI retry + tsc 0 + build sukses |
+| 5 | Sync verify (audit) | DONE | 601de87 | 6/7 item verified, item 7 SKIP (no session cookie) — tsc 0 + build sukses + push |
 
 Status: `TODO` → `DOING` → `DONE` (atau `BLOCKED`). Urut 1→5.
 
