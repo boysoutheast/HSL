@@ -880,7 +880,6 @@ model CampaignSession {
   phase                  String    @default("TESTING") // TESTING | SCALING | MAINTENANCE | EXITED
   source                 String    @default("launch") @map("source") // 'launch' | 'imported'
   importStatus           String?   @map("import_status")  // null | 'pending_sync' | 'synced' | 'sync_failed'
-  importError            String?   @map("import_error_message")
   automationEnabled      Boolean   @default(true) @map("automation_enabled")
   timezone               String    @default("Asia/Jakarta")
   currency               String    @default("IDR")

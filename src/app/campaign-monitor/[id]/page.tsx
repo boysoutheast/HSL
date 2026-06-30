@@ -14,7 +14,7 @@ interface Session {
   id: string; name: string; status: string; phase: string
   automationEnabled: boolean; dailyBudget: string; currency: string; objective: string
   monitorIntervalMinutes: number; insightWindow: string; lastMonitorAt: string | null; nextMonitorAt: string | null
-  lastActionAt: string | null; source: string; importStatus: string | null
+  lastActionAt: string | null; source: string; importStatus: string | null; importError: string | null
   minActiveAds: number; topupEnabled: boolean
   product: { id: string; name: string } | null
   metaAdAccount: { id: string; adAccountId: string; accountName: string | null } | null
@@ -46,9 +46,11 @@ function PhaseBadgeStatic({phase}:{phase:string}) { return <span className={`tex
 
 const PHASES = ['TESTING', 'SCALING', 'MAINTENANCE', 'EXITED']
 
-function PhaseEditor({sessionId, phase, importStatus, onUpdate}:{sessionId:string;phase:string;importStatus:string|null;onUpdate:()=>void}) {
+function PhaseEditor({sessionId, phase, importStatus, importError, onUpdate}:{sessionId:string;phase:string;importStatus:string|null;importError:string|null;onUpdate:()=>void}) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(phase)
+  const [resyncing, setResyncing] = useState(false)
+  const [resyncMsg, setResyncMsg] = useState<string | null>(null)
   async function save() {
     if (value === phase) { setEditing(false); return }
     try {
@@ -61,8 +63,20 @@ function PhaseEditor({sessionId, phase, importStatus, onUpdate}:{sessionId:strin
     } catch {}
     setEditing(false)
   }
+  async function resync() {
+    setResyncing(true)
+    setResyncMsg(null)
+    try {
+      const res = await fetch(`/api/admin/campaign-sessions/${sessionId}/resync`, { method: 'POST', credentials: 'include' })
+      if (res.ok) setResyncMsg('Antri sync ulang — coba lagi dalam ~5 menit')
+      else setResyncMsg('Gagal — coba lagi')
+      onUpdate()
+    } catch { setResyncMsg('Koneksi error') }
+    setResyncing(false)
+  }
   return (
-    <div className="flex items-center gap-2">
+    <div>
+      <div className="flex items-center gap-2">
       {editing ? (
         <select value={value} onChange={e=>setValue(e.target.value)}
           className="text-xs border border-stone-300 rounded-lg px-2 py-1 bg-white">
@@ -84,6 +98,17 @@ function PhaseEditor({sessionId, phase, importStatus, onUpdate}:{sessionId:strin
           {importStatus==='synced' ? '✅ Synced' : importStatus==='sync_failed' ? '❌ Sync gagal' : '⏳ Syncing…'}
         </span>
       )}
+      </div>
+      {importStatus === 'sync_failed' && importError && (
+        <p className="text-xs text-red-600 mt-1 max-w-md truncate" title={importError}>{importError}</p>
+      )}
+      {importStatus === 'sync_failed' && (
+        <button onClick={resync} disabled={resyncing}
+          className="mt-1 text-[11px] font-medium text-violet-700 hover:underline disabled:opacity-50">
+          {resyncing ? 'Menyync ulang…' : 'Sync ulang'}
+        </button>
+      )}
+      {resyncMsg && <p className="text-[10px] text-emerald-600 mt-1">{resyncMsg}</p>}
     </div>
   )
 }
@@ -220,7 +245,7 @@ export default function CampaignDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={session.status} />
-          <PhaseEditor sessionId={session.id} phase={session.phase} importStatus={session.importStatus} onUpdate={fetchSession} />
+          <PhaseEditor sessionId={session.id} phase={session.phase} importStatus={session.importStatus} importError={session.importError} onUpdate={fetchSession} />
         </div>
       </div>
 

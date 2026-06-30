@@ -57,9 +57,13 @@ async function run() {
     const metaCampaignId = session.metaCampaignId
 
     if (!adAccountId || !encryptedToken || !metaCampaignId) {
+      const parts: string[] = []
+      if (!adAccountId) parts.push('adAccountId')
+      if (!encryptedToken) parts.push('encryptedToken')
+      if (!metaCampaignId) parts.push('metaCampaignId')
       await prisma.campaignSession.update({
         where: { id: session.id },
-        data: { importStatus: 'sync_failed' },
+        data: { importStatus: 'sync_failed', importError: `Meta account tidak lengkap: ${parts.join(', ')}` },
       })
       failed++
       continue
@@ -183,6 +187,7 @@ async function run() {
         where: { id: session.id },
         data: {
           importStatus: 'synced',
+          importError: null,
           dailyBudget: campaignDailyBudget > 0 ? campaignDailyBudget : 0,
           budgetMode: isCBO ? 'CBO' : 'ABO',
           primaryAdsetMetaId: isCBO ? null : primaryAdsetMetaId,
@@ -192,9 +197,10 @@ async function run() {
       synced++
     } catch (err) {
       console.error(`[sync-campaigns] Failed for session ${session.id}:`, err)
+      const msg = String(err instanceof Error ? err.message : err).slice(0, 500)
       await prisma.campaignSession.update({
         where: { id: session.id },
-        data: { importStatus: 'sync_failed' },
+        data: { importStatus: 'sync_failed', importError: msg },
       })
       failed++
     }
