@@ -37,7 +37,7 @@
 
 | # | Segmen | Status | Commit | Catatan |
 |---|--------|--------|--------|---------|
-| 1 | Progress bar arah-benar untuk metrik lower-is-better (LIB) | TODO | — | logic — fix paling penting di UX testing |
+| 1 | Progress bar arah-benar untuk metrik lower-is-better (LIB) | DONE | 2bfe7d1 | tsc 0 + build sukses + push |
 | 2 | Loading + error state di TestingPage (sync, declare, archive, create) | TODO | — | gantikan silent catch |
 | 3 | Mobile compare grid + state mutation cleanup | TODO | — | kosmetik + clean code |
 | 4 | Sync retry + error message visible (import_error_message kolom additive) | TODO | — | unblock user yang `sync_failed` |
