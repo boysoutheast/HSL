@@ -21,7 +21,13 @@ export interface CompositeCondition {
   children: Condition[]
 }
 
-export type Condition = LeafCondition | CompositeCondition
+export type Condition = LeafCondition | CompositeCondition | TestOutcomeCondition
+
+export interface TestOutcomeCondition {
+  type: 'TEST_OUTCOME'
+  adTestId: string
+  expect: 'WINNER_DECLARED'
+}
 
 export interface MetricsMap {
   spend: number
@@ -69,11 +75,28 @@ function nextKey(): string { return `eval_${++resultCounter}` }
 export function evaluateRule(
   condition: Condition,
   metrics: MetricsMap,
+  options?: { getAdTestStatus?: (id: string) => string | undefined },
 ): EvaluationResult {
   resultCounter = 0 // reset per evaluation
   const results: EvaluationResult['results'] = {}
 
   function evalNode(node: Condition): boolean {
+    // TestOutcome condition
+    if ('type' in node && node.type === 'TEST_OUTCOME') {
+      const toc = node as TestOutcomeCondition
+      const status = options?.getAdTestStatus?.(toc.adTestId)
+      const matched = status === toc.expect
+      const key = nextKey()
+      results[key] = {
+        metric: 'TEST_OUTCOME' as unknown as Metric,
+        operator: 'eq' as Operator,
+        threshold: 0,
+        actual: 0,
+        matched,
+      }
+      return matched
+    }
+
     if ('op' in node) {
       // Composite
       const childResults = node.children.map(c => evalNode(c))

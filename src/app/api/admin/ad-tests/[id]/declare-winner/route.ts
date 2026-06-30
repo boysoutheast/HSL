@@ -85,7 +85,69 @@ export async function POST(
     })
   }
 
-  // 5. Return the test with autoScaleWinner
+  // 5. Auto-scale: create AutomationActions if autoScaleWinner is true
+  if (test.autoScaleWinner && winnerVariant && (winnerVariant.metaAdId || test.campaignSessionId)) {
+    const actions: Array<{
+      userId: string
+      campaignSessionId: string
+      source: string
+      actionType: string
+      targetEntityType: string
+      targetMetaEntityId: string
+      payloadJson: string
+      status: string
+      priority: number
+      requestedAt: Date
+      idempotencyKey: string
+    }> = []
+
+    // Scale winner budget up 30%
+    if (winnerVariant.metaAdId) {
+      actions.push({
+        userId: test.userId,
+        campaignSessionId: test.campaignSessionId ?? 'unknown',
+        source: 'SYSTEM',
+        actionType: 'UPDATE_BUDGET',
+        targetEntityType: 'AD',
+        targetMetaEntityId: winnerVariant.metaAdId,
+        payloadJson: JSON.stringify({
+          budgetIncreasePct: 30,
+          reason: `Test winner: ${test.name} (${winnerVariant.label}:${winnerVariant.name})`,
+        }),
+        status: 'PENDING',
+        priority: 50,
+        requestedAt: new Date(),
+        idempotencyKey: `test_win_${test.id}_${winnerVariant.id}_${Date.now()}`,
+      })
+    }
+
+    // Pause killed variants
+    for (const v of test.variants) {
+      if (v.id !== body.variantId && v.metaAdId) {
+        actions.push({
+          userId: test.userId,
+          campaignSessionId: test.campaignSessionId ?? 'unknown',
+          source: 'SYSTEM',
+          actionType: 'PAUSE_ADSET',
+          targetEntityType: 'AD',
+          targetMetaEntityId: v.metaAdId,
+          payloadJson: JSON.stringify({
+            reason: `Killed by test: ${test.name} (winner: ${winnerVariant.label})`,
+          }),
+          status: 'PENDING',
+          priority: 50,
+          requestedAt: new Date(),
+          idempotencyKey: `test_kill_${test.id}_${v.id}_${Date.now()}`,
+        })
+      }
+    }
+
+    if (actions.length > 0) {
+      await prisma.automationAction.createMany({ data: actions })
+    }
+  }
+
+  // 6. Return the test with autoScaleWinner
   const updated = await prisma.adTest.findUnique({
     where: { id: params.id },
     include: { variants: true },
