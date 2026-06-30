@@ -1,0 +1,9 @@
+{
+  "version": "5.2",
+  "steps": [
+    {
+      "tag": "CreateMigration",
+      "migration_name": "20260630000001_add_testing_lab"
+    }
+  ]
+}
