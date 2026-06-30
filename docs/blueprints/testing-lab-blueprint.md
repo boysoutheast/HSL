@@ -53,9 +53,12 @@ Spine produk: **Library → Studio → Testing Lab → Rules → Dashboard.**
 | 6 | CEP tester + Price tester (OfferVariant) | TODO | — | |
 | 7 | Ruling loop (TEST_OUTCOME signal → auto-scale winner) | TODO | — | |
 | 8 | Dashboard surfacing + onboarding + zero-worker verify | TODO | — | |
+| 9 | Scale templates (seed 5) + template picker UI (lengkapi Fase 6) | TODO | — | |
+| 10 | Phase affordance (transisi + suggest) + Import UX (create-menu, importStatus) | TODO | — | |
 
 Status: `TODO` → `DOING` → `DONE` (atau `BLOCKED: alasan`).
-Urutan WAJIB berurutan (1→8). Segmen N+1 boleh mulai hanya jika N = DONE.
+Urutan WAJIB berurutan (1→10). Segmen N+1 boleh mulai hanya jika N = DONE.
+Segmen 9–10 = modul "add existing campaign → scale/maintain"; melengkapi `docs/blueprints/testing-scaling-automation-blueprint.md` (Fase 1–5 sudah BUILT, Fase 6 belum). JANGAN eksekusi blueprint itu terpisah — Fase 6-nya diserap ke Segmen 9.
 
 ---
 
@@ -320,6 +323,37 @@ npx prisma generate
 
 ---
 
+## 10b. SEGMEN 9 — Scale Templates + Template Picker UI (lengkapi Fase 6)
+
+**Konteks:** Modul import campaign + scaling engine SUDAH ada (import wizard, cron `sync-campaigns`, `scan-campaigns` dengan anti-overscale guard +50%/hari, `MetricSnapshot` harian, temporal metrics). Yang KURANG: template rule siap-pakai + cara user attach tanpa nulis JSON. Sumber kondisi template = `testing-scaling-automation-blueprint.md` Fase 6.
+
+**A. Seed 5 built-in `RuleTemplate`** (via `prisma/seed.ts` atau seed route idempotent — cek dulu pola seed existing). `isBuiltin=true`. Condition tree (sesuaikan field name dgn `rule-engine.ts` aktual):
+1. **Kill Loser** — `AND[ spend>10000, purchases==0 ]` → `PAUSE_ADSET`
+2. **Scale Winner Vertical** — `AND[ roas>=1.5, purchases>=5, adset_age_days>=7 ]` → `UPDATE_BUDGET increase_pct 20`
+3. **Fatigue Guard** — `frequency>3.5` → `UPDATE_BUDGET decrease_pct 20`
+4. **Scale-Ready Gate** — `AND[ roas_min_7d>=1.5, purchases>=5, frequency<3.5, cpa_change_pct_3d<=20 ]` → `NOTIFY`
+5. **Kill Boros** — `AND[ spend>30000, roas<1 ]` → `PAUSE_ADSET`
+6. **Scale Test Winner** (sambungan Segmen 7) — condition `TEST_OUTCOME { adTestId, expect:'WINNER_DECLARED' }` → `UPDATE_BUDGET increase_pct 30` ke `winnerVariant.metaAdId`.
+
+**B. Template picker UI** di campaign detail Automation tab (`src/app/campaign-monitor/[id]/...`): list template **human-readable** (kondisi + aksi dalam bahasa manusia, BUKAN JSON), tombol **Attach** → POST `/api/admin/campaign-sessions/[id]/rules` dari template. Tampilkan threshold yang bisa di-override (mis. ROAS target, spend cap).
+
+**Acceptance:** 5–6 template ke-seed (verifikasi via query); picker nampilin readable; attach bikin `AutomationRule`; tidak ada user yang perlu nulis JSON mentah. tsc clean. Sertakan list template + 1 contoh attach di report.
+
+---
+
+## 10c. SEGMEN 10 — Phase Affordance + Import UX
+
+**Objective:** phase berhenti jadi pajangan; import gampang ke-discover; status sync kelihatan. SEMUA additive/non-breaking — JANGAN hard-gate rule existing by phase (rule yang sudah attached harus tetap jalan).
+
+1. **Phase transition UI** (`campaign-monitor/[id]`): dropdown/tombol `TESTING → SCALING → MAINTENANCE → EXITED` → PATCH `phase` (route sudah terima `phase`). Tampilkan badge phase yang editable.
+2. **Phase-suggested templates** (soft, bukan gate): di picker Segmen 9, kalau `phase=SCALING` highlight Scale Winner/Scale-Ready; `phase=TESTING` highlight Kill Loser/Kill Boros/Scale Test Winner. Cuma urutan/highlight — semua template tetap bisa dipilih.
+3. **Import di create-menu** (`src/components/Sidebar.tsx`): tambah shortcut "Import Campaign" → `/campaign-monitor/import` (sekarang cuma ada New Launch + Upload Media).
+4. **importStatus surfaced**: di `campaign-monitor/[id]` + list monitor, tampilkan badge `Syncing… / Sync gagal / Synced` dari `CampaignSession.importStatus`. Kalau `sync_failed`, kasih tombol retry (panggil ulang sync).
+
+**Acceptance:** bisa ganti phase dari UI (verifikasi PATCH); "Import Campaign" muncul di create-menu; badge importStatus tampil; highlight template ngikut phase. tsc + build clean.
+
+---
+
 ## 11. SONNET REPORT (format wajib tiap segmen — kirim ke Mac/Fable)
 
 ```
@@ -348,13 +382,13 @@ Segmen N → DONE (sudah update tabel §2 + commit)
 Segmen N+1: [judul]
 ```
 
-Setelah SEMUA 8 segmen DONE → kirim ringkasan akhir + daftar semua commit. Fable akan audit total (cross-check origin/main independen, smoke test live). JANGAN klaim "FULL DONE" tanpa 8 baris ledger = DONE + 8 SONNET REPORT.
+Setelah SEMUA 10 segmen DONE → kirim ringkasan akhir + daftar semua commit. Fable akan audit total (cross-check origin/main independen, smoke test live). JANGAN klaim "FULL DONE" tanpa 10 baris ledger = DONE + 10 SONNET REPORT.
 
 ---
 
 ## 12. DEFINITION OF DONE (keseluruhan)
 
-- 8 segmen DONE di ledger, tiap segmen ada SONNET REPORT dengan commit asli.
+- 10 segmen DONE di ledger, tiap segmen ada SONNET REPORT dengan commit asli.
 - `npx tsc --noEmit` 0 error baru; `npm run build` sukses.
 - Migration additive ter-apply; `prisma generate` clean.
 - `/ads?tab=testing` (atau `/testing`) kebuka; bisa bikin test → sync → declare winner.
