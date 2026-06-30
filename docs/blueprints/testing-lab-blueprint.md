@@ -46,7 +46,7 @@ Spine produk: **Library → Studio → Testing Lab → Rules → Dashboard.**
 | # | Segmen | Status | Commit | Catatan |
 |---|--------|--------|--------|---------|
 | 1 | Foundation schema (AdTest, AdTestVariant, OfferVariant, landingPageViews, track) | DONE | a689483 | migrate + generate + tsc 0 error |
-| 2 | AdTest API (CRUD + declare-winner + sync-metrics) | TODO | — | |
+| 2 | AdTest API (CRUD + declare-winner + sync-metrics) | DONE | 8b59f31 | 5 routes + lib, tsc 0, migrate additive |
 | 3 | Nav re-spine + Design System + CPAS takedown | TODO | — | |
 | 4 | Testing Lab UI (variant compare + metric picker = winner readback) | TODO | — | |
 | 5 | Creative tester + Studio gen→asset autolink | TODO | — | |
