@@ -102,6 +102,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
           {showCreate && (
             <div className="absolute left-48 top-3 z-20 w-48 bg-white border border-stone-200 rounded-xl shadow-xl py-1.5">
               <Link href="/ads?tab=launch&new=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">New Launch</Link>
+              <Link href="/campaign-monitor/import" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">Import Campaign</Link>
               <Link href="/media?tab=library&upload=1" onClick={() => setShowCreate(false)} className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50">Upload Media</Link>
             </div>
           )}

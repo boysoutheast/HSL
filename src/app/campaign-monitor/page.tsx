@@ -14,6 +14,7 @@ interface CampaignSession {
   status: string
   phase: string
   source: string
+  importStatus: string | null
   automationEnabled: boolean
   dailyBudget: string
   monitorIntervalMinutes: number
@@ -312,6 +313,15 @@ export default function CampaignMonitorPage() {
               </td>
               <td className="px-4 py-3">
                 <PhaseBadge phase={session.phase} />
+                {session.importStatus && (
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                    session.importStatus==='synced' ? 'bg-green-100 text-green-700'
+                    : session.importStatus==='sync_failed' ? 'bg-red-100 text-red-700'
+                    : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {session.importStatus==='synced' ? 'Synced' : session.importStatus==='sync_failed' ? 'Gagal' : 'Syncing'}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
                 <StatusBadge status={session.status} />

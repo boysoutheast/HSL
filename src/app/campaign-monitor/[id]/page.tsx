@@ -42,7 +42,52 @@ const SOURCE_BADGES: Record<string,{label:string;cls:string}> = { launch:{label:
 const ENTITY_TYPE_COLORS: Record<string,string> = { CAMPAIGN:'bg-violet-100 text-violet-800', ADSET:'bg-blue-100 text-blue-800', AD:'bg-green-100 text-green-800', CREATIVE:'bg-orange-100 text-orange-800' }
 
 function StatusBadge({status}:{status:string}) { return <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[status]??'bg-stone-100 text-stone-600'}`}>{status}</span> }
-function PhaseBadge({phase}:{phase:string}) { return <span className={`text-xs px-2 py-1 rounded-full font-medium ${PHASE_COLORS[phase]??'bg-stone-100 text-stone-600'}`}>{phase}</span> }
+function PhaseBadgeStatic({phase}:{phase:string}) { return <span className={`text-xs px-2 py-1 rounded-full font-medium ${PHASE_COLORS[phase]??'bg-stone-100 text-stone-600'}`}>{phase}</span> }
+
+const PHASES = ['TESTING', 'SCALING', 'MAINTENANCE', 'EXITED']
+
+function PhaseEditor({sessionId, phase, importStatus, onUpdate}:{sessionId:string;phase:string;importStatus:string|null;onUpdate:()=>void}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(phase)
+  async function save() {
+    if (value === phase) { setEditing(false); return }
+    try {
+      await fetch(`/api/admin/campaign-sessions/${sessionId}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({phase: value}),
+      })
+      onUpdate()
+    } catch {}
+    setEditing(false)
+  }
+  return (
+    <div className="flex items-center gap-2">
+      {editing ? (
+        <select value={value} onChange={e=>setValue(e.target.value)}
+          className="text-xs border border-stone-300 rounded-lg px-2 py-1 bg-white">
+          {PHASES.map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+      ) : (
+        <PhaseBadgeStatic phase={phase} />
+      )}
+      <button onClick={() => editing ? save() : setEditing(true)}
+        className={`text-[10px] font-medium px-1.5 py-0.5 rounded transition-colors ${editing ? 'bg-violet-100 text-violet-700' : 'text-stone-400 hover:text-stone-600'}`}>
+        {editing ? 'Simpan' : '✏️'}
+      </button>
+      {importStatus && (
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+          importStatus==='synced' ? 'bg-green-100 text-green-700' 
+          : importStatus==='sync_failed' ? 'bg-red-100 text-red-700'
+          : 'bg-yellow-100 text-yellow-700'
+        }`}>
+          {importStatus==='synced' ? '✅ Synced' : importStatus==='sync_failed' ? '❌ Sync gagal' : '⏳ Syncing…'}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function SourceBadge({source}:{source:string}) { const d=SOURCE_BADGES[source]??{label:source,cls:'bg-stone-100 text-stone-600'}; return <span className={`text-xs px-2 py-1 rounded-full font-medium ${d.cls}`}>{d.label}</span> }
 function fmtCurrency(n:number|null|undefined,currency='IDR') { return n==null?'—':`${currency} ${Number(n).toLocaleString('id-ID',{maximumFractionDigits:0})}` }
 function fmtDate(d:string|null) { if(!d)return'—';return new Date(d).toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) }
@@ -175,7 +220,7 @@ export default function CampaignDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={session.status} />
-          <PhaseBadge phase={session.phase} />
+          <PhaseEditor sessionId={session.id} phase={session.phase} importStatus={session.importStatus} onUpdate={fetchSession} />
         </div>
       </div>
 
