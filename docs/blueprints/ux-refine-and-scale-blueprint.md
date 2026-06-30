@@ -38,7 +38,7 @@
 | # | Segmen | Status | Commit | Catatan |
 |---|--------|--------|--------|---------|
 | 1 | Progress bar arah-benar untuk metrik lower-is-better (LIB) | DONE | 2bfe7d1 | tsc 0 + build sukses + push |
-| 2 | Loading + error state di TestingPage (sync, declare, archive, create) | TODO | — | gantikan silent catch |
+| 2 | Loading + error state di TestingPage (sync, declare, archive, create) | DONE | 0a4a9c4 | tsc 0 + build sukses + push |
 | 3 | Mobile compare grid + state mutation cleanup | TODO | — | kosmetik + clean code |
 | 4 | Sync retry + error message visible (import_error_message kolom additive) | TODO | — | unblock user yang `sync_failed` |
 | 5 | Sync verify (audit) | TODO | — | end-to-end pass |
