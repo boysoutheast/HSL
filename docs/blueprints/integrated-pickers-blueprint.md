@@ -43,7 +43,7 @@
 | # | Segmen | Status | Commit | Catatan |
 |---|--------|--------|--------|---------|
 | 1 | Testing Lab: campaign selector + ad picker (metaAdId auto-fill) | DONE | e090b3b | tsc 0 + build sukses + push |
-| 2 | Sweep & verify: pastikan tidak ada blank-ID input bodoh lain | TODO | — | |
+| 2 | Sweep & verify: pastikan tidak ada blank-ID input bodoh lain | DONE | — | 15 hasil grep — semua LEGIT-MANUAL. Tidak ada BUTUH-PICKER lain selain Testing Lab (sudah difix Segmen 1). |
 
 Status: `TODO` → `DOING` → `DONE` (atau `BLOCKED: alasan`). Urut 1→2.
 
