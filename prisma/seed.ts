@@ -205,6 +205,22 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
       actionType: 'PAUSE',
     }),
   },
+  {
+    name: '🧪 Scale Test Winner',
+    description: 'Naikkan budget 30% ke adset pemenang kalau test A/B sudah menghasilkan winner. Otomatis pause variant kalah.',
+    scope: 'ADSET',
+    ruleCategory: 'COMPOSITE',
+    conditionTreeJson: JSON.stringify({
+      type: 'TEST_OUTCOME',
+      adTestId: '',
+      expect: 'WINNER_DECLARED',
+    }),
+    actionSpecJson: JSON.stringify({
+      actionType: 'UPDATE_BUDGET',
+      mode: 'increase_pct',
+      amount: 30,
+    }),
+  },
 ]
 
 async function seedBuiltinTemplates() {
