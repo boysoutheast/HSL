@@ -5,8 +5,10 @@ import CampaignMonitorPage from '../campaign-monitor/page'
 import RulesEditorPage from '../rules-editor/page'
 import MediaRulesPage from '../media-rules/page'
 import ActionCenterPage from '../action-center/page'
+import TestingPage from './TestingPage'
 
 const tabs = [
+  { id: 'testing', label: 'Testing Lab' },
   { id: 'campaigns', label: 'Campaigns' },
   { id: 'rules', label: 'Rules' },
 ]
@@ -40,6 +42,7 @@ export default async function AdsPage({
       initial={key}
       basePath="/ads"
       panels={{
+        testing: <TestingPage />,
         campaigns: (
           <div className="space-y-8">
             <LaunchesPage />
