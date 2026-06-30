@@ -318,8 +318,9 @@ npx prisma generate
 1. **Dashboard (`src/app/page.tsx`):** tambah widget "Tes Berjalan" (RUNNING AdTest + pemimpin sementara) dan "Winner Terbaru" (WINNER_DECLARED terakhir). Onboarding checklist: tambah item "Jalankan test pertama".
 2. **Onboarding flow:** pastikan jalur Library→Studio→Testing Lab→Rules ada petunjuk next-step di EmptyState tiap halaman (mis. dashboard kosong → "Buat produk dulu" link).
 3. **Zero-worker verify:** grep `workerTask.create` / `prisma.workerTask` di `src/app/api/admin/generate/*`, `media-assets/generate`, `api/gen/*`. Kalau ADA yang masih bikin WorkerTask untuk generate → konversi ke pemanggilan direct ke service gen (pola seperti pemanggilan geminigen yang sudah ada). Kalau TIDAK ada (audit inference stale) → no-op + catat hasil grep mentah di report.
+4. **Wire `landing_page_views` (UTANG dari Segmen 2):** field `MetricSnapshot.landingPageViews` sudah ada tapi BELUM diisi cron → metrik `COST_PER_LPV` mati. Di `scan-campaigns` (dan `getInsights`/insight fetch): tambah `landing_page_views` ke fields yang diminta dari Meta Insights, lalu isi ke `MetricSnapshot.landingPageViews` saat upsert. Guard null kalau Insights tidak mengembalikan field itu untuk objective tertentu. Setelah ini, `sync-metrics` (Segmen 2) otomatis dapat angka LPV.
 
-**Acceptance:** dashboard nampilin tes berjalan + winner; grep zero-worker dilampirkan (mentah) di report; kalau ada konversi, smoke generate masih jalan. tsc + build clean.
+**Acceptance:** dashboard nampilin tes berjalan + winner; grep zero-worker dilampirkan (mentah) di report; `landing_page_views` terisi di MetricSnapshot (verifikasi 1 record atau sebut kalau belum ada campaign live); kalau ada konversi worker, smoke generate masih jalan. tsc + build clean.
 
 ---
 
