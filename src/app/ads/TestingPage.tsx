@@ -485,6 +485,40 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
   const [options, setOptions] = useState<Array<{ id: string; label: string }>>([])
   const [loadingOpts, setLoadingOpts] = useState(false)
 
+  // ─── Campaign picker state ───
+  const [sessions, setSessions] = useState<Array<{ id: string; name: string }>>([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
+  const [campaignAds, setCampaignAds] = useState<Array<{ metaEntityId: string; name: string; status?: string }>>([])
+  const [showAdPicker, setShowAdPicker] = useState<Map<number, boolean>>(new Map())
+
+  useEffect(() => {
+    setLoadingSessions(true)
+    fetch('/api/admin/campaign-sessions', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { sessions: [] }))
+      .then(d => setSessions(d.sessions ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingSessions(false))
+  }, [])
+
+  // ─── Fetch campaign ads when campaign selected ───
+  useEffect(() => {
+    if (!form.campaignSessionId) { setCampaignAds([]); return }
+    fetch(`/api/admin/campaign-sessions/${form.campaignSessionId}`, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { session: null }))
+      .then(d => {
+        const metaEntities = d.session?.metaEntities ?? []
+        const ads = metaEntities
+          .filter((e: { entityType: string }) => e.entityType === 'AD')
+          .map((e: { metaEntityId: string; name: string; effectiveStatus?: string }) => ({
+            metaEntityId: e.metaEntityId,
+            name: e.name,
+            status: e.effectiveStatus,
+          }))
+        setCampaignAds(ads)
+      })
+      .catch(() => setCampaignAds([]))
+  }, [form.campaignSessionId])
+
   useEffect(() => {
     fetch('/api/admin/products', { credentials: 'include' })
       .then(r => (r.ok ? r.json() : { products: [] }))
@@ -660,6 +694,18 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                   className="rounded border-stone-300" />
                 <label htmlFor="asw" className="text-xs text-stone-600">Auto-scale pemenang</label>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">Campaign (opsional)</label>
+                <select value={form.campaignSessionId} onChange={e => setForm({ ...form, campaignSessionId: e.target.value })}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">Tanpa campaign / manual</option>
+                  {sessions.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                {loadingSessions && <p className="text-[10px] text-stone-400 mt-1">Memuat campaign…</p>}
+                {campaignAds.length > 0 && (
+                  <p className="text-[10px] text-emerald-600 mt-1">{campaignAds.length} ad tersedia dari campaign ini</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -686,9 +732,49 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                       {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                     </select>
                   )}
-                  <input value={v.metaAdId ?? ''} onChange={e => {
-                    const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
-                  }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID — untuk sync metrics (opsional)" />
+                  {form.campaignSessionId && campaignAds.length > 0 ? (
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <label className="text-[11px] font-medium text-stone-500">Meta Ad</label>
+                        <button type="button" onClick={() => {
+                          const next = !(showAdPicker.get(i) ?? true)
+                          setShowAdPicker(new Map(showAdPicker.set(i, next)))
+                        }} className="text-[10px] text-violet-700 hover:underline">
+                          {showAdPicker.get(i) === false ? 'Pilih Ad dari campaign' : 'Input manual'}
+                        </button>
+                      </div>
+                      {showAdPicker.get(i) !== false ? (
+                        <select value={v.metaAdId ?? ''} onChange={e => {
+                          const ad = campaignAds.find(a => a.metaEntityId === e.target.value)
+                          const next = [...variants]
+                          next[i] = {
+                            ...next[i],
+                            metaAdId: e.target.value || undefined,
+                            name: (!next[i].name && ad ? ad.name : next[i].name) || '',
+                          }
+                          setVariants(next)
+                        }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white mt-1">
+                          <option value="">Pilih Ad…</option>
+                          {campaignAds.map(ad => (
+                            <option key={ad.metaEntityId} value={ad.metaEntityId}>
+                              {ad.name}{ad.status ? ` (${ad.status})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={v.metaAdId ?? ''} onChange={e => {
+                          const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
+                        }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm mt-1" placeholder="Meta Ad ID — manual" />
+                      )}
+                    </div>
+                  ) : (
+                    <input value={v.metaAdId ?? ''} onChange={e => {
+                      const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
+                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID — untuk sync metrics (opsional)" />
+                  )}
+                  {!form.campaignSessionId && (
+                    <p className="text-[10px] text-stone-400 italic mt-1">Pilih campaign di Setup untuk ambil ad otomatis.</p>
+                  )}
                 </div>
               ))}
               {variants.length < 4 && (
