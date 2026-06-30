@@ -14,7 +14,7 @@ async function getDashboardData() {
   startOfDay.setHours(0, 0, 0, 0)
 
   try {
-    const [todaySnapshots, runningCampaigns, pendingApprovals, pendingActions, monitors, workers, session] =
+    const [todaySnapshots, runningCampaigns, pendingApprovals, pendingActions, monitors, runningTests, winnerTests, workers, session] =
       await Promise.all([
         prisma.metricSnapshot.findMany({
           where: { entityType: 'CAMPAIGN', windowEnd: { gte: startOfDay } },
@@ -43,6 +43,30 @@ async function getDashboardData() {
           },
           orderBy: { updatedAt: 'desc' },
         }),
+        prisma.adTest.findMany({
+          where: { status: 'RUNNING' },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            id: true, name: true, type: true, successMetric: true, createdAt: true,
+            variants: {
+              select: { id: true, label: true, name: true, status: true, roas: true,
+                        spend: true, purchases: true },
+            },
+          },
+        }),
+        prisma.adTest.findMany({
+          where: { status: 'WINNER_DECLARED' },
+          orderBy: { endedAt: 'desc' },
+          take: 5,
+          select: {
+            id: true, name: true, type: true, successMetric: true, endedAt: true,
+            winnerVariantId: true,
+            variants: {
+              select: { id: true, label: true, name: true, status: true, roas: true },
+            },
+          },
+        }),
         // Zero-worker: no worker registry — all ops direct/SaaS
         Promise.resolve(null),
         // Get current session user for onboarding checklist
@@ -69,6 +93,7 @@ async function getDashboardData() {
                       campaignSessions: true,
                       generatedMedia: true,
                       instagramAccounts: true,
+                      adTests: true,
                     },
                   },
                 },
@@ -90,7 +115,8 @@ async function getDashboardData() {
         { label: 'Buat produk pertama', done: counts.products > 0, href: '/products' },
         { label: 'Hubungkan akun Meta', done: counts.metaAccounts > 0, href: '/meta-connections' },
         { label: 'Buat campaign pertama', done: counts.campaignSessions > 0, href: '/test-launches/new' },
-        { label: 'Generate video pertama', done: counts.generatedMedia > 0, href: '/studio' },
+        { label: 'Generate video pertama', done: counts.generatedMedia > 0, href: '/media' },
+        { label: 'Jalankan test pertama', done: counts.adTests > 0, href: '/ads?tab=testing' },
       ]
       // Only show checklist for new-ish users or incomplete ones
       if (daysSinceCreated > 30 && onboardingItems.every(i => i.done)) {
@@ -121,6 +147,8 @@ async function getDashboardData() {
       pendingApprovals,
       pendingActions,
       monitors,
+      runningTests,
+      winnerTests,
       workerHealthy,
       workerKnown,
       onboardingItems,
@@ -130,6 +158,7 @@ async function getDashboardData() {
     return {
       hasMetrics: false, spend: 0, roas: null, runningCampaigns: 0,
       pendingApprovals: [], pendingActions: [], monitors: [],
+      runningTests: [], winnerTests: [],
       workerHealthy: false, workerKnown: false,
       onboardingItems: null,
     }
@@ -293,53 +322,75 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Influencer hari ini */}
+        {/* Tes Berjalan */}
         <div className="card p-5 lg:col-span-2">
           <div className="flex items-baseline justify-between mb-3.5">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">✦ Influencer hari ini</p>
-            <Link href="/influencer" className="text-[11px] font-semibold text-violet-600 hover:underline">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">🧪 Tes Berjalan</p>
+            <Link href="/ads?tab=testing" className="text-[11px] font-semibold text-violet-600 hover:underline">
               semua →
             </Link>
           </div>
-          {d.monitors.length === 0 ? (
-            <p className="text-sm text-stone-400 py-6 text-center">Belum ada posting monitor aktif.</p>
+          {d.runningTests.length === 0 ? (
+            <p className="text-sm text-stone-400 py-6 text-center">Belum ada tes berjalan.</p>
           ) : (
             <div className="space-y-1.5">
-              {posted.slice(0, 3).map(m => (
-                <Link
-                  key={m.instagramAccount.id}
-                  href={`/accounts/${m.instagramAccount.id}`}
-                  className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
-                >
-                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center text-[10px] font-bold text-violet-700 shrink-0">
-                    {m.instagramAccount.username.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-stone-800 truncate">@{m.instagramAccount.username}</p>
-                    <p className="text-[10px] text-emerald-600 font-medium">
-                      {m.status === 'HOT_VIDEO' ? '🔥 video panas' : m.status === 'STILL_GROWING' ? '📈 masih tumbuh' : '👁 monitoring'}
-                    </p>
-                  </div>
-                </Link>
-              ))}
-              {ready.slice(0, 4).map(m => (
-                <Link
-                  key={m.instagramAccount.id}
-                  href={`/accounts/${m.instagramAccount.id}`}
-                  className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
-                >
-                  <span className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-[10px] font-bold text-amber-700 shrink-0">
-                    {m.instagramAccount.username.charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-stone-800 truncate">@{m.instagramAccount.username}</p>
-                    <p className="text-[10px] text-amber-600 font-medium">siap posting — konten?</p>
-                  </div>
-                </Link>
-              ))}
-              {ready.length > 4 && (
-                <p className="text-[11px] text-stone-400 pt-1">+{ready.length - 4} akun lain siap posting</p>
-              )}
+              {d.runningTests.map(t => {
+                const leader = t.variants.find(v => v.status === 'winner') ?? t.variants[0]
+                return (
+                  <Link
+                    key={t.id}
+                    href="/ads?tab=testing"
+                    className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
+                  >
+                    <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-100 to-pink-100 flex items-center justify-center text-[10px] font-bold text-violet-700 shrink-0">
+                      {t.type.charAt(0)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-stone-800 truncate">{t.name}</p>
+                      <p className="text-[10px] text-stone-500">{t.type} · {t.variants.length} varian</p>
+                    </div>
+                    {leader && (
+                      <span className="text-[11px] font-semibold text-emerald-600 shrink-0">
+                        {leader.label}: {leader.roas ? leader.roas.toFixed(1) + 'x' : '—'}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Winner Terbaru */}
+        <div className="card p-5 lg:col-span-2">
+          <div className="flex items-baseline justify-between mb-3.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">🏆 Winner Terbaru</p>
+            <Link href="/ads?tab=testing" className="text-[11px] font-semibold text-violet-600 hover:underline">
+              semua →
+            </Link>
+          </div>
+          {d.winnerTests.length === 0 ? (
+            <p className="text-sm text-stone-400 py-6 text-center">Belum ada winner.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {d.winnerTests.map(t => {
+                const w = t.variants.find(v => v.id === t.winnerVariantId)
+                return (
+                  <Link
+                    key={t.id}
+                    href="/ads?tab=testing"
+                    className="flex items-center gap-2.5 py-1.5 px-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors"
+                  >
+                    <span className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] font-bold text-emerald-700 shrink-0">
+                      {t.type.charAt(0)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-stone-800 truncate">{t.name}</p>
+                      <p className="text-[10px] text-stone-500">{t.type} · {w ? `Pemenang: ${w.label} (${w.roas ? w.roas.toFixed(1) + 'x' : '—'})` : ''}</p>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
