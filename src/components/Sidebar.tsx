@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
 import NotificationBell from './NotificationBell'
 import { LogoMark } from '@/components/Logo'
 
@@ -39,7 +39,7 @@ const librarySubLinks = [
   { label: 'Topics', href: '/topics' },
 ]
 
-export default function Sidebar({ user, onLogout }: { user?: User | null; onLogout?: () => void }) {
+function SidebarBody({ user, onLogout, activeTab }: { user?: User | null; onLogout?: () => void; activeTab: string | null }) {
   const pathname = usePathname()
   const isAdmin = user?.role === 'admin'
   const initials = (user?.name ?? user?.email ?? '?').charAt(0).toUpperCase()
@@ -77,7 +77,14 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
 
   function isActive(href: string) {
     if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(href + '/') || pathname.startsWith(href + '?')
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  // Testing Lab and Campaigns share /ads — disambiguate by ?tab
+  function pillarActive(href: string) {
+    if (href === '/ads?tab=testing') return pathname === '/ads' && activeTab === 'testing'
+    if (href === '/ads') return pathname === '/ads' && activeTab !== 'testing'
+    return isActive(href)
   }
 
   const visiblePillars = pillars
@@ -110,7 +117,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
 
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {visiblePillars.map(p => {
-            const active = isActive(p.href)
+            const active = pillarActive(p.href)
             const badge = p.label === 'Campaigns' ? badges.ads : p.label === 'Approvals' ? badges.approvals : 0
             const cls = `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-700 font-semibold' : 'text-stone-600 hover:bg-stone-50'}`
             return (
@@ -164,7 +171,7 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-stone-200 safe-pb">
         <div className="grid grid-cols-5">
           {visiblePillars.slice(0, 5).map((p) => {
-            const active = isActive(p.href)
+            const active = pillarActive(p.href)
             const cls = `flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? 'text-violet-700 font-semibold' : 'text-stone-500'}`
             return (
               <Link key={p.href} href={p.href} className={cls}>
@@ -176,5 +183,21 @@ export default function Sidebar({ user, onLogout }: { user?: User | null; onLogo
         </div>
       </nav>
     </>
+  )
+}
+
+// useSearchParams must live inside a Suspense boundary, else it forces every
+// page in this layout to bail out of prerendering. Fallback renders the full
+// sidebar (activeTab=null) so there is no flash.
+function SidebarWithTab(props: { user?: User | null; onLogout?: () => void }) {
+  const activeTab = useSearchParams().get('tab')
+  return <SidebarBody {...props} activeTab={activeTab} />
+}
+
+export default function Sidebar(props: { user?: User | null; onLogout?: () => void }) {
+  return (
+    <Suspense fallback={<SidebarBody {...props} activeTab={null} />}>
+      <SidebarWithTab {...props} />
+    </Suspense>
   )
 }

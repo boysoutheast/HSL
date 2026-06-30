@@ -175,6 +175,13 @@ async function run() {
         console.log(`[scan-campaigns] temporal session=${session.id} age=${temporal.adset_age_days}d daysWithData=${temporal.days_with_data} roasMin7d=${temporal.roas_min_7d} freqMax7d=${temporal.frequency_max_7d}`)
       }
 
+      // Preload AdTest statuses for this session so TEST_OUTCOME conditions resolve
+      const sessionAdTests = await prisma.adTest.findMany({
+        where: { campaignSessionId: session.id },
+        select: { id: true, status: true },
+      })
+      const adTestStatusMap = new Map(sessionAdTests.map((t) => [t.id, t.status]))
+
       // Evaluate each rule
       for (const rule of session.automationRules) {
         // Cooldown check
@@ -191,7 +198,9 @@ async function run() {
         try { conditionTree = parseConditionTree(rule.conditionTreeJson) } catch { continue }
 
         // Evaluate
-        const evalResult = evaluateRule(conditionTree, metricsMap)
+        const evalResult = evaluateRule(conditionTree, metricsMap, {
+          getAdTestStatus: (id) => adTestStatusMap.get(id),
+        })
 
         // Record execution
         const dedupKey = `scan_${session.id}_${rule.id}_${now.toISOString().slice(0, 16)}`

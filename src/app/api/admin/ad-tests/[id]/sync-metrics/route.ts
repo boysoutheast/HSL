@@ -32,9 +32,21 @@ export async function POST(
       continue
     }
 
+    // Resolve internal MetaEntity (snapshot.metaEntityId is the internal cuid,
+    // NOT the Meta ad id — so we must look the entity up first).
+    const entity = await prisma.metaEntity.findFirst({
+      where: { entityType: 'AD', metaEntityId: variant.metaAdId },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    if (!entity) {
+      syncedVariants.push({ id: variant.id, label: variant.label, synced: false, reason: 'meta entity not synced yet' })
+      continue
+    }
+
     // Get latest MetricSnapshot for this meta ad
     const snapshot = await prisma.metricSnapshot.findFirst({
-      where: { metaEntityId: variant.metaAdId },
+      where: { metaEntityId: entity.id },
       orderBy: { windowEnd: 'desc' },
     })
 
@@ -51,7 +63,7 @@ export async function POST(
       leads: snapshot.leads ?? 0,
       purchases: snapshot.purchases ?? 0,
       revenue: snapshot.purchaseValue ?? 0,
-      landingPageViews: 0, // MetricSnapshot may not have this field yet
+      landingPageViews: snapshot.landingPageViews ?? 0,
     }
 
     const derived = deriveMetrics(counters)

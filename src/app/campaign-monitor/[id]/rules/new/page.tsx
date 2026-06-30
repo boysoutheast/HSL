@@ -26,7 +26,9 @@ interface Condition {
 
 interface ConditionTree {
   operator?: string
+  op?: string
   conditions?: (Condition | ConditionTree)[]
+  children?: (Condition | ConditionTree)[]
 }
 
 interface ActionSpec {
@@ -41,15 +43,21 @@ interface ActionSpec {
 function getEditableConditions(json: string): { key: string; label: string; defaultValue: number }[] {
   try {
     const tree: ConditionTree = JSON.parse(json)
-    if (!tree.conditions) return []
+    // Support both rule-engine ('children') and legacy ('conditions') shapes
+    const nodes = (tree.children ?? tree.conditions) as Condition[] | undefined
+    if (!nodes) return []
     const result: { key: string; label: string; defaultValue: number }[] = []
-    for (const c of tree.conditions) {
+    const labels: Record<string, string> = {
+      roas: 'ROAS', spend: 'Spend (Rp)', purchases: 'Pembelian',
+      cpc: 'CPC (Rp)', ctr: 'CTR (%)', impressions: 'Impressions',
+      frequency: 'Frequency', leads: 'Leads', cpm: 'CPM (Rp)', cplc: 'CPLC (Rp)',
+      adset_age_days: 'Umur adset (hari)', roas_min_7d: 'ROAS min 7h',
+      cpa_change_pct_3d: 'CPA Δ% 3h', frequency_max_7d: 'Frequency max 7h',
+    }
+    for (const c of nodes) {
       const cond = c as Condition
-      if (cond.metric && typeof cond.value === 'number' && cond.type === 'number') {
-        const labels: Record<string, string> = {
-          roas: 'ROAS', spend: 'Spend (Rp)', purchases: 'Pembelian',
-          cpc: 'CPC (Rp)', ctr: 'CTR (%)', impressions: 'Impressions',
-        }
+      // rule-engine leaves don't carry `type`; accept any numeric leaf with a metric
+      if (cond.metric && typeof cond.value === 'number') {
         result.push({
           key: cond.metric,
           label: labels[cond.metric] ?? cond.metric,
@@ -66,14 +74,20 @@ function getEditableConditions(json: string): { key: string; label: string; defa
  */
 function getEditableActionParams(json: string): { key: string; label: string; defaultValue: number }[] {
   try {
-    const spec: ActionSpec = JSON.parse(json)
-    if (!spec.params) return []
+    const spec = JSON.parse(json) as ActionSpec & { mode?: string; amount?: number }
     const result: { key: string; label: string; defaultValue: number }[] = []
-    if (typeof spec.params.percentage === 'number') {
-      result.push({ key: 'percentage', label: 'Persentase (%)', defaultValue: spec.params.percentage })
+    // Legacy format: params.percentage / params.fixedAmount
+    if (spec.params) {
+      if (typeof spec.params.percentage === 'number') {
+        result.push({ key: 'percentage', label: 'Persentase (%)', defaultValue: spec.params.percentage })
+      }
+      if (typeof spec.params.fixedAmount === 'number') {
+        result.push({ key: 'fixedAmount', label: 'Jumlah (Rp)', defaultValue: spec.params.fixedAmount })
+      }
     }
-    if (typeof spec.params.fixedAmount === 'number') {
-      result.push({ key: 'fixedAmount', label: 'Jumlah (Rp)', defaultValue: spec.params.fixedAmount })
+    // rule-engine format: { mode: 'increase_pct'|'decrease_pct', amount } — server maps params.percentage → amount
+    if (result.length === 0 && (spec.mode === 'increase_pct' || spec.mode === 'decrease_pct') && typeof spec.amount === 'number') {
+      result.push({ key: 'percentage', label: `Budget ${spec.mode === 'increase_pct' ? '+' : '-'}%`, defaultValue: spec.amount })
     }
     return result
   } catch { return [] }

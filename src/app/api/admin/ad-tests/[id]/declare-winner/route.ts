@@ -67,13 +67,14 @@ export async function POST(
   // 3. If winner has cepId → append to Cep.notes
   const winnerVariant = test.variants.find((v) => v.id === body.variantId)
   if (winnerVariant?.cepId) {
+    const existing = await prisma.cep.findUnique({
+      where: { id: winnerVariant.cepId },
+      select: { notes: true },
+    })
+    const tag = `[Test Winner: ${test.name}] ${winnerVariant.name}`
     await prisma.cep.update({
       where: { id: winnerVariant.cepId },
-      data: {
-        notes: {
-          set: `[Test Winner: ${test.name}] ${winnerVariant.name}`,
-        },
-      },
+      data: { notes: existing?.notes ? `${existing.notes}\n${tag}` : tag },
     })
   }
 
@@ -101,43 +102,53 @@ export async function POST(
       idempotencyKey: string
     }> = []
 
-    // Scale winner budget up 30%
+    // NOTE: budget lives at adset/campaign level (not ad), and there is no
+    // PAUSE_AD action type — so we surface recommendations to the decision
+    // queue (NOTIFY) for human approval rather than emitting actions the
+    // executor would mis-target. Deterministic idempotencyKey prevents dupes
+    // on re-declare/retry (guarded by @@unique([idempotencyKey])).
+
+    // Recommend scaling the winner
     if (winnerVariant.metaAdId) {
       actions.push({
         userId: test.userId,
         campaignSessionId: test.campaignSessionId ?? 'unknown',
         source: 'SYSTEM',
-        actionType: 'UPDATE_BUDGET',
+        actionType: 'NOTIFY',
         targetEntityType: 'AD',
         targetMetaEntityId: winnerVariant.metaAdId,
         payloadJson: JSON.stringify({
+          recommendation: 'SCALE_WINNER',
           budgetIncreasePct: 30,
+          metaAdId: winnerVariant.metaAdId,
           reason: `Test winner: ${test.name} (${winnerVariant.label}:${winnerVariant.name})`,
         }),
         status: 'PENDING',
         priority: 50,
         requestedAt: new Date(),
-        idempotencyKey: `test_win_${test.id}_${winnerVariant.id}_${Date.now()}`,
+        idempotencyKey: `test_win_${test.id}_${winnerVariant.id}`,
       })
     }
 
-    // Pause killed variants
+    // Recommend pausing killed variants
     for (const v of test.variants) {
       if (v.id !== body.variantId && v.metaAdId) {
         actions.push({
           userId: test.userId,
           campaignSessionId: test.campaignSessionId ?? 'unknown',
           source: 'SYSTEM',
-          actionType: 'PAUSE_ADSET',
+          actionType: 'NOTIFY',
           targetEntityType: 'AD',
           targetMetaEntityId: v.metaAdId,
           payloadJson: JSON.stringify({
+            recommendation: 'PAUSE_LOSER',
+            metaAdId: v.metaAdId,
             reason: `Killed by test: ${test.name} (winner: ${winnerVariant.label})`,
           }),
           status: 'PENDING',
           priority: 50,
           requestedAt: new Date(),
-          idempotencyKey: `test_kill_${test.id}_${v.id}_${Date.now()}`,
+          idempotencyKey: `test_kill_${test.id}_${v.id}`,
         })
       }
     }

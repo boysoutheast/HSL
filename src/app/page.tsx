@@ -9,6 +9,46 @@ function fmtIdr(n: number): string {
   return `Rp${Math.round(n)}`
 }
 
+// ─── Ad-test leader by success metric ───
+const HIB_METRICS = new Set(['ROAS', 'CTR', 'CVR'])
+interface TestVariantMetrics {
+  roas: number | null; ctr: number | null; cpc: number | null; cpl: number | null
+  cplc: number | null; cpm: number | null; convRate: number | null; costPerLpv: number | null
+  spend: number; purchases: number
+}
+function testMetricValue(v: TestVariantMetrics, m: string): number | null {
+  switch (m) {
+    case 'ROAS': return v.roas
+    case 'CTR': return v.ctr
+    case 'CVR': return v.convRate
+    case 'CPC': return v.cpc
+    case 'CPL': return v.cpl
+    case 'CPLC': return v.cplc
+    case 'CPM': return v.cpm
+    case 'COST_PER_LPV': return v.costPerLpv
+    case 'CPA': return v.spend > 0 && v.purchases > 0 ? v.spend / v.purchases : null
+    default: return v.roas
+  }
+}
+function fmtTestMetric(val: number | null, m: string): string {
+  if (val === null) return '—'
+  if (m === 'ROAS') return val.toFixed(1) + 'x'
+  if (m === 'CTR' || m === 'CVR') return val.toFixed(1) + '%'
+  return fmtIdr(val)
+}
+function pickTestLeader<T extends TestVariantMetrics & { status: string }>(variants: T[], m: string): T | undefined {
+  const declared = variants.find(v => v.status === 'winner')
+  if (declared) return declared
+  const ranked = variants
+    .filter(v => testMetricValue(v, m) !== null)
+    .sort((a, b) => {
+      const av = testMetricValue(a, m) as number
+      const bv = testMetricValue(b, m) as number
+      return HIB_METRICS.has(m) ? bv - av : av - bv
+    })
+  return ranked[0] ?? variants[0]
+}
+
 async function getDashboardData() {
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
@@ -51,7 +91,8 @@ async function getDashboardData() {
             id: true, name: true, type: true, successMetric: true, createdAt: true,
             variants: {
               select: { id: true, label: true, name: true, status: true, roas: true,
-                        spend: true, purchases: true },
+                        spend: true, purchases: true, ctr: true, cpc: true, cpl: true,
+                        cplc: true, cpm: true, convRate: true, costPerLpv: true },
             },
           },
         }),
@@ -63,7 +104,9 @@ async function getDashboardData() {
             id: true, name: true, type: true, successMetric: true, endedAt: true,
             winnerVariantId: true,
             variants: {
-              select: { id: true, label: true, name: true, status: true, roas: true },
+              select: { id: true, label: true, name: true, status: true, roas: true,
+                        spend: true, purchases: true, ctr: true, cpc: true, cpl: true,
+                        cplc: true, cpm: true, convRate: true, costPerLpv: true },
             },
           },
         }),
@@ -335,7 +378,8 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-1.5">
               {d.runningTests.map(t => {
-                const leader = t.variants.find(v => v.status === 'winner') ?? t.variants[0]
+                const leader = pickTestLeader(t.variants, t.successMetric)
+                const leaderVal = leader ? testMetricValue(leader, t.successMetric) : null
                 return (
                   <Link
                     key={t.id}
@@ -351,7 +395,8 @@ export default async function DashboardPage() {
                     </div>
                     {leader && (
                       <span className="text-[11px] font-semibold text-emerald-600 shrink-0">
-                        {leader.label}: {leader.roas ? leader.roas.toFixed(1) + 'x' : '—'}
+                        {leader.label}: {fmtTestMetric(leaderVal, t.successMetric)}
+                        <span className="ml-1 text-[9px] font-medium text-stone-400">{t.successMetric}</span>
                       </span>
                     )}
                   </Link>
@@ -386,7 +431,7 @@ export default async function DashboardPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-stone-800 truncate">{t.name}</p>
-                      <p className="text-[10px] text-stone-500">{t.type} · {w ? `Pemenang: ${w.label} (${w.roas ? w.roas.toFixed(1) + 'x' : '—'})` : ''}</p>
+                      <p className="text-[10px] text-stone-500">{t.type} · {w ? `Pemenang: ${w.label} (${fmtTestMetric(testMetricValue(w, t.successMetric), t.successMetric)})` : ''}</p>
                     </div>
                   </Link>
                 )

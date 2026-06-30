@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const tests = await prisma.adTest.findMany({
     where: {
-      ...ownerFilter(auth),
+      ...ownerFilter(auth, 'userId'),
       ...(status ? { status } : {}),
       ...(type ? { type } : {}),
       ...(campaignSessionId ? { campaignSessionId } : {}),
@@ -77,6 +77,12 @@ export async function POST(req: NextRequest) {
   if (!body.variants || body.variants.length < 2) {
     return NextResponse.json(
       { error: 'At least 2 variants are required' },
+      { status: 400 },
+    )
+  }
+  if (body.variants.length > 4) {
+    return NextResponse.json(
+      { error: 'Maximum 4 variants allowed' },
       { status: 400 },
     )
   }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
 import EmptyState from '@/components/ui/EmptyState'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 /* ─── Types ─── */
 interface Variant {
@@ -190,6 +190,8 @@ export default function TestingPage() {
   const [showDrawer, setShowDrawer] = useState(false)
   const [showWinner, setShowWinner] = useState<AdTest | null>(null)
   const [collapsedCompleted, setCollapsedCompleted] = useState(true)
+  const [archiveTarget, setArchiveTarget] = useState<AdTest | null>(null)
+  const [archiving, setArchiving] = useState(false)
 
   const loadTests = useCallback(async () => {
     try {
@@ -230,13 +232,18 @@ export default function TestingPage() {
     } catch { /* silent */ }
   }
 
-  const archiveTest = async (testId: string) => {
+  const archiveTest = async () => {
+    if (!archiveTarget) return
+    setArchiving(true)
     try {
-      const res = await fetch(`/api/admin/ad-tests/${testId}`, {
+      const res = await fetch(`/api/admin/ad-tests/${archiveTarget.id}`, {
         method: 'DELETE', credentials: 'include',
       })
       if (res.ok) await loadTests()
-    } catch { /* silent */ }
+    } catch { /* silent */ } finally {
+      setArchiving(false)
+      setArchiveTarget(null)
+    }
   }
 
   const updateSuccessMetric = async (testId: string, successMetric: string) => {
@@ -293,7 +300,7 @@ export default function TestingPage() {
         {running.map(test => <TestCard key={test.id} test={test}
           onSync={() => syncMetrics(test.id)}
           onDeclare={() => setShowWinner(test)}
-          onArchive={() => archiveTest(test.id)}
+          onArchive={() => setArchiveTarget(test)}
           onMetricChange={(m) => updateSuccessMetric(test.id, m)}
         />)}
       </div>
@@ -314,7 +321,7 @@ export default function TestingPage() {
               {completed.map(test => <TestCard key={test.id} test={test}
                 onSync={() => syncMetrics(test.id)}
                 onDeclare={() => {}}
-                onArchive={() => archiveTest(test.id)}
+                onArchive={() => setArchiveTarget(test)}
                 onMetricChange={(m) => updateSuccessMetric(test.id, m)}
               />)}
             </div>
@@ -325,6 +332,16 @@ export default function TestingPage() {
       {/* Drawers */}
       {showDrawer && <NewTestDrawer onClose={() => setShowDrawer(false)} onCreated={loadTests} />}
       {showWinner && <WinnerModal test={showWinner} onClose={() => setShowWinner(null)} onConfirm={declareWinner} />}
+      <ConfirmDialog
+        open={archiveTarget !== null}
+        title="Arsipkan Test"
+        body={<p>Arsipkan test <strong>{archiveTarget?.name}</strong>? Test bisa dilihat lagi di bagian Selesai, tapi tidak aktif.</p>}
+        confirmLabel="Arsipkan"
+        danger
+        loading={archiving}
+        onConfirm={archiveTest}
+        onCancel={() => setArchiveTarget(null)}
+      />
     </div>
   )
 }
@@ -463,6 +480,62 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
   ])
   const [submitting, setSubmitting] = useState(false)
 
+  // ─── Pickers: load real options instead of pasting raw IDs ───
+  const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
+  const [options, setOptions] = useState<Array<{ id: string; label: string }>>([])
+  const [loadingOpts, setLoadingOpts] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/products', { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : { products: [] }))
+      .then(d => setProducts(d.products ?? []))
+      .catch(() => {})
+  }, [])
+
+  const isCreative = form.type === 'CREATIVE' || form.type === 'COMBINED'
+  const needsProduct = !isCreative // CEP/LP/PRICE difilter per produk
+
+  useEffect(() => {
+    type Src = { id: string; prompt?: string; cepText?: string; label?: string; url?: string; variant?: string; price?: number | string }
+    let url: string | null = null
+    if (isCreative) url = '/api/gen/media?limit=100'
+    else if (form.type === 'CEP') url = form.productId ? `/api/admin/ceps?productId=${form.productId}` : null
+    else if (form.type === 'LP') url = form.productId ? `/api/admin/products/${form.productId}/landing-pages` : null
+    else if (form.type === 'PRICE') url = form.productId ? `/api/admin/products/${form.productId}/offer-variants` : null
+    if (!url) { setOptions([]); return }
+    setLoadingOpts(true)
+    fetch(url, { credentials: 'include' })
+      .then(r => (r.ok ? r.json() : {}))
+      .then((d: { media?: Src[]; ceps?: Src[]; landingPages?: Src[]; offers?: Src[] }) => {
+        let opts: Array<{ id: string; label: string }> = []
+        if (isCreative) opts = ((d.media ?? []) as Src[]).map(m => ({ id: m.id, label: m.prompt ? String(m.prompt).slice(0, 60) : m.id }))
+        else if (form.type === 'CEP') opts = ((d.ceps ?? []) as Src[]).map(c => ({ id: c.id, label: c.cepText ? String(c.cepText).slice(0, 60) : c.id }))
+        else if (form.type === 'LP') opts = ((d.landingPages ?? []) as Src[]).map(l => ({ id: l.id, label: `${l.variant ?? ''} ${l.label ?? l.url ?? ''}`.trim() || l.id }))
+        else if (form.type === 'PRICE') opts = ((d.offers ?? []) as Src[]).map(o => ({ id: o.id, label: `${o.label ?? ''}${o.price != null ? ` · Rp${Number(o.price).toLocaleString('id-ID')}` : ''}`.trim() || o.id }))
+        setOptions(opts)
+      })
+      .catch(() => setOptions([]))
+      .finally(() => setLoadingOpts(false))
+  }, [form.type, form.productId, isCreative])
+
+  const refValue = (v: typeof variants[number]): string =>
+    form.type === 'CEP' ? (v.cepId ?? '')
+      : form.type === 'LP' ? (v.landingPageId ?? '')
+      : form.type === 'PRICE' ? (v.offerVariantId ?? '')
+      : (v.generatedMediaId ?? '')
+
+  const setRefValue = (idx: number, id: string) => {
+    const val = id || undefined
+    const next = [...variants]
+    if (form.type === 'CEP') next[idx] = { ...next[idx], cepId: val }
+    else if (form.type === 'LP') next[idx] = { ...next[idx], landingPageId: val }
+    else if (form.type === 'PRICE') next[idx] = { ...next[idx], offerVariantId: val }
+    else next[idx] = { ...next[idx], generatedMediaId: val }
+    setVariants(next)
+  }
+
+  const refLabel = form.type === 'CEP' ? 'CEP' : form.type === 'LP' ? 'Landing Page' : form.type === 'PRICE' ? 'Harga/Offer' : 'Creative (dari Studio)'
+
   const addVariant = () => {
     const next = String.fromCharCode(65 + variants.length) // C, D, etc.
     if (variants.length >= 4) return
@@ -519,11 +592,12 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
         <div className="p-5 space-y-5">
           {/* Steps indicator */}
           <div className="flex items-center gap-2 text-xs font-medium text-stone-400">
-            <span className={step >= 0 ? 'text-violet-700' : ''}>Setup</span>
-            <span>→</span>
-            <span className={step >= 1 ? 'text-violet-700' : ''}>Varian ({variants.length})</span>
-            <span>→</span>
-            <span className={step >= 2 ? 'text-violet-700' : ''}>Confirm</span>
+            {(['Setup', `Varian (${variants.length})`, 'Confirm'] as const).map((lbl, n) => (
+              <span key={n} className="flex items-center gap-2">
+                {n > 0 && <span className="text-stone-300">→</span>}
+                <span className={step === n ? 'text-violet-700 font-semibold' : step > n ? 'text-emerald-600' : ''}>{lbl}</span>
+              </span>
+            ))}
           </div>
 
           {step === 0 && (
@@ -554,6 +628,19 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                     <option value="ATC">Add to Cart</option>
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-600 mb-1">
+                  Produk {needsProduct && <span className="text-amber-600">*</span>}
+                </label>
+                <select value={form.productId} onChange={e => setForm({ ...form, productId: e.target.value })}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                  <option value="">{needsProduct ? 'Pilih produk…' : 'Semua / tanpa produk'}</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {needsProduct && !form.productId && (
+                  <p className="text-[10px] text-amber-600 mt-1">Tipe {form.type} butuh produk untuk memuat pilihan varian.</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-1">Metrik Kemenangan</label>
@@ -590,29 +677,18 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                   <input value={v.name} onChange={e => {
                     const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next)
                   }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder={`Varian ${v.label} — nama`} />
-                  {form.type === 'CREATIVE' && (
-                    <input value={v.generatedMediaId ?? ''} onChange={e => {
-                      const next = [...variants]; next[i] = { ...next[i], generatedMediaId: e.target.value || undefined }; setVariants(next)
-                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="GeneratedMedia ID (dari Studio)" />
-                  )}
-                  {form.type === 'CEP' && (
-                    <input value={v.cepId ?? ''} onChange={e => {
-                      const next = [...variants]; next[i] = { ...next[i], cepId: e.target.value || undefined }; setVariants(next)
-                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="CEP ID" />
-                  )}
-                  {form.type === 'LP' && (
-                    <input value={v.landingPageId ?? ''} onChange={e => {
-                      const next = [...variants]; next[i] = { ...next[i], landingPageId: e.target.value || undefined }; setVariants(next)
-                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="LandingPage ID" />
-                  )}
-                  {form.type === 'PRICE' && (
-                    <input value={v.offerVariantId ?? ''} onChange={e => {
-                      const next = [...variants]; next[i] = { ...next[i], offerVariantId: e.target.value || undefined }; setVariants(next)
-                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="OfferVariant ID" />
+                  {needsProduct && !form.productId ? (
+                    <p className="text-[11px] text-stone-400 italic">Pilih produk di step Setup untuk memuat {refLabel}.</p>
+                  ) : (
+                    <select value={refValue(v)} onChange={e => setRefValue(i, e.target.value)}
+                      className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm bg-white">
+                      <option value="">{loadingOpts ? 'Memuat…' : options.length === 0 ? `Belum ada ${refLabel}` : `Pilih ${refLabel}…`}</option>
+                      {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
                   )}
                   <input value={v.metaAdId ?? ''} onChange={e => {
                     const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
-                  }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID (opsional)" />
+                  }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID — untuk sync metrics (opsional)" />
                 </div>
               ))}
               {variants.length < 4 && (

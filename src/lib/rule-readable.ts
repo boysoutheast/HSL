@@ -62,6 +62,12 @@ const METRIC_LABELS: Record<string, string> = {
   cost_per_purchase: 'Cost/Purchase',
   age_hours: 'Age (hours)',
   age_days: 'Age (days)',
+  cpa: 'CPA',
+  roas_min_7d: 'ROAS min 7h',
+  frequency_max_7d: 'Frequency max 7h',
+  cpa_change_pct_3d: 'CPA Δ% 3h',
+  adset_age_days: 'Umur adset (hari)',
+  days_with_data: 'Hari berdata',
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -81,6 +87,13 @@ const OPERATOR_LABELS: Record<string, string> = {
   '<=': '≤',
   '==': '=',
   '!=': '≠',
+  // rule-engine word operators
+  gt: '>',
+  lt: '<',
+  gte: '≥',
+  lte: '≤',
+  eq: '=',
+  ne: '≠',
 }
 
 function formatMetricValue(metric: string, value: number | string): string {

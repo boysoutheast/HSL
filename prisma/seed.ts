@@ -143,6 +143,7 @@ const BUILTIN_TEMPLATES: TemplateDef[] = [
     scope: 'ADSET',
     ruleCategory: 'THRESHOLD',
     conditionTreeJson: JSON.stringify({
+      op: 'AND',
       children: [
         { metric: 'frequency', operator: 'gt', value: 3.5 },
       ],
