@@ -52,7 +52,7 @@ Spine produk: **Library → Studio → Testing Lab → Rules → Dashboard.**
 | 5 | Creative tester + Studio gen→asset autolink | DONE | 614f621 | webhook autolink + create-creative route + creative text input in drawer |
 | 6 | CEP tester + Price tester (OfferVariant) | DONE | f3c7000 | OfferVariant CRUD APIs + CEP/LP/PRICE inputs in drawer |
 | 7 | Ruling loop (TEST_OUTCOME signal → auto-scale winner) | DONE | 0974eb2 | TEST_OUTCOME condition + AutomationAction on declare-winner |
-| 8 | Dashboard surfacing + onboarding + zero-worker verify | TODO | — | |
+| 8 | Dashboard surfacing + onboarding + zero-worker verify | DONE | 2288ede | tes berjalan + winner widgets + onboarding item + zero-worker grep pass |
 | 9 | Scale templates (seed 5) + template picker UI (lengkapi Fase 6) | TODO | — | |
 | 10 | Phase affordance (transisi + suggest) + Import UX (create-menu, importStatus) | TODO | — | |
 
