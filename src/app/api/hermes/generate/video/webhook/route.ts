@@ -105,6 +105,37 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // Autolink: create MediaAsset from completed GeneratedMedia (idempotent)
+    const full = await prisma.generatedMedia.findUnique({
+      where: { id: media.id },
+      select: { id: true, userId: true, videoUrl: true, thumbnailUrl: true,
+                prompt: true, mediaType: true, mediaHash: true,
+                mediaAssetId: true },
+    })
+    if (full && full.videoUrl && !full.mediaAssetId) {
+      const asset = await prisma.mediaAsset.create({
+        data: {
+          userId: full.userId ?? '',
+          type: full.mediaType === 'IMAGE' ? 'IMAGE' as const : 'VIDEO' as const,
+          source: 'AI_GENERATED' as const,
+          storageProvider: 'external',
+          storagePath: full.videoUrl,
+          publicUrl: full.videoUrl,
+          fileUrl: full.videoUrl,
+          thumbnailUrl: full.thumbnailUrl ?? null,
+          mimeType: full.mediaType === 'IMAGE' ? 'image/png' : 'video/mp4',
+          fileSizeBytes: 0,
+          checksum: full.mediaHash ?? '',
+          status: 'READY' as const,
+          generationPrompt: full.prompt ?? null,
+        },
+      })
+      await prisma.generatedMedia.update({
+        where: { id: media.id },
+        data: { mediaAssetId: asset.id },
+      })
+    }
+
     return NextResponse.json({ ok: true, id: media.id, status: 'completed' })
   }
 

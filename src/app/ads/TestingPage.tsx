@@ -590,6 +590,11 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                   <input value={v.name} onChange={e => {
                     const next = [...variants]; next[i] = { ...next[i], name: e.target.value }; setVariants(next)
                   }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder={`Varian ${v.label} — nama`} />
+                  {form.type === 'CREATIVE' && (
+                    <input value={v.generatedMediaId ?? ''} onChange={e => {
+                      const next = [...variants]; next[i] = { ...next[i], generatedMediaId: e.target.value || undefined }; setVariants(next)
+                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="GeneratedMedia ID (dari Studio)" />
+                  )}
                   <input value={v.metaAdId ?? ''} onChange={e => {
                     const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
                   }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID (opsional)" />
