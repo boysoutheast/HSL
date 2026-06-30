@@ -775,6 +775,9 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                   {!form.campaignSessionId && (
                     <p className="text-[10px] text-stone-400 italic mt-1">Pilih campaign di Setup untuk ambil ad otomatis.</p>
                   )}
+                  {form.campaignSessionId && campaignAds.length === 0 && (
+                    <p className="text-[10px] text-amber-600 italic mt-1">Campaign ini belum punya ad tersinkron — input manual dulu atau tunggu sync campaign.</p>
+                  )}
                 </div>
               ))}
               {variants.length < 4 && (
