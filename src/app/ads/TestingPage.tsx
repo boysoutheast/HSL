@@ -595,6 +595,21 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
                       const next = [...variants]; next[i] = { ...next[i], generatedMediaId: e.target.value || undefined }; setVariants(next)
                     }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="GeneratedMedia ID (dari Studio)" />
                   )}
+                  {form.type === 'CEP' && (
+                    <input value={v.cepId ?? ''} onChange={e => {
+                      const next = [...variants]; next[i] = { ...next[i], cepId: e.target.value || undefined }; setVariants(next)
+                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="CEP ID" />
+                  )}
+                  {form.type === 'LP' && (
+                    <input value={v.landingPageId ?? ''} onChange={e => {
+                      const next = [...variants]; next[i] = { ...next[i], landingPageId: e.target.value || undefined }; setVariants(next)
+                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="LandingPage ID" />
+                  )}
+                  {form.type === 'PRICE' && (
+                    <input value={v.offerVariantId ?? ''} onChange={e => {
+                      const next = [...variants]; next[i] = { ...next[i], offerVariantId: e.target.value || undefined }; setVariants(next)
+                    }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="OfferVariant ID" />
+                  )}
                   <input value={v.metaAdId ?? ''} onChange={e => {
                     const next = [...variants]; next[i] = { ...next[i], metaAdId: e.target.value || undefined }; setVariants(next)
                   }} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm" placeholder="Meta Ad ID (opsional)" />
