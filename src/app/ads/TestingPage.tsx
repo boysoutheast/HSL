@@ -387,15 +387,20 @@ function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange }: {
         {test.variants.map(v => {
           const metricVal = getMetricValue(v, sm)
           // Find leader
-          const values = test.variants.map(x => getMetricValue(x, sm)).filter(x => x !== null) as number[]
+          const values = test.variants.map(x => getMetricValue(x, sm)).filter(x => x !== null && x > 0) as number[]
           const best = values.length > 0
             ? (HIB.has(sm) ? Math.max(...values) : Math.min(...values))
             : null
           const isLeader = metricVal !== null && best !== null && metricVal === best && values.length > 0
-          const maxVal = values.length > 0 ? (HIB.has(sm) ? Math.max(...values) : Math.max(...values.map(x => Math.abs(x)))) : 1
-          const pct = metricVal !== null && maxVal > 0
-            ? Math.min(100, Math.abs(metricVal) / maxVal * 100)
-            : 0
+          // Progress bar: HIB — pct = val / max, LIB — pct = min / val. Clamp [3, 100].
+          // Hasil: pemenang selalu bar terpanjang (~100%), apapun metriknya.
+          let pct = 0
+          if (values.length > 0 && metricVal !== null && metricVal > 0) {
+            pct = HIB.has(sm)
+              ? (metricVal / Math.max(...values)) * 100
+              : (Math.min(...values) / metricVal) * 100
+            pct = Math.max(3, Math.min(100, pct))
+          }
 
           return (
             <div key={v.id} className={`p-4 border-r border-stone-100 last:border-r-0 ${v.status === 'winner' ? 'bg-green-50/50' : v.status === 'killed' ? 'bg-red-50/30' : ''}`}>
