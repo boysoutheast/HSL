@@ -191,7 +191,13 @@ export default function TestingPage() {
   const [showWinner, setShowWinner] = useState<AdTest | null>(null)
   const [collapsedCompleted, setCollapsedCompleted] = useState(true)
   const [archiveTarget, setArchiveTarget] = useState<AdTest | null>(null)
-  const [archiving, setArchiving] = useState(false)
+  const [actionLoading, setActionLoading] = useState<Map<string, string>>(new Map())
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const setAction = (testId: string, action: string) =>
+    setActionLoading(prev => { const m = new Map(prev); m.set(testId, action); return m })
+  const clearAction = (testId: string) =>
+    setActionLoading(prev => { const m = new Map(prev); m.delete(testId); return m })
 
   const loadTests = useCallback(async () => {
     try {
@@ -209,15 +215,26 @@ export default function TestingPage() {
   useEffect(() => { loadTests() }, [loadTests])
 
   const syncMetrics = async (testId: string) => {
+    setActionError(null)
+    setAction(testId, 'sync')
     try {
       const res = await fetch(`/api/admin/ad-tests/${testId}/sync-metrics`, {
         method: 'POST', credentials: 'include',
       })
-      if (res.ok) await loadTests()
-    } catch { /* silent */ }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setActionError(`Sync gagal: ${data.error ?? res.status}`)
+      } else {
+        await loadTests()
+      }
+    } catch { setActionError('Sync gagal — koneksi error') } finally {
+      clearAction(testId)
+    }
   }
 
   const declareWinner = async (testId: string, variantId: string) => {
+    setActionError(null)
+    setAction(testId, 'declare')
     try {
       const res = await fetch(`/api/admin/ad-tests/${testId}/declare-winner`, {
         method: 'POST',
@@ -225,24 +242,35 @@ export default function TestingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variantId }),
       })
-      if (res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setActionError(`Declare gagal: ${data.error ?? res.status}`)
+      } else {
         setShowWinner(null)
         await loadTests()
       }
-    } catch { /* silent */ }
+    } catch { setActionError('Declare gagal — koneksi error') } finally {
+      clearAction(testId)
+    }
   }
 
   const archiveTest = async () => {
     if (!archiveTarget) return
-    setArchiving(true)
+    setActionError(null)
+    setAction(archiveTarget.id, 'archive')
     try {
       const res = await fetch(`/api/admin/ad-tests/${archiveTarget.id}`, {
         method: 'DELETE', credentials: 'include',
       })
-      if (res.ok) await loadTests()
-    } catch { /* silent */ } finally {
-      setArchiving(false)
-      setArchiveTarget(null)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setActionError(`Arsip gagal: ${data.error ?? res.status}`)
+      } else {
+        await loadTests()
+        setArchiveTarget(null)
+      }
+    } catch { setActionError('Arsip gagal — koneksi error') } finally {
+      clearAction(archiveTarget.id)
     }
   }
 
@@ -302,6 +330,7 @@ export default function TestingPage() {
           onDeclare={() => setShowWinner(test)}
           onArchive={() => setArchiveTarget(test)}
           onMetricChange={(m) => updateSuccessMetric(test.id, m)}
+          actionLoading={actionLoading}
         />)}
       </div>
 
@@ -323,6 +352,7 @@ export default function TestingPage() {
                 onDeclare={() => {}}
                 onArchive={() => setArchiveTarget(test)}
                 onMetricChange={(m) => updateSuccessMetric(test.id, m)}
+                actionLoading={actionLoading}
               />)}
             </div>
           )}
@@ -338,21 +368,33 @@ export default function TestingPage() {
         body={<p>Arsipkan test <strong>{archiveTarget?.name}</strong>? Test bisa dilihat lagi di bagian Selesai, tapi tidak aktif.</p>}
         confirmLabel="Arsipkan"
         danger
-        loading={archiving}
+        loading={archiveTarget ? (actionLoading.get(archiveTarget.id) === 'archive') : false}
         onConfirm={archiveTest}
         onCancel={() => setArchiveTarget(null)}
       />
+      {/* Error banner */}
+      {actionError && (
+        <div className="fixed bottom-4 right-4 z-50 max-w-sm p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 shadow-lg">
+          <div className="flex items-start gap-2">
+            <span className="flex-1">{actionError}</span>
+            <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 /* ─── Test Card ─── */
-function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange }: {
+function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange, actionLoading }: {
   test: AdTest
   onSync: () => void
   onDeclare: () => void
   onArchive: () => void
   onMetricChange: (m: string) => void
+  actionLoading?: Map<string, string>
 }) {
   const sm = (ALL_METRICS.includes(test.successMetric as SuccessMetric) ? test.successMetric : 'ROAS') as SuccessMetric
   const displayFields = getDisplayMetrics(sm)
@@ -444,19 +486,19 @@ function TestCard({ test, onSync, onDeclare, onArchive, onMetricChange }: {
 
       {/* Footer */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-t border-stone-50 bg-stone-50/50">
-        <button onClick={onSync}
-          className="px-2.5 py-1 text-[11px] font-medium text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
-          Sync Metrics
+        <button onClick={onSync} disabled={actionLoading?.get(test.id) === 'sync'}
+          className="px-2.5 py-1 text-[11px] font-medium text-violet-600 hover:bg-violet-50 rounded-lg transition-colors disabled:opacity-50">
+          {actionLoading?.get(test.id) === 'sync' ? 'Syncing…' : 'Sync Metrics'}
         </button>
         {!isWinnerDeclared && (
-          <button onClick={onDeclare}
-            className="px-2.5 py-1 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
-            Declare Winner
+          <button onClick={onDeclare} disabled={actionLoading?.get(test.id) === 'declare'}
+            className="px-2.5 py-1 text-[11px] font-medium text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-50">
+            {actionLoading?.get(test.id) === 'declare' ? 'Declaring…' : 'Declare Winner'}
           </button>
         )}
-        <button onClick={onArchive}
-          className="px-2.5 py-1 text-[11px] font-medium text-stone-500 hover:bg-stone-100 rounded-lg transition-colors ml-auto">
-          Archive
+        <button onClick={onArchive} disabled={actionLoading?.get(test.id) === 'archive'}
+          className="px-2.5 py-1 text-[11px] font-medium text-stone-500 hover:bg-stone-100 rounded-lg transition-colors ml-auto disabled:opacity-50">
+          {actionLoading?.get(test.id) === 'archive' ? 'Archiving…' : 'Archive'}
         </button>
       </div>
     </div>
@@ -484,6 +526,7 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
     { label: 'B', name: '' },
   ])
   const [submitting, setSubmitting] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
 
   // ─── Pickers: load real options instead of pasting raw IDs ───
   const [products, setProducts] = useState<Array<{ id: string; name: string }>>([])
@@ -589,19 +632,18 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
   const createTest = async () => {
     if (!form.name || variants.some(v => !v.name)) return
     setSubmitting(true)
+    setCreateError(null)
     try {
       const res = await fetch('/api/admin/ad-tests', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
+        body: JSON.stringify({...form,
           productId: form.productId || undefined,
           campaignSessionId: form.campaignSessionId || undefined,
           hypothesis: form.hypothesis || undefined,
           variants: variants.map(v => ({
-            label: v.label,
-            name: v.name,
+            label: v.label, name: v.name,
             ...(v.generatedMediaId ? { generatedMediaId: v.generatedMediaId } : {}),
             ...(v.cepId ? { cepId: v.cepId } : {}),
             ...(v.landingPageId ? { landingPageId: v.landingPageId } : {}),
@@ -610,11 +652,16 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
           })),
         }),
       })
-      if (res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setCreateError(data.error ?? `Gagal (${res.status})`)
+      } else {
         onCreated()
         onClose()
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      setCreateError('Koneksi error — coba lagi')
+    } finally {
       setSubmitting(false)
     }
   }
@@ -811,6 +858,11 @@ function NewTestDrawer({ onClose, onCreated }: { onClose: () => void; onCreated:
           )}
 
           {/* Navigation */}
+          {createError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {createError}
+            </div>
+          )}
           <div className="flex items-center justify-between pt-4 border-t border-stone-100">
             {step > 0 ? (
               <button onClick={() => setStep(step - 1)}
